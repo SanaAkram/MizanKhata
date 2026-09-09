@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+
+  --forest: #2f4a34;
+  --forest-deep: #1c2e20;
+  --paper: #fbf9f4;
+  --bg: #eeebe3;
+  --gold: #b8892b;
+  --danger: #8c3b2e;
+
+  --ink: #23291f;
+  --muted: #6b7266;
+  --line: #e4dfd2;
+  --card: #ffffff;
+  --ok: #3b7a57;
+
+  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+}
+
+@theme inline {
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-paper: var(--paper);
+  --color-bg: var(--bg);
+  --color-gold: var(--gold);
+  --color-danger: var(--danger);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-card: var(--card);
+  --color-ok: var(--ok);
+
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* tabular serif figures — timers, totals, big numbers */
+.numeric {
+  font-family: var(--font-serif);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(184, 137, 43, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(184, 137, 43, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(184, 137, 43, 0);
+  }
+}
+.pulse {
+  animation: pulse-ring 2s infinite;
+}
