@@ -27,6 +27,8 @@ type Props = {
   suppliers: Supplier[];
   khataTx: KhataTx[];
   supplierTx: SupplierTx[];
+  cashHand: number;
+  bankBal: number;
 };
 
 type Filter = "all" | "customer" | "supplier";
@@ -37,6 +39,8 @@ export default function LedgerClient({
   suppliers,
   khataTx,
   supplierTx,
+  cashHand,
+  bankBal,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -56,6 +60,9 @@ export default function LedgerClient({
   const willGive = parties
     .filter((p) => p.kind === "supplier" && p.balance > 0)
     .reduce((s, p) => s + p.balance, 0);
+  const liquid = cashHand + bankBal;
+  // Net worth on the books: what customers owe − what you owe suppliers + cash/bank.
+  const net = willGet - willGive + liquid;
 
   const shown = parties.filter((p) => {
     if (filter !== "all" && p.kind !== filter) return false;
@@ -133,6 +140,41 @@ export default function LedgerClient({
           </p>
         </div>
       </section>
+
+      <div className="rounded-2xl border border-line bg-card p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Net position
+        </p>
+        <div className="mt-2 flex flex-col gap-1 text-xs text-muted">
+          <div className="flex justify-between">
+            <span>Customers owe you</span>
+            <span className="numeric text-ok">+ {fmtRs(willGet)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>You owe suppliers</span>
+            <span className="numeric text-danger">− {fmtRs(willGive)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Cash &amp; bank in hand</span>
+            <span
+              className={`numeric ${liquid < 0 ? "text-danger" : "text-ok"}`}
+            >
+              {liquid < 0 ? "− " : "+ "}
+              {fmtRs(Math.abs(liquid))}
+            </span>
+          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
+          <span className="text-sm font-semibold text-ink">Net</span>
+          <span
+            className={`numeric text-lg font-semibold ${
+              net >= 0 ? "text-ok" : "text-danger"
+            }`}
+          >
+            {fmtRs(net)}
+          </span>
+        </div>
+      </div>
 
       <div className="flex gap-1 rounded-xl border border-line bg-card p-1">
         {(["all", "customer", "supplier"] as Filter[]).map((f) => (
