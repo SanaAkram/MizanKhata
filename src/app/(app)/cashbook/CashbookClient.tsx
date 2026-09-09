@@ -1,0 +1,232 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { newId } from "@/lib/ids";
+import { fmtEntryDate, fmtRs } from "@/lib/format";
+import { addCash, cashInHand, deleteCash, type Cash } from "@/lib/khata/db";
+import Sheet from "@/components/Sheet";
+
+type PartyOpt = { id: string; name: string; kind: "customer" | "supplier" };
+
+export default function CashbookClient({
+  cash,
+  parties,
+}: {
+  cash: Cash[];
+  parties: PartyOpt[];
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const [adding, setAdding] = useState(false);
+  const [detail, setDetail] = useState<Cash | null>(null);
+
+  const balance = useMemo(() => cashInHand(cash), [cash]);
+  const rows = useMemo(
+    () =>
+      [...cash].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      ),
+    [cash],
+  );
+
+  async function remove(row: Cash) {
+    await deleteCash(supabase, row.id);
+    setDetail(null);
+    router.refresh();
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <section className="rounded-2xl border border-line bg-card p-5 text-center">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Cash in hand
+        </p>
+        <p
+          className={`numeric mt-1 text-3xl font-semibold ${
+            balance < 0 ? "text-danger" : "text-ink"
+          }`}
+        >
+          {fmtRs(balance)}
+        </p>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          Entries
+        </h2>
+        {rows.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
+            No cash entries yet — tap + to add one.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {rows.map((e) => (
+              <li key={e.id}>
+                <button
+                  onClick={() => setDetail(e)}
+                  className="flex w-full items-center justify-between rounded-xl border border-line bg-card px-4 py-3 text-left"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm text-ink">
+                      {e.note || (e.type === "in" ? "Cash in" : "Cash out")}
+                      {e.party_name ? (
+                        <span className="text-muted"> — {e.party_name}</span>
+                      ) : null}
+                    </span>
+                    <span className="text-[11px] text-muted">
+                      {fmtEntryDate(e.date)}
+                    </span>
+                  </span>
+                  <span
+                    className={`numeric shrink-0 text-sm font-semibold ${
+                      e.type === "in" ? "text-ok" : "text-danger"
+                    }`}
+                  >
+                    {e.type === "in" ? "+" : "−"} {fmtRs(e.amount)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <button
+        onClick={() => setAdding(true)}
+        aria-label="Add cash entry"
+        className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-forest text-2xl font-light text-paper shadow-lg active:scale-95 sm:right-[max(1rem,calc(50%-15rem+1rem))]"
+      >
+        +
+      </button>
+
+      <Sheet open={adding} title="Add cash entry" onClose={() => setAdding(false)}>
+        <AddCashForm
+          parties={parties}
+          onDone={() => {
+            setAdding(false);
+            router.refresh();
+          }}
+          supabase={supabase}
+        />
+      </Sheet>
+
+      <Sheet
+        open={detail !== null}
+        title={detail?.type === "in" ? "Cash in" : "Cash out"}
+        onClose={() => setDetail(null)}
+      >
+        {detail ? (
+          <div className="flex flex-col gap-3">
+            <p className="numeric text-2xl font-semibold text-ink">
+              {fmtRs(detail.amount)}
+            </p>
+            <p className="text-sm text-muted">
+              {detail.note || "—"}
+              {detail.party_name ? ` · ${detail.party_name}` : ""}
+            </p>
+            <p className="text-xs text-muted">{fmtEntryDate(detail.date)}</p>
+            <button
+              onClick={() => remove(detail)}
+              className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-sm font-semibold text-danger"
+            >
+              Delete entry
+            </button>
+          </div>
+        ) : null}
+      </Sheet>
+    </div>
+  );
+}
+
+function AddCashForm({
+  parties,
+  onDone,
+  supabase,
+}: {
+  parties: PartyOpt[];
+  onDone: () => void;
+  supabase: ReturnType<typeof createClient>;
+}) {
+  const [type, setType] = useState<"in" | "out">("in");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [partyVal, setPartyVal] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const amt = Math.round((parseFloat(amount) || 0) * 100) / 100;
+
+  async function save() {
+    if (amt <= 0) return;
+    setBusy(true);
+    try {
+      const p = parties.find((x) => `${x.kind}:${x.id}` === partyVal);
+      await addCash(supabase, {
+        id: newId("cb_"),
+        type,
+        amount: amt,
+        note: note.trim() || null,
+        partyType: p ? p.kind : null,
+        partyId: p ? p.id : null,
+        partyName: p ? p.name : null,
+        date: new Date().toISOString(),
+      });
+      onDone();
+    } catch {
+      alert("Could not save the entry.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-1 rounded-xl border border-line p-1">
+        {(["in", "out"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setType(t)}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
+              type === t ? "bg-forest text-paper" : "text-muted"
+            }`}
+          >
+            {t === "in" ? "Cash in" : "Cash out"}
+          </button>
+        ))}
+      </div>
+      <input
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        placeholder="Amount"
+        inputMode="decimal"
+        autoFocus
+        className="numeric rounded-xl border border-line bg-paper px-4 py-3 text-2xl font-semibold outline-none focus:border-forest"
+      />
+      <select
+        value={partyVal}
+        onChange={(e) => setPartyVal(e.target.value)}
+        className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+      >
+        <option value="">No party — general</option>
+        {parties.map((p) => (
+          <option key={`${p.kind}:${p.id}`} value={`${p.kind}:${p.id}`}>
+            {p.name} ({p.kind})
+          </option>
+        ))}
+      </select>
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="Note (e.g. shop rent)"
+        className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+      />
+      <button
+        onClick={save}
+        disabled={amt <= 0 || busy}
+        className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
+      >
+        {busy ? "Saving…" : "Save"}
+      </button>
+    </div>
+  );
+}

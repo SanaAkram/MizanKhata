@@ -7,18 +7,24 @@ import { GearIcon } from "@/components/icons";
 const TITLES: Record<string, string> = {
   "/work": "Work",
   "/routine": "Routine",
+  "/ledger": "Ledger",
+  "/cashbook": "Cash Book",
   "/settings": "Settings",
 };
+
+const PREFIXES: Array<[string, string]> = [
+  ["/routine", "Routine"],
+  ["/work", "Work"],
+  ["/ledger", "Ledger"],
+  ["/cashbook", "Cash Book"],
+];
 
 export default function AppHeader() {
   const pathname = usePathname();
   const title =
     TITLES[pathname] ??
-    (pathname.startsWith("/routine")
-      ? "Routine"
-      : pathname.startsWith("/work")
-        ? "Work"
-        : "Roznamcha");
+    PREFIXES.find(([p]) => pathname.startsWith(p))?.[1] ??
+    "Roznamcha";
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper/95 px-5 py-3.5 backdrop-blur">

@@ -36,6 +36,21 @@ export function fmtHm(time: string): string {
   return `${h.padStart(2, "0")}:${(m ?? "00").padStart(2, "0")}`;
 }
 
+/** "Rs 1,454,957" — rounded and grouped. */
+export function fmtRs(n: number): string {
+  return "Rs " + Math.round(Number(n) || 0).toLocaleString("en-US");
+}
+
+/** "12 Sep · 5:23 PM" from an ISO string. */
+export function fmtEntryDate(iso: string): string {
+  const d = new Date(iso);
+  return (
+    d.toLocaleDateString([], { day: "numeric", month: "short" }) +
+    " · " +
+    d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  );
+}
+
 /** "8:00 AM" from a "HH:MM[:SS]" time string. */
 export function fmt12h(time: string): string {
   const [h, m] = time.split(":").map(Number);

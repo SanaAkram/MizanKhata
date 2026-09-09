@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClockIcon, CalendarIcon } from "@/components/icons";
+import {
+  ClockIcon,
+  CalendarIcon,
+  LedgerIcon,
+  CashIcon,
+} from "@/components/icons";
 
 const TABS = [
   { href: "/work", label: "Work", Icon: ClockIcon },
   { href: "/routine", label: "Routine", Icon: CalendarIcon },
+  { href: "/ledger", label: "Ledger", Icon: LedgerIcon },
+  { href: "/cashbook", label: "Cash", Icon: CashIcon },
 ] as const;
 
 export default function BottomNav() {
