@@ -17,6 +17,7 @@ import {
 } from "@/lib/khata/shop-db";
 import { UNITS } from "@/lib/khata/units";
 import Sheet from "@/components/Sheet";
+import CalcField from "@/components/CalcField";
 
 const inputCls =
   "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
@@ -356,20 +357,12 @@ function RestockForm({
       ) : null}
 
       <div className="flex gap-2">
-        <input
-          value={qty}
-          onChange={(e) => setQty(e.target.value)}
-          placeholder="Quantity"
-          inputMode="decimal"
-          className={`${inputCls} w-1/2`}
-        />
-        <input
-          value={cost}
-          onChange={(e) => setCost(e.target.value)}
-          placeholder="Cost / unit"
-          inputMode="decimal"
-          className={`${inputCls} w-1/2`}
-        />
+        <div className="w-1/2">
+          <CalcField value={qty} onChange={setQty} placeholder="Quantity" />
+        </div>
+        <div className="w-1/2">
+          <CalcField value={cost} onChange={setCost} placeholder="Cost / unit" />
+        </div>
       </div>
       <input
         value={ref}

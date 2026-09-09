@@ -7,6 +7,7 @@ import { newId } from "@/lib/ids";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
 import { addCash, cashInHand, deleteCash, type Cash } from "@/lib/khata/db";
 import Sheet from "@/components/Sheet";
+import CalcField from "@/components/CalcField";
 
 type PartyOpt = { id: string; name: string; kind: "customer" | "supplier" };
 
@@ -244,13 +245,12 @@ function AddCashForm({
           </button>
         ))}
       </div>
-      <input
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        placeholder="Amount"
-        inputMode="decimal"
+      <CalcField
+        big
         autoFocus
-        className="numeric rounded-xl border border-line bg-paper px-4 py-3 text-2xl font-semibold outline-none focus:border-forest"
+        value={amount}
+        onChange={setAmount}
+        placeholder="Amount"
       />
       <div className="flex gap-2">
         <div className="flex flex-1 gap-1 rounded-xl border border-line p-1">

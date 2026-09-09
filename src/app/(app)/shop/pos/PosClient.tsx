@@ -11,6 +11,7 @@ import {
   type Product,
 } from "@/lib/khata/shop-db";
 import Sheet from "@/components/Sheet";
+import CalcField from "@/components/CalcField";
 
 type Props = {
   products: Product[];
@@ -241,13 +242,14 @@ function CheckoutForm({
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted">Discount</span>
-          <input
-            value={discount}
-            onChange={(e) => setDiscount(e.target.value)}
-            placeholder="0"
-            inputMode="decimal"
-            className="w-24 rounded border border-line bg-card px-2 py-1 text-right text-sm"
-          />
+          <div className="w-40">
+            <CalcField
+              value={discount}
+              onChange={setDiscount}
+              placeholder="0"
+              className="w-full rounded border border-line bg-card px-2 py-1 text-right text-sm outline-none focus:border-forest"
+            />
+          </div>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted">Tax %</span>

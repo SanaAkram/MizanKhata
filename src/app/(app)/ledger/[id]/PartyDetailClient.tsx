@@ -19,6 +19,7 @@ import {
 } from "@/lib/khata/db";
 import type { Product } from "@/lib/khata/shop-db";
 import Sheet from "@/components/Sheet";
+import CalcField from "@/components/CalcField";
 import ItemLinePicker, {
   linesToText,
   linesTotal,
@@ -455,24 +456,13 @@ function EntryForm({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <input
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Amount"
-          inputMode="decimal"
-          autoFocus
-          className="numeric flex-1 rounded-xl border border-line bg-paper px-4 py-3 text-2xl font-semibold outline-none focus:border-forest"
-        />
-        {amount ? (
-          <button
-            onClick={() => setAmount("")}
-            className="rounded-lg border border-line px-3 py-2 text-sm text-muted"
-          >
-            ✕
-          </button>
-        ) : null}
-      </div>
+      <CalcField
+        big
+        autoFocus
+        value={amount}
+        onChange={setAmount}
+        placeholder="Amount"
+      />
 
       <button
         onClick={() => setPicker(true)}

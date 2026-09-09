@@ -18,6 +18,7 @@ import {
 } from "@/lib/khata/db";
 import { seedKhata } from "@/lib/khata/seed";
 import Sheet from "@/components/Sheet";
+import CalcField from "@/components/CalcField";
 
 type Props = {
   customers: Customer[];
@@ -284,16 +285,14 @@ function AddPartySheet({
           inputMode="tel"
           className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
         />
-        <input
+        <CalcField
           value={opening}
-          onChange={(e) => setOpening(e.target.value)}
+          onChange={setOpening}
           placeholder={
             kind === "customer"
               ? "Opening balance they owe (optional)"
               : "Opening balance you owe (optional)"
           }
-          inputMode="decimal"
-          className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
         />
         <button
           onClick={save}

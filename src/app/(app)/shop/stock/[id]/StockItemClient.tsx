@@ -18,6 +18,7 @@ import {
 } from "@/lib/khata/shop-db";
 import { UNITS } from "@/lib/khata/units";
 import Sheet from "@/components/Sheet";
+import CalcField from "@/components/CalcField";
 import ItemLinePicker, {
   linesToText,
   linesTotal,
@@ -393,21 +394,21 @@ function MoveForm({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
-        <input
-          value={qty}
-          onChange={(e) => setQty(e.target.value)}
-          placeholder={`Quantity (${unit})`}
-          inputMode="decimal"
-          autoFocus
-          className={`${inputCls} w-1/2`}
-        />
-        <input
-          value={rate}
-          onChange={(e) => setRate(e.target.value)}
-          placeholder={kind === "in" ? "Purchase rate" : "Sale rate"}
-          inputMode="decimal"
-          className={`${inputCls} w-1/2`}
-        />
+        <div className="w-1/2">
+          <CalcField
+            autoFocus
+            value={qty}
+            onChange={setQty}
+            placeholder={`Quantity (${unit})`}
+          />
+        </div>
+        <div className="w-1/2">
+          <CalcField
+            value={rate}
+            onChange={setRate}
+            placeholder={kind === "in" ? "Purchase rate" : "Sale rate"}
+          />
+        </div>
       </div>
       <button
         onClick={() => setPicker(true)}
