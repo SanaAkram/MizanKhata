@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { fetchSuppliers } from "@/lib/khata/db";
 import {
@@ -8,12 +9,18 @@ import {
   type Purchase,
   type StockMove,
 } from "@/lib/khata/shop-db";
-import StockClient from "./StockClient";
+import StockItemClient from "./StockItemClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function StockPage() {
+export default async function StockItemPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const db = await createClient();
+
   let products: Product[] = [];
   let purchases: Purchase[] = [];
   let moves: StockMove[] = [];
@@ -22,7 +29,7 @@ export default async function StockPage() {
     const [p, pu, mv, s] = await Promise.all([
       fetchProducts(db),
       fetchPurchases(db),
-      fetchStockMoves(db),
+      fetchStockMoves(db, id),
       fetchSuppliers(db),
     ]);
     products = p;
@@ -30,13 +37,29 @@ export default async function StockPage() {
     moves = mv;
     suppliers = s.map((x) => ({ id: x.id, name: x.name }));
   } catch {
-    /* render empty */
+    /* fall through */
+  }
+
+  const product = products.find((x) => x.id === id);
+  if (!product) {
+    return (
+      <div className="rounded-2xl border border-line bg-card p-6 text-center">
+        <p className="text-sm text-muted">Product not found.</p>
+        <Link
+          href="/shop/stock"
+          className="mt-3 inline-block text-sm font-semibold text-forest underline underline-offset-4"
+        >
+          Back to stock
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <StockClient
+    <StockItemClient
+      product={product}
       products={products}
-      purchases={purchases}
+      purchases={purchases.filter((x) => x.product_id === id)}
       moves={moves}
       suppliers={suppliers}
     />

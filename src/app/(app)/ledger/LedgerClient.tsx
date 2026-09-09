@@ -115,7 +115,7 @@ export default function LedgerClient({
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             You&apos;ll get
           </p>
-          <p className="numeric mt-1 text-xl font-semibold text-ok">
+          <p className="numeric mt-1 text-xl font-semibold text-danger">
             {fmtRs(willGet)}
           </p>
         </div>
@@ -123,7 +123,7 @@ export default function LedgerClient({
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             You&apos;ll give
           </p>
-          <p className="numeric mt-1 text-xl font-semibold text-danger">
+          <p className="numeric mt-1 text-xl font-semibold text-ok">
             {fmtRs(willGive)}
           </p>
         </div>
@@ -169,8 +169,8 @@ export default function LedgerClient({
                 className={`numeric shrink-0 text-sm font-semibold ${
                   p.balance > 0
                     ? p.kind === "customer"
-                      ? "text-ok"
-                      : "text-danger"
+                      ? "text-danger"
+                      : "text-ok"
                     : "text-muted"
                 }`}
               >

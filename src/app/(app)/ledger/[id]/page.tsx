@@ -10,6 +10,7 @@ import {
   type Supplier,
   type SupplierTx,
 } from "@/lib/khata/db";
+import { fetchProducts, type Product } from "@/lib/khata/shop-db";
 import PartyDetailClient from "./PartyDetailClient";
 
 export const dynamic = "force-dynamic";
@@ -29,12 +30,14 @@ export default async function PartyPage({
   let suppliers: Supplier[] = [];
   let khataTx: KhataTx[] = [];
   let supplierTx: SupplierTx[] = [];
+  let products: Product[] = [];
   try {
-    [customers, suppliers, khataTx, supplierTx] = await Promise.all([
+    [customers, suppliers, khataTx, supplierTx, products] = await Promise.all([
       fetchCustomers(supabase),
       fetchSuppliers(supabase),
       fetchKhataTx(supabase),
       fetchSupplierTx(supabase),
+      fetchProducts(supabase),
     ]);
   } catch {
     /* fall through to not-found */
@@ -66,6 +69,7 @@ export default async function PartyPage({
     <PartyDetailClient
       kind={kind}
       party={{ id: party.id, name: party.name, phone: party.phone }}
+      products={products}
       txs={
         kind === "supplier"
           ? supplierTx.filter((t) => t.supplier_id === id)

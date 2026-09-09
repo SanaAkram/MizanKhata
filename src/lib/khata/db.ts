@@ -201,6 +201,8 @@ export async function addCash(
     partyId?: string | null;
     partyName?: string | null;
     date: string;
+    method?: "cash" | "bank";
+    category?: string | null;
   },
 ): Promise<void> {
   const { error } = await db.from("shop_cashbook").insert({
@@ -212,6 +214,8 @@ export async function addCash(
     party_id: row.partyId ?? null,
     party_name: row.partyName ?? null,
     date: row.date,
+    method: row.method ?? "cash",
+    category: row.category ?? null,
   });
   if (error) throw error;
 }
@@ -231,4 +235,33 @@ export async function createParty(
     .from(table)
     .insert({ id: row.id, name: row.name, phone: row.phone ?? null });
   if (error) throw error;
+}
+
+export async function deleteParty(
+  db: DB,
+  kind: PartyKind,
+  id: string,
+): Promise<void> {
+  if (kind === "customer") {
+    await db.from("shop_khata_tx").delete().eq("customer_id", id);
+    const { error } = await db.from("shop_customers").delete().eq("id", id);
+    if (error) throw error;
+  } else {
+    await db.from("shop_supplier_tx").delete().eq("supplier_id", id);
+    const { error } = await db.from("shop_suppliers").delete().eq("id", id);
+    if (error) throw error;
+  }
+}
+
+/** Lifetime "You gave" / "You got" totals for a party's transactions. */
+export function partyLifetime(
+  txs: Array<{ type: string; amount: number }>,
+): { credit: number; payment: number } {
+  let credit = 0;
+  let payment = 0;
+  for (const t of txs) {
+    if (t.type === "credit") credit += Number(t.amount) || 0;
+    else payment += Number(t.amount) || 0;
+  }
+  return { credit, payment };
 }

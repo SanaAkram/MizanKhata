@@ -10,6 +10,146 @@ export type SaleItem =
   Database["public"]["Tables"]["shop_sale_items"]["Row"];
 export type Purchase =
   Database["public"]["Tables"]["shop_purchases"]["Row"];
+export type StockMove =
+  Database["public"]["Tables"]["shop_stock_moves"]["Row"];
+
+// ---- stock moves (manual IN/BUY, OUT/SELL) --------------------------
+
+export async function fetchStockMoves(
+  db: DB,
+  productId?: string,
+): Promise<StockMove[]> {
+  let q = db
+    .from("shop_stock_moves")
+    .select("*")
+    .order("date", { ascending: false });
+  if (productId) q = q.eq("product_id", productId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addStockMove(
+  db: DB,
+  row: {
+    id: string;
+    productId: string;
+    kind: "in" | "out";
+    qty: number;
+    rate?: number | null;
+    note?: string | null;
+    ref?: string | null;
+    supplierId?: string | null;
+    date: string;
+  },
+): Promise<void> {
+  const ins = await db.from("shop_stock_moves").insert({
+    id: row.id,
+    product_id: row.productId,
+    kind: row.kind,
+    qty: row.qty,
+    rate: row.rate ?? null,
+    note: row.note ?? null,
+    ref: row.ref ?? null,
+    party_type: row.supplierId ? "supplier" : null,
+    party_id: row.supplierId ?? null,
+    date: row.date,
+  });
+  if (ins.error) throw ins.error;
+  await adjustStock(
+    db,
+    row.productId,
+    row.kind === "in" ? row.qty : -row.qty,
+  );
+}
+
+export async function deleteStockMove(
+  db: DB,
+  move: Pick<StockMove, "id" | "product_id" | "kind" | "qty">,
+): Promise<void> {
+  const del = await db
+    .from("shop_stock_moves")
+    .delete()
+    .eq("id", move.id);
+  if (del.error) throw del.error;
+  await adjustStock(
+    db,
+    move.product_id,
+    move.kind === "in" ? -Number(move.qty) : Number(move.qty),
+  );
+}
+
+async function adjustStock(
+  db: DB,
+  productId: string,
+  delta: number,
+): Promise<void> {
+  const { data: p } = await db
+    .from("shop_products")
+    .select("stock")
+    .eq("id", productId)
+    .single();
+  const next = Math.max(
+    0,
+    Math.round(((Number(p?.stock) || 0) + delta) * 100) / 100,
+  );
+  await db.from("shop_products").update({ stock: next }).eq("id", productId);
+}
+
+/** Unified per-item stock ledger (purchases + manual moves), newest first, with running stock. */
+export type StockRow = {
+  id: string;
+  kind: "in" | "out";
+  qty: number;
+  rate: number | null;
+  note: string | null;
+  ref: string | null;
+  supplierId: string | null;
+  date: string;
+  source: "purchase" | "move";
+  running: number;
+};
+
+export function stockHistory(
+  productId: string,
+  purchases: Purchase[],
+  moves: StockMove[],
+): StockRow[] {
+  const rows: Omit<StockRow, "running">[] = [];
+  for (const p of purchases.filter((x) => x.product_id === productId)) {
+    rows.push({
+      id: p.id,
+      kind: "in",
+      qty: Number(p.qty),
+      rate: Number(p.price),
+      note: null,
+      ref: p.ref,
+      supplierId: null,
+      date: p.date,
+      source: "purchase",
+    });
+  }
+  for (const m of moves.filter((x) => x.product_id === productId)) {
+    rows.push({
+      id: m.id,
+      kind: m.kind === "out" ? "out" : "in",
+      qty: Number(m.qty),
+      rate: m.rate == null ? null : Number(m.rate),
+      note: m.note,
+      ref: m.ref,
+      supplierId: m.party_id,
+      date: m.date,
+      source: "move",
+    });
+  }
+  rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  let run = 0;
+  const withRun = rows.map((r) => {
+    run += r.kind === "in" ? r.qty : -r.qty;
+    return { ...r, running: run };
+  });
+  return withRun.reverse();
+}
 
 // ---- reads ----------------------------------------------------------
 
@@ -139,11 +279,20 @@ export async function completeSale(
     creditAmount: number;
     customerId: string | null;
     customerName: string | null;
+    discount?: number;
+    tax?: number;
+    note?: string | null;
+    method?: "cash" | "bank";
   },
 ): Promise<void> {
   const { lines, paidCash, creditAmount, customerId, customerName } = args;
   const total =
-    Math.round(lines.reduce((s, l) => s + l.price * l.qty, 0) * 100) / 100;
+    Math.round(
+      (lines.reduce((s, l) => s + l.price * l.qty, 0) -
+        (args.discount ?? 0) +
+        (args.tax ?? 0)) *
+        100,
+    ) / 100;
   const saleId = newId("sl_");
   const nowIso = new Date().toISOString();
 
@@ -155,6 +304,10 @@ export async function completeSale(
     credit_amount: creditAmount,
     customer_id: customerId,
     customer_name: customerName,
+    discount: args.discount ?? 0,
+    tax: args.tax ?? 0,
+    note: args.note ?? null,
+    method: args.method ?? "cash",
   });
   if (res.error) throw res.error;
 
@@ -195,6 +348,8 @@ export async function completeSale(
       party_id: customerId,
       party_name: customerName,
       date: nowIso,
+      method: args.method ?? "cash",
+      category: "sale",
     });
   }
   if (creditAmount > 0 && customerId) {

@@ -21,14 +21,24 @@ export default function CashbookClient({
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [detail, setDetail] = useState<Cash | null>(null);
+  const [tab, setTab] = useState<"all" | "cash" | "bank">("all");
 
-  const balance = useMemo(() => cashInHand(cash), [cash]);
+  const cashBal = useMemo(
+    () => cashInHand(cash.filter((c) => (c.method ?? "cash") === "cash")),
+    [cash],
+  );
+  const bankBal = useMemo(
+    () => cashInHand(cash.filter((c) => c.method === "bank")),
+    [cash],
+  );
   const rows = useMemo(
     () =>
-      [...cash].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      ),
-    [cash],
+      [...cash]
+        .filter((c) => tab === "all" || (c.method ?? "cash") === tab)
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        ),
+    [cash, tab],
   );
 
   async function remove(row: Cash) {
@@ -39,18 +49,46 @@ export default function CashbookClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="rounded-2xl border border-line bg-card p-5 text-center">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Cash in hand
-        </p>
-        <p
-          className={`numeric mt-1 text-3xl font-semibold ${
-            balance < 0 ? "text-danger" : "text-ink"
-          }`}
-        >
-          {fmtRs(balance)}
-        </p>
+      <section className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-line bg-card p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Cash in hand
+          </p>
+          <p
+            className={`numeric mt-1 text-2xl font-semibold ${
+              cashBal < 0 ? "text-danger" : "text-ink"
+            }`}
+          >
+            {fmtRs(cashBal)}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Bank balance
+          </p>
+          <p
+            className={`numeric mt-1 text-2xl font-semibold ${
+              bankBal < 0 ? "text-danger" : "text-ink"
+            }`}
+          >
+            {fmtRs(bankBal)}
+          </p>
+        </div>
       </section>
+
+      <div className="flex gap-1 rounded-xl border border-line bg-card p-1">
+        {(["all", "cash", "bank"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold capitalize ${
+              tab === t ? "bg-forest text-paper" : "text-muted"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
 
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -150,12 +188,22 @@ function AddCashForm({
   supabase: ReturnType<typeof createClient>;
 }) {
   const [type, setType] = useState<"in" | "out">("in");
+  const [method, setMethod] = useState<"cash" | "bank">("cash");
+  const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [partyVal, setPartyVal] = useState("");
   const [busy, setBusy] = useState(false);
 
   const amt = Math.round((parseFloat(amount) || 0) * 100) / 100;
+  const OUT_CATS = [
+    "purchase",
+    "expense",
+    "salary",
+    "rent",
+    "transport",
+    "other",
+  ];
 
   async function save() {
     if (amt <= 0) return;
@@ -171,6 +219,8 @@ function AddCashForm({
         partyId: p ? p.id : null,
         partyName: p ? p.name : null,
         date: new Date().toISOString(),
+        method,
+        category: type === "out" ? category || "expense" : "income",
       });
       onDone();
     } catch {
@@ -202,6 +252,35 @@ function AddCashForm({
         autoFocus
         className="numeric rounded-xl border border-line bg-paper px-4 py-3 text-2xl font-semibold outline-none focus:border-forest"
       />
+      <div className="flex gap-2">
+        <div className="flex flex-1 gap-1 rounded-xl border border-line p-1">
+          {(["cash", "bank"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMethod(m)}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-semibold capitalize ${
+                method === m ? "bg-forest text-paper" : "text-muted"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        {type === "out" ? (
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm capitalize outline-none focus:border-forest"
+          >
+            <option value="">category…</option>
+            {OUT_CATS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        ) : null}
+      </div>
       <select
         value={partyVal}
         onChange={(e) => setPartyVal(e.target.value)}
