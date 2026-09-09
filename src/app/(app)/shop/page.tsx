@@ -158,8 +158,8 @@ export default async function ShopDashboardPage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <MiniCard label="You'll get" value={fmtRs(receivables)} tone="danger" />
-        <MiniCard label="You'll give" value={fmtRs(payables)} tone="ok" />
+        <MiniCard label="You'll get" value={fmtRs(receivables)} tone="ok" />
+        <MiniCard label="You'll give" value={fmtRs(payables)} tone="danger" />
         <MiniCard label="Cash in hand" value={fmtRs(cashHand)} />
         <MiniCard label="Bank balance" value={fmtRs(bankBal)} />
         <MiniCard label="Stock value" value={fmtRs(stockVal)} />
@@ -184,7 +184,7 @@ export default async function ShopDashboardPage() {
           <h2 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted">
             Receivables <span className="numeric">{fmtRs(receivables)}</span>
           </h2>
-          <ShareBars items={recvByParty} tone="danger" />
+          <ShareBars items={recvByParty} tone="ok" />
         </section>
       ) : null}
 
@@ -193,7 +193,7 @@ export default async function ShopDashboardPage() {
           <h2 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted">
             Payables <span className="numeric">{fmtRs(payables)}</span>
           </h2>
-          <ShareBars items={payByParty} tone="ok" />
+          <ShareBars items={payByParty} tone="danger" />
         </section>
       ) : null}
 

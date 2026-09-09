@@ -162,7 +162,12 @@ export default function CashbookClient({
       >
         {detail ? (
           <div className="flex flex-col gap-3">
-            <p className="numeric text-2xl font-semibold text-ink">
+            <p
+              className={`numeric text-2xl font-semibold ${
+                detail.type === "in" ? "text-ok" : "text-danger"
+              }`}
+            >
+              {detail.type === "in" ? "+ " : "− "}
               {fmtRs(detail.amount)}
             </p>
             <p className="text-sm text-muted">

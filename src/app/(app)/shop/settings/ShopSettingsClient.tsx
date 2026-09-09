@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   createBusiness,
+  deleteBusiness,
   saveBusiness,
   setActiveBusinessCookie,
   type Business,
@@ -33,6 +34,8 @@ export default function ShopSettingsClient({
   const [newBizOpen, setNewBizOpen] = useState(false);
   const [newBizName, setNewBizName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [armDelBiz, setArmDelBiz] = useState(false);
+  const [deletingBiz, setDeletingBiz] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cls =
@@ -63,6 +66,71 @@ export default function ShopSettingsClient({
     }
   }
 
+  async function removeBusiness() {
+    if (!active || list.length < 2 || deletingBiz) return;
+    setDeletingBiz(true);
+    try {
+      await deleteBusiness(supabase, active.id);
+      const next = list.find((b) => b.id !== active.id);
+      if (next) setActiveBusinessCookie(next.id);
+      setArmDelBiz(false);
+      toast("Business deleted.", "success");
+      router.push("/shop");
+      router.refresh();
+    } catch {
+      toast("Could not delete the business.", "error");
+      setDeletingBiz(false);
+    }
+  }
+
+  function dominantColor(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const s = 28;
+          const cv = document.createElement("canvas");
+          cv.width = s;
+          cv.height = s;
+          const ctx = cv.getContext("2d");
+          if (!ctx) return resolve("#2f4a34");
+          ctx.drawImage(img, 0, 0, s, s);
+          const { data } = ctx.getImageData(0, 0, s, s);
+          let r = 0,
+            g = 0,
+            b = 0,
+            n = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            const rr = data[i],
+              gg = data[i + 1],
+              bb = data[i + 2],
+              aa = data[i + 3];
+            if (aa < 128) continue;
+            const mx = Math.max(rr, gg, bb);
+            const mn = Math.min(rr, gg, bb);
+            if (mx > 238 && mn > 238) continue; // near-white
+            if (mx < 26) continue; // near-black
+            r += rr;
+            g += gg;
+            b += bb;
+            n++;
+          }
+          if (!n) return resolve("#2f4a34");
+          const hx = (v: number) =>
+            Math.round(v / n)
+              .toString(16)
+              .padStart(2, "0");
+          resolve(`#${hx(r)}${hx(g)}${hx(b)}`);
+        } catch {
+          resolve("#2f4a34");
+        }
+      };
+      img.onerror = () => resolve("#2f4a34");
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
   async function onLogo(file: File) {
     if (!active) return;
     setUploading(true);
@@ -77,9 +145,14 @@ export default function ShopSettingsClient({
         .from("business-logos")
         .getPublicUrl(path);
       const url = `${data.publicUrl}?v=${Date.now()}`;
-      await saveBusiness(supabase, active.id, { logo_url: url });
+      const color = await dominantColor(file);
+      await saveBusiness(supabase, active.id, {
+        logo_url: url,
+        logo_color: color,
+      });
       setLogoUrl(url);
       router.refresh();
+      toast("Logo saved — bills will use its colour.", "success");
     } catch {
       toast("Could not upload the logo.", "error");
     } finally {
@@ -135,6 +208,24 @@ export default function ShopSettingsClient({
           >
             + New business
           </button>
+          {list.length > 1 ? (
+            <button
+              onClick={() => {
+                if (!armDelBiz) {
+                  setArmDelBiz(true);
+                  setTimeout(() => setArmDelBiz(false), 3000);
+                  return;
+                }
+                void removeBusiness();
+              }}
+              disabled={deletingBiz}
+              className="mt-1 rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-xs font-semibold text-danger disabled:opacity-50"
+            >
+              {armDelBiz
+                ? `Tap again — deletes “${active?.name}” and all its data`
+                : "Delete this business"}
+            </button>
+          ) : null}
         </div>
       </section>
 

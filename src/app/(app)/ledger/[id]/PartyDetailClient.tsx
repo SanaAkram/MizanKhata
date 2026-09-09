@@ -80,9 +80,11 @@ export default function PartyDetailClient({
 
   const balance = rows.length ? rows[0].running : 0;
   const life = partyLifetime(txs);
-  // Digikhata colour convention: money you'll GET (customer owes) = red;
-  // money you'll GIVE (you owe a supplier) = green.
-  const balTone = balance > 0 ? (isCust ? "text-danger" : "text-ok") : "text-muted";
+  // Money coming IN to my account = green; money going OUT = red.
+  // Customer +balance = they owe me (money in). Supplier +balance = I owe them (money out).
+  const moneyIn = isCust ? balance > 0 : balance < 0;
+  const balTone =
+    balance === 0 ? "text-muted" : moneyIn ? "text-ok" : "text-danger";
 
   const shown = rows.filter(
     (r) => !q || (r.note ?? "").toLowerCase().includes(q.toLowerCase()),
@@ -249,6 +251,14 @@ export default function PartyDetailClient({
           <ul className="flex flex-col gap-2">
             {shown.map((r) => {
               const credit = r.type === "credit";
+              // payment = actual cash movement: customer pays me = in (green),
+              // I pay a supplier = out (red). Credit entries move no cash.
+              const tone = credit
+                ? "text-ink"
+                : isCust
+                  ? "text-ok"
+                  : "text-danger";
+              const sign = credit ? "" : isCust ? "+ " : "− ";
               return (
                 <li key={r.id}>
                   <button
@@ -271,11 +281,8 @@ export default function PartyDetailClient({
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p
-                          className={`numeric text-sm font-semibold ${
-                            credit ? "text-forest" : "text-ok"
-                          }`}
-                        >
+                        <p className={`numeric text-sm font-semibold ${tone}`}>
+                          {sign}
                           {fmtRs(r.amount)}
                         </p>
                         <p className="numeric text-[11px] text-muted">
@@ -315,7 +322,16 @@ export default function PartyDetailClient({
       >
         {detail ? (
           <div className="flex flex-col gap-3">
-            <p className="numeric text-2xl font-semibold text-ink">
+            <p
+              className={`numeric text-2xl font-semibold ${
+                detail.type === "credit"
+                  ? "text-ink"
+                  : isCust
+                    ? "text-ok"
+                    : "text-danger"
+              }`}
+            >
+              {detail.type === "credit" ? "" : isCust ? "+ " : "− "}
               {fmtRs(detail.amount)}
             </p>
             <p className="text-xs text-muted">

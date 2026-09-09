@@ -8,6 +8,7 @@ export function billText(
   sale: Sale,
   no: number,
   items: SaleItem[],
+  balances?: { prevBalance: number; newBalance: number },
 ): string {
   const lines = items.map(
     (i) =>
@@ -27,8 +28,13 @@ export function billText(
   parts.push(`Total: ${fmtRs(Number(sale.total))}`);
   if (Number(sale.credit_amount) > 0)
     parts.push(
-      `Paid: ${fmtRs(Number(sale.paid_cash))} · Balance: ${fmtRs(Number(sale.credit_amount))}`,
+      `Paid: ${fmtRs(Number(sale.paid_cash))} · This bill on credit: ${fmtRs(Number(sale.credit_amount))}`,
     );
+  if (balances) {
+    parts.push("");
+    parts.push(`Previous balance: ${fmtRs(balances.prevBalance)}`);
+    parts.push(`Total balance now: ${fmtRs(balances.newBalance)}`);
+  }
   return parts.join("\n");
 }
 

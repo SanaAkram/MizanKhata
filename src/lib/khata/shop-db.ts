@@ -371,6 +371,7 @@ export async function completeSale(
     await db.from("shop_cashbook").insert({
       id: newId("cb_"),
       business_id: businessId,
+      bill_id: saleId,
       type: "in",
       amount: paidCash,
       note:
@@ -399,6 +400,126 @@ export async function completeSale(
       date: nowIso,
     });
   }
+}
+
+/**
+ * Edit a bill's non-stock fields (party, discount, tax, note, cash/credit split).
+ * Line items are left as-is; the total is recomputed from them, and the linked
+ * cashbook + ledger rows are rebuilt so everything stays consistent.
+ */
+export async function updateSale(
+  db: DB,
+  saleId: string,
+  patch: {
+    customerId: string | null;
+    customerName: string | null;
+    discount: number;
+    tax: number;
+    note: string | null;
+    paidCash: number;
+    creditAmount: number;
+  },
+): Promise<void> {
+  const { data: sale, error: sErr } = await db
+    .from("shop_sales")
+    .select("business_id,time")
+    .eq("id", saleId)
+    .single();
+  if (sErr) throw sErr;
+  const businessId = sale?.business_id ?? "";
+  const when = sale?.time ?? new Date().toISOString();
+
+  const { data: its } = await db
+    .from("shop_sale_items")
+    .select("name,price,qty")
+    .eq("sale_id", saleId);
+  const subtotal = (its ?? []).reduce(
+    (s, r) => s + Number(r.price || 0) * Number(r.qty || 0),
+    0,
+  );
+  const total =
+    Math.round((subtotal - patch.discount + patch.tax) * 100) / 100;
+  const itemsText = (its ?? [])
+    .map((l) => `${l.qty} ${l.name} ${l.price}Rs`)
+    .join("\n");
+
+  const up = await db
+    .from("shop_sales")
+    .update({
+      customer_id: patch.customerId,
+      customer_name: patch.customerName,
+      discount: patch.discount,
+      tax: patch.tax,
+      note: patch.note,
+      paid_cash: patch.paidCash,
+      credit_amount: patch.creditAmount,
+      total,
+    })
+    .eq("id", saleId);
+  if (up.error) throw up.error;
+
+  // rebuild the cash-received row
+  await db.from("shop_cashbook").delete().eq("bill_id", saleId);
+  if (patch.paidCash > 0) {
+    await db.from("shop_cashbook").insert({
+      id: newId("cb_"),
+      business_id: businessId,
+      bill_id: saleId,
+      type: "in",
+      amount: patch.paidCash,
+      note:
+        `Sale${patch.customerName ? ` — ${patch.customerName}` : ""}` +
+        (itemsText ? `\n${itemsText}` : ""),
+      party_type: patch.customerId ? "customer" : null,
+      party_id: patch.customerId,
+      party_name: patch.customerName,
+      date: when,
+      method: "cash",
+      category: "sale",
+    });
+  }
+
+  // rebuild the credit (ledger) row
+  await db.from("shop_khata_tx").delete().eq("bill_id", saleId);
+  if (patch.creditAmount > 0 && patch.customerId) {
+    await db.from("shop_khata_tx").insert({
+      id: newId("kt_"),
+      business_id: businessId,
+      customer_id: patch.customerId,
+      type: "credit",
+      amount: patch.creditAmount,
+      note:
+        (itemsText || "Bill") +
+        (patch.note ? `\n${patch.note}` : "") +
+        (patch.paidCash > 0 ? `\nPaid cash Rs ${patch.paidCash}` : ""),
+      bill_id: saleId,
+      date: when,
+    });
+  }
+}
+
+/** Delete a bill and reverse its effects (restores stock, removes its cashbook + ledger rows). */
+export async function deleteSale(db: DB, saleId: string): Promise<void> {
+  const { data: items } = await db
+    .from("shop_sale_items")
+    .select("product_id,qty")
+    .eq("sale_id", saleId);
+  for (const it of items ?? []) {
+    if (!it.product_id) continue;
+    const { data: p } = await db
+      .from("shop_products")
+      .select("stock")
+      .eq("id", it.product_id)
+      .single();
+    const next =
+      Math.round(((Number(p?.stock) || 0) + Number(it.qty || 0)) * 100) / 100;
+    await db.from("shop_products").update({ stock: next }).eq("id", it.product_id);
+  }
+  await db.from("shop_sale_items").delete().eq("sale_id", saleId);
+  await db.from("shop_khata_tx").delete().eq("bill_id", saleId);
+  await db.from("shop_cashbook").delete().eq("bill_id", saleId);
+  const { error } = await db.from("shop_sales").delete().eq("id", saleId);
+  if (error) throw error;
 }
 
 // ---- restock ----------------------------------------------------

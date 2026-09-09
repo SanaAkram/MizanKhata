@@ -17,6 +17,7 @@ export type Database = {
           address: string | null
           created_at: string
           id: string
+          logo_color: string | null
           logo_url: string | null
           name: string
           owner_id: string
@@ -26,6 +27,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           id: string
+          logo_color?: string | null
           logo_url?: string | null
           name?: string
           owner_id?: string
@@ -35,6 +37,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           id?: string
+          logo_color?: string | null
           logo_url?: string | null
           name?: string
           owner_id?: string
@@ -45,6 +48,7 @@ export type Database = {
       shop_cashbook: {
         Row: {
           amount: number
+          bill_id: string | null
           business_id: string | null
           category: string | null
           date: string
@@ -59,6 +63,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bill_id?: string | null
           business_id?: string | null
           category?: string | null
           date?: string
@@ -73,6 +78,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bill_id?: string | null
           business_id?: string | null
           category?: string | null
           date?: string
