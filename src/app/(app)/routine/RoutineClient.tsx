@@ -1,12 +1,14 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addDays, dateKey, parseDateKey, startOfWeek } from "@/lib/date";
-import { fmt12h, fmtTimeOfDay } from "@/lib/format";
+import { fmt12h, fmtInterval, fmtTimeOfDay } from "@/lib/format";
 import { defaultItems } from "@/lib/routine/defaults";
 import {
+  bumpCount,
   clearLog,
   fetchLogsBetween,
   insertItems,
@@ -18,6 +20,8 @@ import {
   adherence,
   buildOccurrences,
   catchUpQueue,
+  intervalItems,
+  intervalProgress,
   nextUpcoming,
   timelineBounds,
   type Occurrence,
@@ -88,12 +92,8 @@ export default function RoutineClient({
     () => logsByDate.get(todayKey) ?? [],
     [logsByDate, todayKey],
   );
-  const loggedTodayIds = useMemo(
-    () => new Set(todayLogs.map((l) => l.item_id)),
-    [todayLogs],
-  );
 
-  const now = useRoutineTicker(items, loggedTodayIds);
+  const now = useRoutineTicker(items, todayLogs);
 
   const ensureWeek = useCallback(
     async (ws: Date) => {
@@ -137,6 +137,7 @@ export default function RoutineClient({
         date: dk,
         item_id: itemId,
         status,
+        count: prev.find((l) => l.id === id)?.count ?? 0,
         responded_at: nowIso,
         note: null,
         created_at: nowIso,
@@ -166,13 +167,42 @@ export default function RoutineClient({
     setPick(null);
   }
 
+  async function bump(dk: string, itemId: string, delta: number) {
+    const item = items.find((i) => i.id === itemId);
+    const target = Number(item?.target_count ?? 0);
+    const id = logId(dk, itemId);
+    const nowIso = new Date().toISOString();
+    clearReminderState(dk, itemId);
+    setLogs((prev) => {
+      const cur = prev.find((l) => l.id === id);
+      const nextCount = Math.max(0, Number(cur?.count ?? 0) + delta);
+      const row: RoutineLog = {
+        id,
+        owner_id: "",
+        date: dk,
+        item_id: itemId,
+        status: target > 0 && nextCount >= target ? "done" : "pending",
+        count: nextCount,
+        responded_at: nowIso,
+        note: null,
+        created_at: cur?.created_at ?? nowIso,
+      };
+      return [...prev.filter((l) => l.id !== id), row];
+    });
+    try {
+      await bumpCount(supabase, dk, itemId, delta, target);
+    } catch {
+      /* reconciled on next load */
+    }
+  }
+
   async function seed() {
     setSeeding(true);
     try {
       await insertItems(supabase, defaultItems());
       router.refresh();
     } catch {
-      alert("Could not create the starter routine. Try again.");
+      toast("Could not create the starter routine. Try again.", "error");
       setSeeding(false);
     }
   }
@@ -188,6 +218,7 @@ export default function RoutineClient({
       if (action === "done") void mark(day, itemId, "done");
       else if (action === "skip") void mark(day, itemId, "skipped");
       else if (action === "snooze") snoozeItem(day, itemId);
+      else if (action === "plus") void bump(day, itemId, 1);
       // "open" / anything else: app is already focused, nothing to do
     };
   });
@@ -253,6 +284,14 @@ export default function RoutineClient({
     return m;
   }, [items, logsByDate, weekStart, now]);
 
+  const intervals = useMemo(
+    () =>
+      intervalItems(items, parseDateKey(selectedKey)).map((it) =>
+        intervalProgress(it, selectedLogs, now),
+      ),
+    [items, selectedKey, selectedLogs, now],
+  );
+
   if (items.length === 0) {
     return <FirstRun onSeed={seed} seeding={seeding} />;
   }
@@ -292,6 +331,75 @@ export default function RoutineClient({
           onMark={(id, s) => void mark(todayKey, id, s)}
           onSnooze={(id) => snoozeItem(todayKey, id)}
         />
+      ) : null}
+
+      {intervals.length > 0 ? (
+        <section className="rounded-2xl border border-line bg-card p-4">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            {isToday ? "Today" : "Repeating"}
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {intervals.map((ip) => {
+              const pct =
+                ip.target > 0
+                  ? Math.min(100, Math.round((ip.count / ip.target) * 100))
+                  : 0;
+              return (
+                <li key={ip.item.id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-ink">
+                        {ip.item.label}
+                        {ip.done ? (
+                          <span className="ml-2 text-xs font-semibold text-ok">
+                            done
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {ip.target > 0
+                          ? `${ip.count} / ${ip.target} ${ip.unit}`
+                          : `${ip.count} ${ip.unit}`}
+                        {ip.item.interval_min
+                          ? ` · ${fmtInterval(ip.item.interval_min)}`
+                          : ""}
+                        {isToday && ip.activeNow && ip.nextDueMin != null && !ip.done
+                          ? ` · next in ${ip.nextDueMin}m`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => void bump(selectedKey, ip.item.id, -1)}
+                        disabled={ip.count <= 0}
+                        className="h-8 w-8 rounded-lg border border-line text-muted disabled:opacity-40"
+                      >
+                        −
+                      </button>
+                      <span className="numeric w-6 text-center text-sm font-semibold">
+                        {ip.count}
+                      </span>
+                      <button
+                        onClick={() => void bump(selectedKey, ip.item.id, 1)}
+                        className="h-8 w-8 rounded-lg bg-forest text-paper"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  {ip.target > 0 ? (
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                      <div
+                        className="h-full rounded-full bg-forest transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       ) : null}
 
       <DayTimeline

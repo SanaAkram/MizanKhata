@@ -52,3 +52,7 @@ AGENTS.md
 .claude/
 .cursor/
 reference/scratch_*
+
+# push keys — do not commit
+push-vapid.local.json
+*.local.json

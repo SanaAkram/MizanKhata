@@ -68,6 +68,76 @@ export function StopIcon({ className = "h-7 w-7" }: IconProps) {
   );
 }
 
+export function LedgerIcon({ className = "h-6 w-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 3.5h11a2 2 0 0 1 2 2v15a1 1 0 0 1-1.4.9L15 20l-2.6 1.4a1 1 0 0 1-.9 0L9 20l-2.6 1.4A1 1 0 0 1 5 20.5V5.5a2 2 0 0 1 2-2Z" />
+      <path d="M9 8h6M9 11.5h6" />
+    </svg>
+  );
+}
+
+export function ShopIcon({ className = "h-6 w-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 9.5 5.2 4.5A1 1 0 0 1 6.2 3.75h11.6a1 1 0 0 1 1 .75L20 9.5" />
+      <path d="M3.5 9.5h17v2a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-2-2.4Z" />
+      <path d="M5 13.8V20h14v-6.2" />
+    </svg>
+  );
+}
+
+export function CashIcon({ className = "h-6 w-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
+      <circle cx="12" cy="12" r="2.6" />
+      <path d="M6 9.5v5M18 9.5v5" />
+    </svg>
+  );
+}
+
+export function CalcIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M8 7h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15v3M8 18h4" />
+    </svg>
+  );
+}
+
 export function CheckIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg

@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     // Frozen reference copy of the original single-file app (not part of the build):
     "reference/**",
     ".claude/**",
+    "supabase/**",
   ]),
 ]);
 

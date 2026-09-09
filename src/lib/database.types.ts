@@ -7,18 +7,53 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      shop_businesses: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          logo_color: string | null
+          logo_url: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id: string
+          logo_color?: string | null
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          logo_color?: string | null
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       shop_cashbook: {
         Row: {
           amount: number
+          bill_id: string | null
+          business_id: string | null
+          category: string | null
           date: string
           id: string
+          method: string
           note: string | null
           owner_id: string
           party_id: string | null
@@ -28,8 +63,12 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bill_id?: string | null
+          business_id?: string | null
+          category?: string | null
           date?: string
           id: string
+          method?: string
           note?: string | null
           owner_id?: string
           party_id?: string | null
@@ -39,8 +78,12 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bill_id?: string | null
+          business_id?: string | null
+          category?: string | null
           date?: string
           id?: string
+          method?: string
           note?: string | null
           owner_id?: string
           party_id?: string | null
@@ -52,6 +95,7 @@ export type Database = {
       }
       shop_customers: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
           name: string
@@ -59,6 +103,7 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id: string
           name: string
@@ -66,6 +111,7 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -78,6 +124,7 @@ export type Database = {
         Row: {
           amount: number
           bill_id: string | null
+          business_id: string | null
           customer_id: string
           date: string
           id: string
@@ -89,6 +136,7 @@ export type Database = {
         Insert: {
           amount: number
           bill_id?: string | null
+          business_id?: string | null
           customer_id: string
           date?: string
           id: string
@@ -100,6 +148,7 @@ export type Database = {
         Update: {
           amount?: number
           bill_id?: string | null
+          business_id?: string | null
           customer_id?: string
           date?: string
           id?: string
@@ -127,36 +176,70 @@ export type Database = {
       }
       shop_products: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
+          low_stock: number
           name: string
           owner_id: string
+          purchase_price: number
           sale_price: number
           stock: number
           unit: string
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id: string
+          low_stock?: number
           name: string
           owner_id?: string
+          purchase_price?: number
           sale_price?: number
           stock?: number
           unit?: string
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
+          low_stock?: number
           name?: string
           owner_id?: string
+          purchase_price?: number
           sale_price?: number
           stock?: number
           unit?: string
         }
         Relationships: []
       }
+      shop_profile: {
+        Row: {
+          address: string | null
+          owner_id: string
+          phone: string | null
+          shop_name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          owner_id?: string
+          phone?: string | null
+          shop_name?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          owner_id?: string
+          phone?: string | null
+          shop_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shop_purchases: {
         Row: {
+          business_id: string | null
           date: string
           id: string
           owner_id: string
@@ -166,6 +249,7 @@ export type Database = {
           ref: string | null
         }
         Insert: {
+          business_id?: string | null
           date?: string
           id: string
           owner_id?: string
@@ -175,6 +259,7 @@ export type Database = {
           ref?: string | null
         }
         Update: {
+          business_id?: string | null
           date?: string
           id?: string
           owner_id?: string
@@ -193,47 +278,108 @@ export type Database = {
           },
         ]
       }
+      shop_push_sent: {
+        Row: { id: string; owner_id: string; sent_at: string }
+        Insert: { id: string; owner_id: string; sent_at?: string }
+        Update: { id?: string; owner_id?: string; sent_at?: string }
+        Relationships: []
+      }
+      shop_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen: string
+          owner_id: string
+          p256dh: string
+          tz_offset_min: number
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id: string
+          last_seen?: string
+          owner_id?: string
+          p256dh: string
+          tz_offset_min?: number
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen?: string
+          owner_id?: string
+          p256dh?: string
+          tz_offset_min?: number
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       shop_routine_items: {
         Row: {
-          at_time: string
+          active_from: string
+          active_to: string
+          at_time: string | null
           category: string
+          count_unit: string | null
           created_at: string
           days: number[]
           enabled: boolean
           id: string
+          interval_min: number | null
+          kind: string
           label: string
           owner_id: string
           sort: number
+          target_count: number
           window_min: number
         }
         Insert: {
-          at_time: string
+          active_from?: string
+          active_to?: string
+          at_time?: string | null
           category?: string
+          count_unit?: string | null
           created_at?: string
           days?: number[]
           enabled?: boolean
           id: string
+          interval_min?: number | null
+          kind?: string
           label: string
           owner_id?: string
           sort?: number
+          target_count?: number
           window_min?: number
         }
         Update: {
-          at_time?: string
+          active_from?: string
+          active_to?: string
+          at_time?: string | null
           category?: string
+          count_unit?: string | null
           created_at?: string
           days?: number[]
           enabled?: boolean
           id?: string
+          interval_min?: number | null
+          kind?: string
           label?: string
           owner_id?: string
           sort?: number
+          target_count?: number
           window_min?: number
         }
         Relationships: []
       }
       shop_routine_log: {
         Row: {
+          count: number
           created_at: string
           date: string
           id: string
@@ -244,6 +390,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          count?: number
           created_at?: string
           date: string
           id: string
@@ -254,6 +401,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          count?: number
           created_at?: string
           date?: string
           id?: string
@@ -267,6 +415,7 @@ export type Database = {
       }
       shop_sale_items: {
         Row: {
+          business_id: string | null
           id: string
           name: string
           owner_id: string
@@ -277,6 +426,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          business_id?: string | null
           id: string
           name: string
           owner_id?: string
@@ -287,6 +437,7 @@ export type Database = {
           unit?: string
         }
         Update: {
+          business_id?: string | null
           id?: string
           name?: string
           owner_id?: string
@@ -315,41 +466,56 @@ export type Database = {
       }
       shop_sales: {
         Row: {
+          business_id: string | null
           created_at: string
           credit_amount: number
           customer_id: string | null
           customer_name: string | null
+          discount: number
           has_paper_photo: boolean
           id: string
+          method: string
+          note: string | null
           owner_id: string
           paid_cash: number
           photo_data_url: string | null
+          tax: number
           time: string
           total: number
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           credit_amount?: number
           customer_id?: string | null
           customer_name?: string | null
+          discount?: number
           has_paper_photo?: boolean
           id: string
+          method?: string
+          note?: string | null
           owner_id?: string
           paid_cash?: number
           photo_data_url?: string | null
+          tax?: number
           time?: string
           total: number
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           credit_amount?: number
           customer_id?: string | null
           customer_name?: string | null
+          discount?: number
           has_paper_photo?: boolean
           id?: string
+          method?: string
+          note?: string | null
           owner_id?: string
           paid_cash?: number
           photo_data_url?: string | null
+          tax?: number
           time?: string
           total?: number
         }
@@ -363,9 +529,55 @@ export type Database = {
           },
         ]
       }
+      shop_stock_moves: {
+        Row: {
+          business_id: string | null
+          date: string
+          id: string
+          kind: string
+          note: string | null
+          owner_id: string
+          party_id: string | null
+          party_type: string | null
+          product_id: string
+          qty: number
+          rate: number | null
+          ref: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          date?: string
+          id: string
+          kind: string
+          note?: string | null
+          owner_id?: string
+          party_id?: string | null
+          party_type?: string | null
+          product_id: string
+          qty: number
+          rate?: number | null
+          ref?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          date?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          owner_id?: string
+          party_id?: string | null
+          party_type?: string | null
+          product_id?: string
+          qty?: number
+          rate?: number | null
+          ref?: string | null
+        }
+        Relationships: []
+      }
       shop_supplier_tx: {
         Row: {
           amount: number
+          business_id: string | null
           date: string
           id: string
           note: string | null
@@ -376,6 +588,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          business_id?: string | null
           date?: string
           id: string
           note?: string | null
@@ -386,6 +599,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          business_id?: string | null
           date?: string
           id?: string
           note?: string | null
@@ -406,6 +620,7 @@ export type Database = {
       }
       shop_suppliers: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
           name: string
@@ -413,6 +628,7 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id: string
           name: string
@@ -420,6 +636,7 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
           name?: string

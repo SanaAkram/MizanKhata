@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import Toaster from "@/components/Toaster";
 
 export default async function AppLayout({
   children,
@@ -22,6 +23,7 @@ export default async function AppLayout({
       <main className="flex-1 px-5 pb-28 pt-4">{children}</main>
       <BottomNav />
       <ServiceWorkerRegister />
+      <Toaster />
     </div>
   );
 }

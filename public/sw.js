@@ -1,4 +1,4 @@
-/* Roznamcha service worker — minimal.
+/* MizanKhata service worker — minimal.
    No fetch caching. It exists to (a) let routine reminders carry action
    buttons and (b) route Done / Snooze / Skip taps back into the app.
    Real background Web Push can be layered on later without changing this. */
@@ -8,6 +8,44 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
+
+// Background reminder delivered by the routine-push edge function.
+self.addEventListener("push", (event) => {
+  let d = {};
+  try {
+    d = event.data ? event.data.json() : {};
+  } catch {
+    d = {};
+  }
+  const title = d.title || "MizanKhata";
+  const options = {
+    body: d.body || "",
+    tag: d.tag || "mizankhata",
+    renotify: true,
+    requireInteraction: true,
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    data: {
+      itemId: d.itemId || "",
+      dateKey: d.dateKey || "",
+      url: d.url || "/routine",
+    },
+    actions:
+      d.kind === "interval"
+        ? [
+            { action: "plus", title: "+1" },
+            { action: "snooze", title: "Snooze 15m" },
+          ]
+        : [
+            { action: "done", title: "Done" },
+            { action: "snooze", title: "Snooze 15m" },
+          ],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// The push service rotated the subscription; the app re-subscribes on next open.
+self.addEventListener("pushsubscriptionchange", () => {});
 
 self.addEventListener("notificationclick", (event) => {
   const action = event.action || "open";

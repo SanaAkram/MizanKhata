@@ -8,6 +8,26 @@ export type RoutineLog =
 export type RoutineCategory = "prayer" | "work" | "health" | "other";
 export type RoutineStatus = "pending" | "done" | "missed" | "skipped";
 
+/** "scheduled" = fixed time of day. "interval" = repeats every N minutes. */
+export type RoutineKind = "scheduled" | "interval";
+
+/** Units for a countable interval item's daily target. */
+export const COUNT_UNITS = [
+  "glass",
+  "litre",
+  "ml",
+  "cup",
+  "bottle",
+  "dose",
+  "rep",
+  "time",
+] as const;
+export type CountUnit = (typeof COUNT_UNITS)[number];
+
+export function isInterval(i: RoutineItem): boolean {
+  return i.kind === "interval";
+}
+
 export const CATEGORY_LABEL: Record<RoutineCategory, string> = {
   prayer: "Prayer",
   work: "Work",

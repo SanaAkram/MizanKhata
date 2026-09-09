@@ -76,6 +76,39 @@ export async function clearLog(
   if (error) throw error;
 }
 
+/**
+ * Add `delta` to an interval item's daily count (e.g. +1 glass of water).
+ * Marks the row `done` once it reaches `target` (0 target => stays pending).
+ */
+export async function bumpCount(
+  db: DB,
+  dateKey: string,
+  itemId: string,
+  delta: number,
+  target: number,
+): Promise<number> {
+  const id = logId(dateKey, itemId);
+  const { data: existing } = await db
+    .from("shop_routine_log")
+    .select("count")
+    .eq("id", id)
+    .maybeSingle();
+  const next = Math.max(0, Number(existing?.count ?? 0) + delta);
+  const { error } = await db.from("shop_routine_log").upsert(
+    {
+      id,
+      date: dateKey,
+      item_id: itemId,
+      count: next,
+      status: target > 0 && next >= target ? "done" : "pending",
+      responded_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
+  if (error) throw error;
+  return next;
+}
+
 export async function insertItems(
   db: DB,
   items: ItemInsert[],

@@ -38,9 +38,10 @@ export function dayRangeIso(key: string): { from: string; to: string } {
 }
 
 /** Minutes since local midnight for a "HH:MM[:SS]" string. */
-export function minutesOfDay(time: string): number {
+export function minutesOfDay(time: string | null | undefined): number {
+  if (!time) return 0;
   const [h, m] = time.split(":").map(Number);
-  return h * 60 + (m || 0);
+  return (h || 0) * 60 + (m || 0);
 }
 
 /** Minutes since local midnight for a Date. */

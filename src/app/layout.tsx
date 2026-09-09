@@ -16,11 +16,11 @@ const sans = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Roznamcha",
+  title: "MizanKhata",
   description: "Work timer and daily routine — a personal daybook.",
-  applicationName: "Roznamcha",
+  applicationName: "MizanKhata",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Roznamcha" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "MizanKhata" },
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
 };
 

@@ -1,12 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { toast } from "@/lib/toast";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { deleteItem, upsertItem } from "@/lib/routine/db";
 import { blankItem, defaultItems } from "@/lib/routine/defaults";
-import { CATEGORY_LABEL, type RoutineCategory } from "@/lib/routine/types";
+import {
+  CATEGORY_LABEL,
+  COUNT_UNITS,
+  type RoutineCategory,
+} from "@/lib/routine/types";
+import {
+  disablePush,
+  enablePush,
+  pushState,
+  type PushState,
+} from "@/lib/routine/push";
+import {
+  getSound,
+  playReminderSound,
+  setSound,
+  SOUND_OPTIONS,
+  type SoundName,
+} from "@/lib/routine/sound";
 import type { Database } from "@/lib/database.types";
 
 type Row = Database["public"]["Tables"]["shop_routine_items"]["Insert"] & {
@@ -24,13 +42,21 @@ function toRow(
     id: i.id,
     label: i.label,
     category: i.category,
-    at_time: i.at_time.slice(0, 5),
+    kind: i.kind,
+    at_time: i.at_time ? i.at_time.slice(0, 5) : "09:00",
     window_min: i.window_min,
+    interval_min: i.interval_min ?? 120,
+    active_from: (i.active_from ?? "07:00").slice(0, 5),
+    active_to: (i.active_to ?? "22:00").slice(0, 5),
+    target_count: i.target_count ?? 0,
+    count_unit: i.count_unit ?? "glass",
     days: i.days ?? [0, 1, 2, 3, 4, 5, 6],
     sort: i.sort,
     enabled: i.enabled,
   };
 }
+
+const HOUR_OPTS = [0.5, 1, 1.5, 2, 3, 4, 6, 8];
 
 export default function RoutineSettingsClient({
   initialItems,
@@ -85,12 +111,21 @@ export default function RoutineSettingsClient({
       let order = 0;
       for (const row of rows) {
         order += 10;
+        const isInt = row.kind === "interval";
         await upsertItem(supabase, {
           id: row.id!,
           label: row.label.trim() || "Untitled",
           category: row.category,
-          at_time: row.at_time,
-          window_min: Math.max(5, Number(row.window_min) || 60),
+          kind: isInt ? "interval" : "scheduled",
+          at_time: isInt ? null : row.at_time || "09:00",
+          window_min: isInt ? 0 : Math.max(5, Number(row.window_min) || 60),
+          interval_min: isInt
+            ? Math.max(15, Number(row.interval_min) || 120)
+            : null,
+          active_from: row.active_from || "07:00",
+          active_to: row.active_to || "22:00",
+          target_count: isInt ? Math.max(0, Number(row.target_count) || 0) : 0,
+          count_unit: isInt ? row.count_unit || "glass" : null,
           days: row.days.length ? row.days : [0, 1, 2, 3, 4, 5, 6],
           sort: order,
           enabled: row.enabled ?? true,
@@ -99,7 +134,7 @@ export default function RoutineSettingsClient({
       router.push("/routine");
       router.refresh();
     } catch {
-      alert("Could not save. Check your connection and try again.");
+      toast("Could not save. Check your connection and try again.", "error");
       setSaving(false);
     }
   }
@@ -109,6 +144,8 @@ export default function RoutineSettingsClient({
       <Link href="/routine" className="text-sm text-muted">
         ‹ Back to routine
       </Link>
+
+      <ReminderSettings supabase={supabase} />
 
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-line bg-card p-5 text-center">
@@ -144,31 +181,111 @@ export default function RoutineSettingsClient({
               </button>
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <input
-                type="time"
-                value={row.at_time}
-                onChange={(e) => patch(idx, { at_time: e.target.value })}
-                className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
-              />
-              <label className="flex items-center gap-1 text-xs text-muted">
+            <div className="mt-2 flex gap-1 rounded-lg border border-line p-1">
+              {(["scheduled", "interval"] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => patch(idx, { kind: k })}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-semibold ${
+                    (row.kind ?? "scheduled") === k
+                      ? "bg-forest text-paper"
+                      : "text-muted"
+                  }`}
+                >
+                  {k === "scheduled" ? "Fixed time" : "Repeating"}
+                </button>
+              ))}
+            </div>
+
+            {(row.kind ?? "scheduled") === "interval" ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                <label className="flex items-center gap-1">
+                  every
+                  <select
+                    value={String((row.interval_min ?? 120) / 60)}
+                    onChange={(e) =>
+                      patch(idx, {
+                        interval_min: Math.round(Number(e.target.value) * 60),
+                      })
+                    }
+                    className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                  >
+                    {HOUR_OPTS.map((h) => (
+                      <option key={h} value={h}>
+                        {h < 1 ? `${h * 60}m` : `${h}h`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-1">
+                  target
+                  <input
+                    type="number"
+                    min={0}
+                    value={row.target_count ?? 0}
+                    onChange={(e) =>
+                      patch(idx, { target_count: Number(e.target.value) })
+                    }
+                    className="w-14 rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                  />
+                </label>
+                <select
+                  value={row.count_unit ?? "glass"}
+                  onChange={(e) => patch(idx, { count_unit: e.target.value })}
+                  className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                >
+                  {COUNT_UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="time"
+                    value={row.active_from ?? "07:00"}
+                    onChange={(e) =>
+                      patch(idx, { active_from: e.target.value })
+                    }
+                    className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                  />
+                  –
+                  <input
+                    type="time"
+                    value={row.active_to ?? "22:00"}
+                    onChange={(e) => patch(idx, { active_to: e.target.value })}
+                    className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <input
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={row.window_min}
-                  onChange={(e) =>
-                    patch(idx, { window_min: Number(e.target.value) })
-                  }
-                  className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                  type="time"
+                  value={row.at_time ?? "09:00"}
+                  onChange={(e) => patch(idx, { at_time: e.target.value })}
+                  className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
                 />
-                min window
-              </label>
+                <label className="flex items-center gap-1 text-xs text-muted">
+                  <input
+                    type="number"
+                    min={5}
+                    step={5}
+                    value={row.window_min}
+                    onChange={(e) =>
+                      patch(idx, { window_min: Number(e.target.value) })
+                    }
+                    className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                  />
+                  min window
+                </label>
+              </div>
+            )}
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <select
                 value={row.category}
-                onChange={(e) =>
-                  patch(idx, { category: e.target.value })
-                }
+                onChange={(e) => patch(idx, { category: e.target.value })}
                 className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
               >
                 {CATS.map((c) => (
@@ -224,5 +341,101 @@ export default function RoutineSettingsClient({
         {saving ? "Saving…" : "Save routine"}
       </button>
     </div>
+  );
+}
+
+function ReminderSettings({
+  supabase,
+}: {
+  supabase: ReturnType<typeof createClient>;
+}) {
+  const [push, setPush] = useState<PushState>("off");
+  const [sound, setSoundState] = useState<SoundName>("chime");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    void pushState().then(setPush);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSoundState(getSound());
+  }, []);
+
+  async function toggle() {
+    setBusy(true);
+    setMsg("");
+    if (push === "on") {
+      await disablePush(supabase);
+      setPush("off");
+    } else {
+      const r = await enablePush(supabase);
+      if (r === "on") setPush("on");
+      else if (r === "denied") setMsg("Notifications are blocked in the browser.");
+      else if (r === "unsupported")
+        setMsg("This browser can't do background reminders.");
+      else if (r === "no-key") setMsg("Push key not configured yet.");
+      else setMsg("Couldn't turn it on — try again.");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <section className="rounded-2xl border border-line bg-card p-4">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+        Reminders
+      </h2>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Background reminders</p>
+          <p className="text-xs text-muted">
+            Get nudged even when the app is closed. On iPhone, add MizanKhata to
+            your Home Screen first.
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={busy || push === "unsupported" || push === "no-key"}
+          className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold ${
+            push === "on"
+              ? "bg-forest text-paper"
+              : "border border-line text-muted"
+          } disabled:opacity-50`}
+        >
+          {busy ? "…" : push === "on" ? "On" : "Turn on"}
+        </button>
+      </div>
+      {msg ? <p className="mt-2 text-xs text-danger">{msg}</p> : null}
+
+      <div className="mt-4">
+        <p className="text-sm font-semibold text-ink">In-app sound</p>
+        <p className="text-xs text-muted">
+          Plays when a reminder fires while the app is open.
+        </p>
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            value={sound}
+            onChange={(e) => {
+              const v = e.target.value as SoundName;
+              setSoundState(v);
+              setSound(v);
+              playReminderSound(v);
+            }}
+            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-forest"
+          >
+            {SOUND_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => playReminderSound(sound)}
+            className="rounded-lg border border-line px-3 py-2 text-xs font-semibold text-muted"
+          >
+            Test
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
