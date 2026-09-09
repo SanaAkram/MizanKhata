@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
 import {
+  cashInHand,
+  fetchCashbook,
   fetchCustomers,
   fetchKhataTx,
   fetchSupplierTx,
   fetchSuppliers,
+  type Cash,
   type Customer,
   type KhataTx,
   type Supplier,
@@ -23,16 +26,21 @@ export default async function LedgerPage() {
   let suppliers: Supplier[] = [];
   let khataTx: KhataTx[] = [];
   let supplierTx: SupplierTx[] = [];
+  let cash: Cash[] = [];
   try {
-    [customers, suppliers, khataTx, supplierTx] = await Promise.all([
+    [customers, suppliers, khataTx, supplierTx, cash] = await Promise.all([
       fetchCustomers(supabase, bid),
       fetchSuppliers(supabase, bid),
       fetchKhataTx(supabase, bid),
       fetchSupplierTx(supabase, bid),
+      fetchCashbook(supabase, bid),
     ]);
   } catch {
     /* render empty */
   }
+
+  const cashHand = cashInHand(cash.filter((c) => (c.method ?? "cash") === "cash"));
+  const bankBal = cashInHand(cash.filter((c) => c.method === "bank"));
 
   return (
     <LedgerClient
@@ -41,6 +49,8 @@ export default async function LedgerPage() {
       suppliers={suppliers}
       khataTx={khataTx}
       supplierTx={supplierTx}
+      cashHand={cashHand}
+      bankBal={bankBal}
     />
   );
 }

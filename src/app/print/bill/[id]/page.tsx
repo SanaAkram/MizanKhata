@@ -41,11 +41,15 @@ export default async function BillPrintPage({
   }
 
   const brand = active?.logo_color || "#2f4a34";
+  const muted = "#6b7266";
   const customer = sale.customer_id
     ? customers.find((c) => c.id === sale.customer_id)
     : null;
-  const newBal = customer ? customerBalance(khataTx, customer.id) : 0;
-  const prevBal = newBal - Number(sale.credit_amount || 0);
+  const custName = sale.customer_name || customer?.name || null;
+  const paid = Number(sale.paid_cash) || 0;
+  const billCredit = Number(sale.credit_amount) || 0;
+  const newBal = customer ? customerBalance(khataTx, customer.id) : null;
+  const prevBal = newBal == null ? null : newBal - billCredit;
 
   return (
     <main
@@ -72,10 +76,10 @@ export default async function BillPrintPage({
           {active?.name ?? "My Shop"}
         </div>
         {active?.phone ? (
-          <div style={{ fontSize: 12, color: "#6b7266" }}>{active.phone}</div>
+          <div style={{ fontSize: 12, color: muted }}>{active.phone}</div>
         ) : null}
         {active?.address ? (
-          <div style={{ fontSize: 12, color: "#6b7266" }}>{active.address}</div>
+          <div style={{ fontSize: 12, color: muted }}>{active.address}</div>
         ) : null}
       </div>
 
@@ -91,21 +95,24 @@ export default async function BillPrintPage({
         }}
       >
         <div>
-          <div style={{ fontWeight: 700, color: brand }}>Bill To</div>
-          <div>{sale.customer_name || "Walk-in customer"}</div>
+          <div style={{ fontWeight: 700, color: brand }}>Bill to</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>
+            {custName || "Walk-in / cash customer"}
+          </div>
           {customer?.phone ? <div>{customer.phone}</div> : null}
+          {!customer ? (
+            <div style={{ color: muted }}>Not linked to a ledger account</div>
+          ) : null}
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 700, color: brand }}>
-            Bill #{idx + 1}
-          </div>
+          <div style={{ fontWeight: 700, color: brand }}>Bill #{idx + 1}</div>
           <div>{new Date(sale.time).toLocaleString()}</div>
         </div>
       </div>
 
       <table style={{ width: "100%", fontSize: 13, marginTop: 10 }}>
         <thead>
-          <tr style={{ color: "#6b7266", textAlign: "left" }}>
+          <tr style={{ color: muted, textAlign: "left" }}>
             <th>Item</th>
             <th style={{ textAlign: "right" }}>Qty</th>
             <th style={{ textAlign: "right" }}>Rate</th>
@@ -139,43 +146,53 @@ export default async function BillPrintPage({
           bold
           color={brand}
         />
-        {Number(sale.credit_amount) > 0 ? (
-          <>
-            <Row label="Paid" value={fmtRs(Number(sale.paid_cash))} />
-            <Row label="This bill (credit)" value={fmtRs(Number(sale.credit_amount))} />
-          </>
-        ) : null}
+        <Row label="Paid now" value={fmtRs(paid)} />
+        {billCredit > 0 ? (
+          <Row label="Unpaid on this bill" value={fmtRs(billCredit)} bold />
+        ) : (
+          <Row label="Status" value="Paid in full" color={brand} />
+        )}
       </div>
 
-      {customer ? (
-        <div
-          style={{
-            marginTop: 10,
-            padding: 10,
-            border: `1px solid ${brand}33`,
-            borderRadius: 8,
-            fontSize: 12,
-          }}
-        >
-          <Row label={`Previous balance`} value={fmtRs(prevBal)} />
-          <Row
-            label={`New balance`}
-            value={fmtRs(newBal)}
-            bold
-            color={brand}
-          />
-        </div>
-      ) : null}
+      <div
+        style={{
+          marginTop: 10,
+          padding: 10,
+          border: `1px solid ${brand}33`,
+          borderRadius: 8,
+          fontSize: 12,
+          background: `${brand}0a`,
+        }}
+      >
+        {customer ? (
+          <>
+            <Row label="Previous balance" value={fmtRs(prevBal ?? 0)} />
+            {billCredit > 0 ? (
+              <Row label="This bill (unpaid)" value={`+ ${fmtRs(billCredit)}`} />
+            ) : null}
+            <Row
+              label={`Total due from ${customer.name}`}
+              value={fmtRs(newBal ?? 0)}
+              bold
+              color={brand}
+            />
+          </>
+        ) : (
+          <div style={{ color: muted }}>
+            Walk-in / cash sale — this bill is not recorded against any
+            customer&apos;s ledger. Open it in MizanKhata and use{" "}
+            <b>Edit bill</b> to attach a customer.
+          </div>
+        )}
+      </div>
 
       {sale.note ? (
-        <p style={{ fontSize: 12, color: "#6b7266", marginTop: 10 }}>
-          {sale.note}
-        </p>
+        <p style={{ fontSize: 12, color: muted, marginTop: 10 }}>{sale.note}</p>
       ) : null}
       <p
         style={{
           fontSize: 11,
-          color: "#6b7266",
+          color: muted,
           textAlign: "center",
           marginTop: 16,
         }}
@@ -202,6 +219,7 @@ function Row({
       style={{
         display: "flex",
         justifyContent: "space-between",
+        gap: 12,
         fontSize: 13,
         fontWeight: bold ? 700 : 400,
         color: bold && color ? color : undefined,
@@ -209,7 +227,7 @@ function Row({
       }}
     >
       <span>{label}</span>
-      <span>{value}</span>
+      <span style={{ whiteSpace: "nowrap" }}>{value}</span>
     </div>
   );
 }

@@ -8,21 +8,23 @@ import {
   LedgerIcon,
   ShopIcon,
 } from "@/components/icons";
+import { useT } from "@/lib/i18n";
 
 const TABS = [
-  { href: "/work", label: "Work", Icon: ClockIcon },
-  { href: "/routine", label: "Routine", Icon: CalendarIcon },
-  { href: "/ledger", label: "Ledger", Icon: LedgerIcon },
-  { href: "/shop", label: "Shop", Icon: ShopIcon },
+  { href: "/work", key: "nav.work", label: "Work", Icon: ClockIcon },
+  { href: "/routine", key: "nav.routine", label: "Routine", Icon: CalendarIcon },
+  { href: "/ledger", key: "nav.ledger", label: "Ledger", Icon: LedgerIcon },
+  { href: "/shop", key: "nav.shop", label: "Shop", Icon: ShopIcon },
 ] as const;
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-[480px] border-t border-line bg-paper/95 backdrop-blur">
       <div className="flex w-full pb-[env(safe-area-inset-bottom)]">
-        {TABS.map(({ href, label, Icon }) => {
+        {TABS.map(({ href, key, label, Icon }) => {
           const active =
             pathname === href || pathname.startsWith(href + "/");
           return (
@@ -35,7 +37,7 @@ export default function BottomNav() {
               }`}
             >
               <Icon className="h-6 w-6" />
-              {label}
+              {t(key, label)}
             </Link>
           );
         })}

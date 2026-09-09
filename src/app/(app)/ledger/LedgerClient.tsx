@@ -18,6 +18,7 @@ import {
   type SupplierTx,
 } from "@/lib/khata/db";
 import { seedKhata } from "@/lib/khata/seed";
+import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 
@@ -27,6 +28,8 @@ type Props = {
   suppliers: Supplier[];
   khataTx: KhataTx[];
   supplierTx: SupplierTx[];
+  cashHand: number;
+  bankBal: number;
 };
 
 type Filter = "all" | "customer" | "supplier";
@@ -37,9 +40,12 @@ export default function LedgerClient({
   suppliers,
   khataTx,
   supplierTx,
+  cashHand,
+  bankBal,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,6 +62,9 @@ export default function LedgerClient({
   const willGive = parties
     .filter((p) => p.kind === "supplier" && p.balance > 0)
     .reduce((s, p) => s + p.balance, 0);
+  const liquid = cashHand + bankBal;
+  // Net worth on the books: what customers owe − what you owe suppliers + cash/bank.
+  const net = willGet - willGive + liquid;
 
   const shown = parties.filter((p) => {
     if (filter !== "all" && p.kind !== filter) return false;
@@ -118,7 +127,7 @@ export default function LedgerClient({
       <section className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            You&apos;ll get
+            {t("ledger.youllGet", "You'll get")}
           </p>
           <p className="numeric mt-1 text-xl font-semibold text-ok">
             {fmtRs(willGet)}
@@ -126,7 +135,7 @@ export default function LedgerClient({
         </div>
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            You&apos;ll give
+            {t("ledger.youllGive", "You'll give")}
           </p>
           <p className="numeric mt-1 text-xl font-semibold text-danger">
             {fmtRs(willGive)}
@@ -134,16 +143,57 @@ export default function LedgerClient({
         </div>
       </section>
 
+      <div className="rounded-2xl border border-line bg-card p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          {t("ledger.netPosition", "Net position")}
+        </p>
+        <div className="mt-2 flex flex-col gap-1 text-xs text-muted">
+          <div className="flex justify-between">
+            <span>{t("ledger.customersOweYou", "Customers owe you")}</span>
+            <span className="numeric text-ok">+ {fmtRs(willGet)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{t("ledger.youOweSuppliers", "You owe suppliers")}</span>
+            <span className="numeric text-danger">− {fmtRs(willGive)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{t("ledger.cashBankInHand", "Cash & bank in hand")}</span>
+            <span
+              className={`numeric ${liquid < 0 ? "text-danger" : "text-ok"}`}
+            >
+              {liquid < 0 ? "− " : "+ "}
+              {fmtRs(Math.abs(liquid))}
+            </span>
+          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
+          <span className="text-sm font-semibold text-ink">
+            {t("ledger.net", "Net")}
+          </span>
+          <span
+            className={`numeric text-lg font-semibold ${
+              net >= 0 ? "text-ok" : "text-danger"
+            }`}
+          >
+            {fmtRs(net)}
+          </span>
+        </div>
+      </div>
+
       <div className="flex gap-1 rounded-xl border border-line bg-card p-1">
         {(["all", "customer", "supplier"] as Filter[]).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold capitalize ${
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
               filter === f ? "bg-forest text-paper" : "text-muted"
             }`}
           >
-            {f === "all" ? "All" : f + "s"}
+            {f === "all"
+              ? t("ledger.all", "All")
+              : f === "customer"
+                ? t("ledger.customers", "Customers")
+                : t("ledger.suppliers", "Suppliers")}
           </button>
         ))}
       </div>
@@ -167,7 +217,9 @@ export default function LedgerClient({
                   {p.name}
                 </span>
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  {p.kind}
+                  {p.kind === "customer"
+                    ? t("ledger.customers", "Customer").replace(/s$/, "")
+                    : t("ledger.suppliers", "Supplier").replace(/s$/, "")}
                 </span>
               </span>
               <span
@@ -179,7 +231,7 @@ export default function LedgerClient({
                     : "text-muted"
                 }`}
               >
-                {p.balance > 0 ? fmtRs(p.balance) : "Settled"}
+                {p.balance > 0 ? fmtRs(p.balance) : t("ledger.settled", "Settled")}
               </span>
             </Link>
           </li>

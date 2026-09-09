@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SignOutButton from "./SignOutButton";
+import LanguagePicker from "./LanguagePicker";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -16,6 +17,8 @@ export default async function SettingsPage() {
         </h2>
         <p className="mt-2 text-sm text-ink">{user?.email ?? "—"}</p>
       </section>
+
+      <LanguagePicker />
 
       <section className="rounded-2xl border border-line bg-card p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
