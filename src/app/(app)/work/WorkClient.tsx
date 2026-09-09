@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -98,7 +99,7 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
       });
     } catch {
       setSessions((prev) => prev.filter((x) => x.id !== id));
-      alert("Could not save that session. Check your connection and try again.");
+      toast("Could not save that session. Check your connection and try again.", "error");
     }
   }
 
@@ -121,7 +122,7 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
       await deleteSession(supabase, id);
     } catch {
       setSessions(prev);
-      alert("Could not delete that session.");
+      toast("Could not delete that session.", "error");
     }
   }
 

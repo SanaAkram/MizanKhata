@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -304,7 +305,7 @@ function RestockForm({
       });
       onDone();
     } catch {
-      alert("Could not save the restock.");
+      toast("Could not save the restock.", "error");
       setBusy(false);
     }
   }

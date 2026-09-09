@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -201,7 +202,7 @@ export default function RoutineClient({
       await insertItems(supabase, defaultItems());
       router.refresh();
     } catch {
-      alert("Could not create the starter routine. Try again.");
+      toast("Could not create the starter routine. Try again.", "error");
       setSeeding(false);
     }
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -230,7 +231,7 @@ function AddCashForm({
       });
       onDone();
     } catch {
-      alert("Could not save the entry.");
+      toast("Could not save the entry.", "error");
       setBusy(false);
     }
   }

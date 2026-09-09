@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import {
   setActiveBusinessCookie,
   type Business,
 } from "@/lib/khata/business";
+import Sheet from "@/components/Sheet";
 
 export default function ShopSettingsClient({
   list,
@@ -28,6 +30,9 @@ export default function ShopSettingsClient({
   const [logoUrl, setLogoUrl] = useState(active?.logo_url ?? "");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [newBizOpen, setNewBizOpen] = useState(false);
+  const [newBizName, setNewBizName] = useState("");
+  const [creating, setCreating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cls =
@@ -40,12 +45,21 @@ export default function ShopSettingsClient({
   }
 
   async function addBusiness() {
-    const nm = prompt("New business name?");
-    if (!nm) return;
-    const b = await createBusiness(supabase, nm);
-    if (b) {
-      setActiveBusinessCookie(b.id);
-      router.refresh();
+    if (!newBizName.trim() || creating) return;
+    setCreating(true);
+    try {
+      const b = await createBusiness(supabase, newBizName.trim());
+      if (b) {
+        setActiveBusinessCookie(b.id);
+        setNewBizOpen(false);
+        setNewBizName("");
+        router.push("/shop");
+        router.refresh();
+      }
+    } catch {
+      toast("Could not create the business.", "error");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -67,7 +81,7 @@ export default function ShopSettingsClient({
       setLogoUrl(url);
       router.refresh();
     } catch {
-      alert("Could not upload the logo.");
+      toast("Could not upload the logo.", "error");
     } finally {
       setUploading(false);
     }
@@ -85,7 +99,7 @@ export default function ShopSettingsClient({
       router.push("/shop");
       router.refresh();
     } catch {
-      alert("Could not save. Try again.");
+      toast("Could not save. Try again.", "error");
       setBusy(false);
     }
   }
@@ -116,13 +130,39 @@ export default function ShopSettingsClient({
             </button>
           ))}
           <button
-            onClick={addBusiness}
+            onClick={() => setNewBizOpen(true)}
             className="rounded-xl border border-dashed border-line px-4 py-2.5 text-sm font-semibold text-muted"
           >
             + New business
           </button>
         </div>
       </section>
+
+      <Sheet
+        open={newBizOpen}
+        title="New business"
+        onClose={() => setNewBizOpen(false)}
+      >
+        <div className="flex flex-col gap-3">
+          <input
+            value={newBizName}
+            onChange={(e) => setNewBizName(e.target.value)}
+            placeholder="Business name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void addBusiness();
+            }}
+            className={cls}
+          />
+          <button
+            onClick={addBusiness}
+            disabled={!newBizName.trim() || creating}
+            className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
+          >
+            {creating ? "Creating…" : "Create business"}
+          </button>
+        </div>
+      </Sheet>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">

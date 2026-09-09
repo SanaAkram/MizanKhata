@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -133,7 +134,7 @@ export default function RoutineSettingsClient({
       router.push("/routine");
       router.refresh();
     } catch {
-      alert("Could not save. Check your connection and try again.");
+      toast("Could not save. Check your connection and try again.", "error");
       setSaving(false);
     }
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -567,7 +568,7 @@ function EditProduct({
             });
             onDone();
           } catch {
-            alert("Could not update.");
+            toast("Could not update.", "error");
             setBusy(false);
           }
         }}

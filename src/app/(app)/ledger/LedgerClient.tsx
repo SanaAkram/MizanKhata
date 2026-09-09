@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -70,7 +71,7 @@ export default function LedgerClient({
       await seedKhata(supabase, businessId);
       router.refresh();
     } catch {
-      alert("Could not load the sample data.");
+      toast("Could not load the sample data.", "error");
       setBusy(false);
     }
   }
@@ -282,7 +283,7 @@ function AddPartySheet({
       setOpening("");
       onDone();
     } catch {
-      alert("Could not add the party.");
+      toast("Could not add the party.", "error");
     } finally {
       setSaving(false);
     }
