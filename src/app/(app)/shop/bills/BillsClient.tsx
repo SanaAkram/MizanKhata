@@ -240,12 +240,14 @@ export default function BillsClient({
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-[11px] text-muted">
-                      {fmtEntryDate(s.time)}
-                      {s.customer_name ? ` · ${s.customer_name}` : ""}
+                    <span className="min-w-0 truncate text-[11px] text-muted">
+                      {fmtEntryDate(s.time)} ·{" "}
+                      {s.customer_name ||
+                        customers.find((c) => c.id === s.customer_id)?.name ||
+                        "Walk-in"}
                     </span>
                     <span
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${b.cls}`}
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${b.cls}`}
                     >
                       {b.text}
                     </span>
@@ -379,18 +381,23 @@ export default function BillsClient({
             </div>
 
             <div className="flex items-start justify-between border-y border-line py-2 text-xs">
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold" style={{ color: brand }}>
-                  Bill To
+                  Bill to
                 </p>
-                <p className="text-ink">
-                  {open.customer_name || "Walk-in customer"}
+                <p className="truncate text-sm font-semibold text-ink">
+                  {open.customer_name || openCust?.name || "Walk-in / cash customer"}
                 </p>
                 {openCust?.phone ? (
                   <p className="text-muted">{openCust.phone}</p>
                 ) : null}
+                {!openCust ? (
+                  <p className="text-muted">Not linked to a ledger account</p>
+                ) : null}
               </div>
-              <p className="text-right text-muted">{fmtEntryDate(open.time)}</p>
+              <p className="shrink-0 text-right text-muted">
+                {fmtEntryDate(open.time)}
+              </p>
             </div>
 
             <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 pt-1 text-xs">
@@ -430,27 +437,57 @@ export default function BillsClient({
                 {fmtRs(Number(open.total))}
               </span>
             </div>
+            <div className="flex items-center justify-between text-xs text-muted">
+              <span>Paid now</span>
+              <span className="numeric">{fmtRs(Number(open.paid_cash))}</span>
+            </div>
             {Number(open.credit_amount) > 0 ? (
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span>Paid {fmtRs(Number(open.paid_cash))}</span>
-                <span>On credit {fmtRs(Number(open.credit_amount))}</span>
+              <div className="flex items-center justify-between text-xs font-semibold text-danger">
+                <span>Unpaid on this bill</span>
+                <span className="numeric">
+                  {fmtRs(Number(open.credit_amount))}
+                </span>
               </div>
-            ) : null}
+            ) : (
+              <div className="flex items-center justify-between text-xs font-semibold text-ok">
+                <span>Status</span>
+                <span>Paid in full</span>
+              </div>
+            )}
 
-            {openCust ? (
-              <div className="rounded-lg border border-line p-2 text-xs">
-                <div className="flex justify-between text-muted">
-                  <span>Previous balance</span>
-                  <span className="numeric">{fmtRs(prevBal)}</span>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <span>New balance</span>
-                  <span className="numeric" style={{ color: brand }}>
-                    {fmtRs(newBal)}
-                  </span>
-                </div>
-              </div>
-            ) : null}
+            <div
+              className="rounded-lg border p-2 text-xs"
+              style={{ borderColor: `${brand}33`, background: `${brand}0a` }}
+            >
+              {openCust ? (
+                <>
+                  <div className="flex justify-between text-muted">
+                    <span>Previous balance</span>
+                    <span className="numeric">{fmtRs(prevBal)}</span>
+                  </div>
+                  {Number(open.credit_amount) > 0 ? (
+                    <div className="flex justify-between text-muted">
+                      <span>This bill (unpaid)</span>
+                      <span className="numeric">
+                        + {fmtRs(Number(open.credit_amount))}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between font-semibold">
+                    <span>Total due from {openCust.name}</span>
+                    <span className="numeric" style={{ color: brand }}>
+                      {fmtRs(newBal)}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted">
+                  Walk-in / cash sale — not recorded on any customer&apos;s
+                  ledger. Use <span className="font-semibold">Edit bill</span> to
+                  attach a customer.
+                </p>
+              )}
+            </div>
 
             {open.note ? (
               <p className="whitespace-pre-line text-xs text-muted">
