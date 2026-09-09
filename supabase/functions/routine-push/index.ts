@@ -1,4 +1,4 @@
-// Roznamcha — background routine reminders. Invoked every minute by pg_cron.
+// MizanKhata — background routine reminders. Invoked every minute by pg_cron.
 // Auth: x-cron-secret header == CRON_SECRET function secret.
 //
 // Function secrets (Supabase → Edge Functions → Manage secrets):
@@ -16,7 +16,7 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
 const VAPID_PUBLIC_JWK = Deno.env.get("VAPID_PUBLIC_JWK") ?? "";
 const VAPID_PRIVATE_JWK = Deno.env.get("VAPID_PRIVATE_JWK") ?? "";
-const CONTACT = Deno.env.get("PUSH_CONTACT") ?? "mailto:admin@roznamcha.app";
+const CONTACT = Deno.env.get("PUSH_CONTACT") ?? "mailto:admin@mizankhata.app";
 
 const RENAG_EVERY = 10;
 const GRACE_AFTER_WINDOW = 60;

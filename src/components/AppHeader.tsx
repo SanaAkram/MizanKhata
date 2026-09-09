@@ -30,7 +30,7 @@ export default function AppHeader() {
   const title =
     TITLES[pathname] ??
     PREFIXES.find(([p]) => pathname.startsWith(p))?.[1] ??
-    "Roznamcha";
+    "MizanKhata";
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper/95 px-5 py-3.5 backdrop-blur">

@@ -4,19 +4,20 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
 import type { Sale, SaleItem } from "@/lib/khata/shop-db";
-import type { ShopProfile } from "@/lib/khata/profile";
+import type { Business } from "@/lib/khata/business";
 import Sheet from "@/components/Sheet";
+import { billText, shareBill, speakBill } from "@/lib/khata/bill-share";
 
 type Numbered = Sale & { no: number };
 
 export default function BillsClient({
   sales,
   items,
-  profile,
+  business,
 }: {
   sales: Sale[];
   items: SaleItem[];
-  profile: ShopProfile | null;
+  business: Business | null;
 }) {
   const [open, setOpen] = useState<Numbered | null>(null);
   const [q, setQ] = useState("");
@@ -136,14 +137,22 @@ export default function BillsClient({
         {open ? (
           <div className="flex flex-col gap-2">
             <div className="text-center">
-              <p className="text-sm font-semibold text-ink">
-                {profile?.shop_name ?? "My Shop"}
-              </p>
-              {profile?.phone ? (
-                <p className="text-[11px] text-muted">{profile.phone}</p>
+              {business?.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={business.logo_url}
+                  alt=""
+                  className="mx-auto mb-1 h-12 w-auto object-contain"
+                />
               ) : null}
-              {profile?.address ? (
-                <p className="text-[11px] text-muted">{profile.address}</p>
+              <p className="text-sm font-semibold text-ink">
+                {business?.name ?? "My Shop"}
+              </p>
+              {business?.phone ? (
+                <p className="text-[11px] text-muted">{business.phone}</p>
+              ) : null}
+              {business?.address ? (
+                <p className="text-[11px] text-muted">{business.address}</p>
               ) : null}
             </div>
             <p className="text-center text-xs text-muted">
@@ -191,14 +200,55 @@ export default function BillsClient({
             {open.note ? (
               <p className="text-xs text-muted">{open.note}</p>
             ) : null}
-            <a
-              href={`/print/bill/${open.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-forest"
-            >
-              Print / PDF
-            </a>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <a
+                href={`/print/bill/${open.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-forest"
+              >
+                Print / PDF
+              </a>
+              <button
+                onClick={() =>
+                  void shareBill(
+                    billText(business?.name ?? "My Shop", open, open.no, openItems),
+                    open.customer_name ? undefined : undefined,
+                  )
+                }
+                className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-forest"
+              >
+                Share
+              </button>
+              <button
+                onClick={() =>
+                  speakBill(
+                    billText(
+                      business?.name ?? "My Shop",
+                      open,
+                      open.no,
+                      openItems,
+                    ),
+                  )
+                }
+                className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted"
+              >
+                Read aloud
+              </button>
+              <a
+                href={`sms:?body=${encodeURIComponent(
+                  billText(
+                    business?.name ?? "My Shop",
+                    open,
+                    open.no,
+                    openItems,
+                  ),
+                )}`}
+                className="rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-muted"
+              >
+                SMS
+              </a>
+            </div>
           </div>
         ) : null}
       </Sheet>

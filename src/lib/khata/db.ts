@@ -26,46 +26,66 @@ export type Party = {
 
 // ---- reads --------------------------------------------------------------
 
-export async function fetchCustomers(db: DB): Promise<Customer[]> {
+export async function fetchCustomers(
+  db: DB,
+  businessId: string,
+): Promise<Customer[]> {
   const { data, error } = await db
     .from("shop_customers")
     .select("*")
+    .eq("business_id", businessId)
     .order("name");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSuppliers(db: DB): Promise<Supplier[]> {
+export async function fetchSuppliers(
+  db: DB,
+  businessId: string,
+): Promise<Supplier[]> {
   const { data, error } = await db
     .from("shop_suppliers")
     .select("*")
+    .eq("business_id", businessId)
     .order("name");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchKhataTx(db: DB): Promise<KhataTx[]> {
+export async function fetchKhataTx(
+  db: DB,
+  businessId: string,
+): Promise<KhataTx[]> {
   const { data, error } = await db
     .from("shop_khata_tx")
     .select("*")
+    .eq("business_id", businessId)
     .order("date", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSupplierTx(db: DB): Promise<SupplierTx[]> {
+export async function fetchSupplierTx(
+  db: DB,
+  businessId: string,
+): Promise<SupplierTx[]> {
   const { data, error } = await db
     .from("shop_supplier_tx")
     .select("*")
+    .eq("business_id", businessId)
     .order("date", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchCashbook(db: DB): Promise<Cash[]> {
+export async function fetchCashbook(
+  db: DB,
+  businessId: string,
+): Promise<Cash[]> {
   const { data, error } = await db
     .from("shop_cashbook")
     .select("*")
+    .eq("business_id", businessId)
     .order("date", { ascending: false });
   if (error) throw error;
   return data ?? [];
@@ -133,6 +153,7 @@ export function buildParties(
 
 export async function addPartyTx(
   db: DB,
+  businessId: string,
   kind: PartyKind,
   partyId: string,
   row: {
@@ -147,6 +168,7 @@ export async function addPartyTx(
   if (kind === "customer") {
     const { error } = await db.from("shop_khata_tx").insert({
       id: row.id,
+      business_id: businessId,
       customer_id: partyId,
       type: row.type,
       amount: row.amount,
@@ -158,6 +180,7 @@ export async function addPartyTx(
   } else {
     const { error } = await db.from("shop_supplier_tx").insert({
       id: row.id,
+      business_id: businessId,
       supplier_id: partyId,
       type: row.type,
       amount: row.amount,
@@ -192,6 +215,7 @@ export async function deletePartyTx(
 
 export async function addCash(
   db: DB,
+  businessId: string,
   row: {
     id: string;
     type: "in" | "out";
@@ -207,6 +231,7 @@ export async function addCash(
 ): Promise<void> {
   const { error } = await db.from("shop_cashbook").insert({
     id: row.id,
+    business_id: businessId,
     type: row.type,
     amount: row.amount,
     note: row.note ?? null,
@@ -227,13 +252,17 @@ export async function deleteCash(db: DB, id: string): Promise<void> {
 
 export async function createParty(
   db: DB,
+  businessId: string,
   kind: PartyKind,
   row: { id: string; name: string; phone?: string | null },
 ): Promise<void> {
   const table = kind === "customer" ? "shop_customers" : "shop_suppliers";
-  const { error } = await db
-    .from(table)
-    .insert({ id: row.id, name: row.name, phone: row.phone ?? null });
+  const { error } = await db.from(table).insert({
+    id: row.id,
+    business_id: businessId,
+    name: row.name,
+    phone: row.phone ?? null,
+  });
   if (error) throw error;
 }
 

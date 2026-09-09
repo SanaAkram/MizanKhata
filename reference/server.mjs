@@ -44,5 +44,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`ridwan-shop-app dev server: http://localhost:${PORT}/`);
+  console.log(`mizankhata dev server: http://localhost:${PORT}/`);
 });

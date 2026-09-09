@@ -21,23 +21,29 @@ const iso = (daysAgo: number) =>
  * Loads Mubeen's Digikhata sample data (customers, suppliers, products, and
  * opening balances) for the signed-in user. Call only when the khata is empty.
  */
-export async function seedKhata(db: DB): Promise<{
+export async function seedKhata(
+  db: DB,
+  businessId: string,
+): Promise<{
   customers: number;
   suppliers: number;
   products: number;
 }> {
   const custRows = SEED_CUSTOMERS.map((c) => ({
     id: newId("c_"),
+    business_id: businessId,
     name: c.name,
     phone: c.phone ?? null,
   }));
   const supRows = SEED_SUPPLIERS.map((s) => ({
     id: newId("s_"),
+    business_id: businessId,
     name: s.name,
     phone: s.phone ?? null,
   }));
   const prodRows = SEED_PRODUCTS.map((p) => ({
     id: newId("p_"),
+    business_id: businessId,
     name: p.name,
     unit: p.unit,
     sale_price: p.salePrice,
@@ -56,6 +62,7 @@ export async function seedKhata(db: DB): Promise<{
   const khataTx = custRows
     .map((row, i) => ({
       id: newId("kt_"),
+      business_id: businessId,
       customer_id: row.id,
       type: "credit",
       amount: SEED_CUSTOMERS[i].balance,
@@ -76,6 +83,7 @@ export async function seedKhata(db: DB): Promise<{
     if (Math.abs(opening) > 0.005) {
       supTx.push({
         id: newId("st_"),
+        business_id: businessId,
         supplier_id: row.id,
         type: opening >= 0 ? "credit" : "payment",
         amount: Math.round(Math.abs(opening) * 100) / 100,
@@ -87,6 +95,7 @@ export async function seedKhata(db: DB): Promise<{
       SEED_BHAI_ENTRIES.forEach((e) => {
         supTx.push({
           id: newId("st_"),
+          business_id: businessId,
           supplier_id: row.id,
           type: e.type,
           amount: e.amount,

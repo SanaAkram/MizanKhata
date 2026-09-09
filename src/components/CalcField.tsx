@@ -181,9 +181,21 @@ export default function CalcField({
               <button
                 type="button"
                 onClick={() => setExpr((e) => e.slice(0, -1))}
-                className="rounded-xl border border-line bg-card py-3 text-sm font-semibold text-muted"
+                aria-label="Backspace"
+                className="flex items-center justify-center rounded-xl border border-line bg-card py-3 text-sm font-semibold text-muted"
               >
-                ⌫
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 6 3 12l6 6h10a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H9Z" />
+                  <path d="m12 9 4 6M16 9l-4 6" />
+                </svg>
               </button>
               <button
                 type="button"

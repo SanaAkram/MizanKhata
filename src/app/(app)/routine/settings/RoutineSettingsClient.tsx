@@ -387,7 +387,7 @@ function ReminderSettings({
         <div className="min-w-0">
           <p className="text-sm font-semibold text-ink">Background reminders</p>
           <p className="text-xs text-muted">
-            Get nudged even when the app is closed. On iPhone, add Roznamcha to
+            Get nudged even when the app is closed. On iPhone, add MizanKhata to
             your Home Screen first.
           </p>
         </div>

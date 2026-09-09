@@ -21,6 +21,7 @@ import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 
 type Props = {
+  businessId: string;
   customers: Customer[];
   suppliers: Supplier[];
   khataTx: KhataTx[];
@@ -30,6 +31,7 @@ type Props = {
 type Filter = "all" | "customer" | "supplier";
 
 export default function LedgerClient({
+  businessId,
   customers,
   suppliers,
   khataTx,
@@ -65,7 +67,7 @@ export default function LedgerClient({
   async function loadSample() {
     setBusy(true);
     try {
-      await seedKhata(supabase);
+      await seedKhata(supabase, businessId);
       router.refresh();
     } catch {
       alert("Could not load the sample data.");
@@ -104,6 +106,7 @@ export default function LedgerClient({
             router.refresh();
           }}
           supabase={supabase}
+          businessId={businessId}
         />
       </div>
     );
@@ -203,7 +206,8 @@ export default function LedgerClient({
           router.refresh();
         }}
         supabase={supabase}
-      />
+          businessId={businessId}
+        />
     </div>
   );
 }
@@ -213,11 +217,13 @@ function AddPartySheet({
   onClose,
   onDone,
   supabase,
+  businessId,
 }: {
   open: boolean;
   onClose: () => void;
   onDone: () => void;
   supabase: ReturnType<typeof createClient>;
+  businessId: string;
 }) {
   const [kind, setKind] = useState<PartyKind>("customer");
   const [name, setName] = useState("");
@@ -225,19 +231,45 @@ function AddPartySheet({
   const [opening, setOpening] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const contactsSupported =
+    typeof navigator !== "undefined" &&
+    "contacts" in navigator &&
+    typeof window !== "undefined" &&
+    "ContactsManager" in window;
+
+  async function pickContact() {
+    try {
+      const nav = navigator as unknown as {
+        contacts: {
+          select: (
+            props: string[],
+            opts: { multiple?: boolean },
+          ) => Promise<Array<{ name?: string[]; tel?: string[] }>>;
+        };
+      };
+      const [c] = await nav.contacts.select(["name", "tel"], {
+        multiple: false,
+      });
+      if (c?.name?.[0]) setName(c.name[0]);
+      if (c?.tel?.[0]) setPhone(String(c.tel[0]).replace(/\s+/g, ""));
+    } catch {
+      /* cancelled / unsupported */
+    }
+  }
+
   async function save() {
     if (!name.trim()) return;
     setSaving(true);
     try {
       const id = newId(kind === "customer" ? "c_" : "s_");
-      await createParty(supabase, kind, {
+      await createParty(supabase, businessId, kind, {
         id,
         name: name.trim(),
         phone: phone.trim() || null,
       });
       const amt = Math.round((parseFloat(opening) || 0) * 100) / 100;
       if (amt > 0) {
-        await addPartyTx(supabase, kind, id, {
+        await addPartyTx(supabase, businessId, kind, id, {
           id: newId("tx_"),
           type: "credit",
           amount: amt,
@@ -272,6 +304,14 @@ function AddPartySheet({
             </button>
           ))}
         </div>
+        {contactsSupported ? (
+          <button
+            onClick={pickContact}
+            className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
+          >
+            Import from contacts
+          </button>
+        ) : null}
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}

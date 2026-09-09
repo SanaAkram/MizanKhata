@@ -1,16 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { fetchProfile, type ShopProfile } from "@/lib/khata/profile";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import ShopSettingsClient from "./ShopSettingsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function ShopSettingsPage() {
   const db = await createClient();
-  let profile: ShopProfile | null = null;
-  try {
-    profile = await fetchProfile(db);
-  } catch {
-    /* ignore */
-  }
-  return <ShopSettingsClient profile={profile} />;
+  const { list, active } = await resolveBusiness(db);
+  return <ShopSettingsClient list={list} activeId={active?.id ?? ""} />;
 }

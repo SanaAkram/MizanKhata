@@ -105,8 +105,8 @@ export async function showRoutineNotif(
 
 // ---- per-item reminder state (localStorage) --------------------------------
 
-const snoozeKey = (d: string, id: string) => `roznamcha:snooze:${d}:${id}`;
-const nudgeKey = (d: string, id: string) => `roznamcha:nudge:${d}:${id}`;
+const snoozeKey = (d: string, id: string) => `mizankhata:snooze:${d}:${id}`;
+const nudgeKey = (d: string, id: string) => `mizankhata:nudge:${d}:${id}`;
 
 export function snoozedUntil(d: string, id: string): number {
   try {

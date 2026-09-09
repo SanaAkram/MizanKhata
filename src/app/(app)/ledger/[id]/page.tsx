@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import {
   fetchCustomers,
   fetchKhataTx,
@@ -26,6 +27,9 @@ export default async function PartyPage({
   const { kind: kindHint } = await searchParams;
 
   const supabase = await createClient();
+  const { active } = await resolveBusiness(supabase);
+  const bid = active?.id ?? "";
+
   let customers: Customer[] = [];
   let suppliers: Supplier[] = [];
   let khataTx: KhataTx[] = [];
@@ -33,11 +37,11 @@ export default async function PartyPage({
   let products: Product[] = [];
   try {
     [customers, suppliers, khataTx, supplierTx, products] = await Promise.all([
-      fetchCustomers(supabase),
-      fetchSuppliers(supabase),
-      fetchKhataTx(supabase),
-      fetchSupplierTx(supabase),
-      fetchProducts(supabase),
+      fetchCustomers(supabase, bid),
+      fetchSuppliers(supabase, bid),
+      fetchKhataTx(supabase, bid),
+      fetchSupplierTx(supabase, bid),
+      fetchProducts(supabase, bid),
     ]);
   } catch {
     /* fall through to not-found */
@@ -67,6 +71,7 @@ export default async function PartyPage({
 
   return (
     <PartyDetailClient
+      businessId={bid}
       kind={kind}
       party={{ id: party.id, name: party.name, phone: party.phone }}
       products={products}

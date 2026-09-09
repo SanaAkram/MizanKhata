@@ -12,9 +12,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      shop_businesses: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       shop_cashbook: {
         Row: {
           amount: number
+          business_id: string | null
           category: string | null
           date: string
           id: string
@@ -28,6 +59,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          business_id?: string | null
           category?: string | null
           date?: string
           id: string
@@ -41,6 +73,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          business_id?: string | null
           category?: string | null
           date?: string
           id?: string
@@ -56,6 +89,7 @@ export type Database = {
       }
       shop_customers: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
           name: string
@@ -63,6 +97,7 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id: string
           name: string
@@ -70,6 +105,7 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -82,6 +118,7 @@ export type Database = {
         Row: {
           amount: number
           bill_id: string | null
+          business_id: string | null
           customer_id: string
           date: string
           id: string
@@ -93,6 +130,7 @@ export type Database = {
         Insert: {
           amount: number
           bill_id?: string | null
+          business_id?: string | null
           customer_id: string
           date?: string
           id: string
@@ -104,6 +142,7 @@ export type Database = {
         Update: {
           amount?: number
           bill_id?: string | null
+          business_id?: string | null
           customer_id?: string
           date?: string
           id?: string
@@ -131,6 +170,7 @@ export type Database = {
       }
       shop_products: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
           low_stock: number
@@ -142,6 +182,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id: string
           low_stock?: number
@@ -153,6 +194,7 @@ export type Database = {
           unit?: string
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
           low_stock?: number
@@ -191,6 +233,7 @@ export type Database = {
       }
       shop_purchases: {
         Row: {
+          business_id: string | null
           date: string
           id: string
           owner_id: string
@@ -200,6 +243,7 @@ export type Database = {
           ref: string | null
         }
         Insert: {
+          business_id?: string | null
           date?: string
           id: string
           owner_id?: string
@@ -209,6 +253,7 @@ export type Database = {
           ref?: string | null
         }
         Update: {
+          business_id?: string | null
           date?: string
           id?: string
           owner_id?: string
@@ -228,21 +273,9 @@ export type Database = {
         ]
       }
       shop_push_sent: {
-        Row: {
-          id: string
-          owner_id: string
-          sent_at: string
-        }
-        Insert: {
-          id: string
-          owner_id: string
-          sent_at?: string
-        }
-        Update: {
-          id?: string
-          owner_id?: string
-          sent_at?: string
-        }
+        Row: { id: string; owner_id: string; sent_at: string }
+        Insert: { id: string; owner_id: string; sent_at?: string }
+        Update: { id?: string; owner_id?: string; sent_at?: string }
         Relationships: []
       }
       shop_push_subscriptions: {
@@ -376,6 +409,7 @@ export type Database = {
       }
       shop_sale_items: {
         Row: {
+          business_id: string | null
           id: string
           name: string
           owner_id: string
@@ -386,6 +420,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          business_id?: string | null
           id: string
           name: string
           owner_id?: string
@@ -396,6 +431,7 @@ export type Database = {
           unit?: string
         }
         Update: {
+          business_id?: string | null
           id?: string
           name?: string
           owner_id?: string
@@ -424,6 +460,7 @@ export type Database = {
       }
       shop_sales: {
         Row: {
+          business_id: string | null
           created_at: string
           credit_amount: number
           customer_id: string | null
@@ -441,6 +478,7 @@ export type Database = {
           total: number
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           credit_amount?: number
           customer_id?: string | null
@@ -458,6 +496,7 @@ export type Database = {
           total: number
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           credit_amount?: number
           customer_id?: string | null
@@ -486,6 +525,7 @@ export type Database = {
       }
       shop_stock_moves: {
         Row: {
+          business_id: string | null
           date: string
           id: string
           kind: string
@@ -499,6 +539,7 @@ export type Database = {
           ref: string | null
         }
         Insert: {
+          business_id?: string | null
           date?: string
           id: string
           kind: string
@@ -512,6 +553,7 @@ export type Database = {
           ref?: string | null
         }
         Update: {
+          business_id?: string | null
           date?: string
           id?: string
           kind?: string
@@ -529,6 +571,7 @@ export type Database = {
       shop_supplier_tx: {
         Row: {
           amount: number
+          business_id: string | null
           date: string
           id: string
           note: string | null
@@ -539,6 +582,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          business_id?: string | null
           date?: string
           id: string
           note?: string | null
@@ -549,6 +593,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          business_id?: string | null
           date?: string
           id?: string
           note?: string | null
@@ -569,6 +614,7 @@ export type Database = {
       }
       shop_suppliers: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
           name: string
@@ -576,6 +622,7 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id: string
           name: string
@@ -583,6 +630,7 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
           name?: string

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Sheet from "@/components/Sheet";
-import CalcField from "@/components/CalcField";
 import { fmtRs } from "@/lib/format";
 import type { Product } from "@/lib/khata/shop-db";
 
@@ -109,14 +108,15 @@ export default function ItemLinePicker({
                       placeholder="Qty"
                     />
                     <span className="text-xs text-muted">×</span>
-                    <div className="w-28">
-                      <CalcField
-                        value={String(line.rate)}
-                        onChange={(v) => patch(p.id, "rate", Number(v) || 0)}
-                        placeholder="Rate"
-                        className="w-full rounded border border-line bg-paper px-2 py-1 text-sm outline-none focus:border-forest"
-                      />
-                    </div>
+                    <input
+                      inputMode="decimal"
+                      value={line.rate}
+                      onChange={(e) =>
+                        patch(p.id, "rate", Number(e.target.value) || 0)
+                      }
+                      className="w-20 rounded border border-line bg-paper px-2 py-1 text-sm"
+                      placeholder="Rate"
+                    />
                     <span className="numeric ml-auto text-xs font-semibold text-forest">
                       {fmtRs(line.qty * line.rate)}
                     </span>

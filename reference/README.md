@@ -1,4 +1,4 @@
-# Ridwan — Shop / Day App
+# MizanKhata — Shop / Day App
 
 A mobile web app combining: a work timer, a daily routine checklist (prayer/work/health),
 a POS-style Sales flow, Stock/inventory management, and a Khata-style credit ledger

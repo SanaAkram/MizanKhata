@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import { fetchSuppliers } from "@/lib/khata/db";
 import {
   fetchProducts,
@@ -20,6 +21,8 @@ export default async function StockItemPage({
 }) {
   const { id } = await params;
   const db = await createClient();
+  const { active } = await resolveBusiness(db);
+  const bid = active?.id ?? "";
 
   let products: Product[] = [];
   let purchases: Purchase[] = [];
@@ -27,10 +30,10 @@ export default async function StockItemPage({
   let suppliers: { id: string; name: string }[] = [];
   try {
     const [p, pu, mv, s] = await Promise.all([
-      fetchProducts(db),
-      fetchPurchases(db),
-      fetchStockMoves(db, id),
-      fetchSuppliers(db),
+      fetchProducts(db, bid),
+      fetchPurchases(db, bid),
+      fetchStockMoves(db, bid, id),
+      fetchSuppliers(db, bid),
     ]);
     products = p;
     purchases = pu;
@@ -57,6 +60,7 @@ export default async function StockItemPage({
 
   return (
     <StockItemClient
+      businessId={bid}
       product={product}
       products={products}
       purchases={purchases.filter((x) => x.product_id === id)}

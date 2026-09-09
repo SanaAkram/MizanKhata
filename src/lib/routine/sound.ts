@@ -1,6 +1,6 @@
 "use client";
 
-const KEY = "roznamcha:sound";
+const KEY = "mizankhata:sound";
 
 export type SoundName = "chime" | "bell" | "soft" | "off";
 export const SOUND_OPTIONS: { value: SoundName; label: string }[] = [

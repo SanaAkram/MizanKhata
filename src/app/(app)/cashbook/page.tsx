@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import {
   fetchCashbook,
   fetchCustomers,
@@ -13,14 +14,17 @@ export const dynamic = "force-dynamic";
 
 export default async function CashbookPage() {
   const supabase = await createClient();
+  const { active } = await resolveBusiness(supabase);
+  const bid = active?.id ?? "";
+
   let cash: Cash[] = [];
   let customers: Customer[] = [];
   let suppliers: Supplier[] = [];
   try {
     [cash, customers, suppliers] = await Promise.all([
-      fetchCashbook(supabase),
-      fetchCustomers(supabase),
-      fetchSuppliers(supabase),
+      fetchCashbook(supabase, bid),
+      fetchCustomers(supabase, bid),
+      fetchSuppliers(supabase, bid),
     ]);
   } catch {
     /* render empty */
@@ -28,6 +32,7 @@ export default async function CashbookPage() {
 
   return (
     <CashbookClient
+      businessId={bid}
       cash={cash}
       parties={[
         ...customers.map((c) => ({

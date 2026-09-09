@@ -29,6 +29,7 @@ const inputCls =
   "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
 
 type Props = {
+  businessId: string;
   product: Product;
   products: Product[];
   purchases: Purchase[];
@@ -37,6 +38,7 @@ type Props = {
 };
 
 export default function StockItemClient({
+  businessId,
   product,
   products,
   purchases,
@@ -74,7 +76,7 @@ export default function StockItemClient({
     supplierId: string | null,
     dateIso: string,
   ) {
-    await addStockMove(supabase, {
+    await addStockMove(supabase, businessId, {
       id: newId("sm_"),
       productId: product.id,
       kind,
@@ -393,23 +395,23 @@ function MoveForm({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2">
-        <div className="w-1/2">
-          <CalcField
-            autoFocus
-            value={qty}
-            onChange={setQty}
-            placeholder={`Quantity (${unit})`}
-          />
-        </div>
-        <div className="w-1/2">
-          <CalcField
-            value={rate}
-            onChange={setRate}
-            placeholder={kind === "in" ? "Purchase rate" : "Sale rate"}
-          />
-        </div>
-      </div>
+      <label className="text-xs font-semibold text-muted">
+        Quantity ({unit})
+        <CalcField
+          autoFocus
+          value={qty}
+          onChange={setQty}
+          placeholder={`Quantity (${unit})`}
+        />
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        {kind === "in" ? "Purchase rate" : "Sale rate"}
+        <CalcField
+          value={rate}
+          onChange={setRate}
+          placeholder={kind === "in" ? "Purchase rate" : "Sale rate"}
+        />
+      </label>
       <button
         onClick={() => setPicker(true)}
         className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"

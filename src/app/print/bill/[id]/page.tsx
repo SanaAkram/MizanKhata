@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import { fetchSaleItems, fetchSales } from "@/lib/khata/shop-db";
-import { fetchProfile } from "@/lib/khata/profile";
 import { fmtRs } from "@/lib/format";
 import AutoPrint from "./AutoPrint";
 
@@ -13,11 +13,15 @@ export default async function BillPrintPage({
 }) {
   const { id } = await params;
   const db = await createClient();
-  const [sales, items, profile] = await Promise.all([
-    fetchSales(db).catch(() => []),
-    fetchSaleItems(db).catch(() => []),
-    fetchProfile(db).catch(() => null),
+  const { active } = await resolveBusiness(db);
+  const bid = active?.id ?? "";
+  const [sales, items] = await Promise.all([
+    fetchSales(db, bid).catch(() => []),
+    fetchSaleItems(db, bid).catch(() => []),
   ]);
+  const profile = active
+    ? { shop_name: active.name, phone: active.phone, address: active.address }
+    : null;
 
   const asc = [...sales].sort(
     (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
@@ -42,6 +46,14 @@ export default async function BillPrintPage({
     >
       <AutoPrint />
       <div style={{ textAlign: "center", marginBottom: 12 }}>
+        {active?.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={active.logo_url}
+            alt=""
+            style={{ height: 56, margin: "0 auto 6px", objectFit: "contain" }}
+          />
+        ) : null}
         <div style={{ fontSize: 18, fontWeight: 700 }}>
           {profile?.shop_name ?? "My Shop"}
         </div>

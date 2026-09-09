@@ -17,11 +17,13 @@ export type StockMove =
 
 export async function fetchStockMoves(
   db: DB,
+  businessId: string,
   productId?: string,
 ): Promise<StockMove[]> {
   let q = db
     .from("shop_stock_moves")
     .select("*")
+    .eq("business_id", businessId)
     .order("date", { ascending: false });
   if (productId) q = q.eq("product_id", productId);
   const { data, error } = await q;
@@ -31,6 +33,7 @@ export async function fetchStockMoves(
 
 export async function addStockMove(
   db: DB,
+  businessId: string,
   row: {
     id: string;
     productId: string;
@@ -45,6 +48,7 @@ export async function addStockMove(
 ): Promise<void> {
   const ins = await db.from("shop_stock_moves").insert({
     id: row.id,
+    business_id: businessId,
     product_id: row.productId,
     kind: row.kind,
     qty: row.qty,
@@ -153,34 +157,52 @@ export function stockHistory(
 
 // ---- reads ----------------------------------------------------------
 
-export async function fetchProducts(db: DB): Promise<Product[]> {
+export async function fetchProducts(
+  db: DB,
+  businessId: string,
+): Promise<Product[]> {
   const { data, error } = await db
     .from("shop_products")
     .select("*")
+    .eq("business_id", businessId)
     .order("name");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSales(db: DB): Promise<Sale[]> {
+export async function fetchSales(
+  db: DB,
+  businessId: string,
+): Promise<Sale[]> {
   const { data, error } = await db
     .from("shop_sales")
     .select("*")
+    .eq("business_id", businessId)
     .order("time", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSaleItems(db: DB): Promise<SaleItem[]> {
-  const { data, error } = await db.from("shop_sale_items").select("*");
+export async function fetchSaleItems(
+  db: DB,
+  businessId: string,
+): Promise<SaleItem[]> {
+  const { data, error } = await db
+    .from("shop_sale_items")
+    .select("*")
+    .eq("business_id", businessId);
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchPurchases(db: DB): Promise<Purchase[]> {
+export async function fetchPurchases(
+  db: DB,
+  businessId: string,
+): Promise<Purchase[]> {
   const { data, error } = await db
     .from("shop_purchases")
     .select("*")
+    .eq("business_id", businessId)
     .order("date", { ascending: false });
   if (error) throw error;
   return data ?? [];
@@ -273,6 +295,7 @@ export type CartLine = {
 
 export async function completeSale(
   db: DB,
+  businessId: string,
   args: {
     lines: CartLine[];
     paidCash: number;
@@ -296,8 +319,13 @@ export async function completeSale(
   const saleId = newId("sl_");
   const nowIso = new Date().toISOString();
 
+  const itemsText = lines
+    .map((l) => `${l.qty} ${l.name} ${l.price}Rs`)
+    .join("\n");
+
   let res = await db.from("shop_sales").insert({
     id: saleId,
+    business_id: businessId,
     time: nowIso,
     total,
     paid_cash: paidCash,
@@ -314,6 +342,7 @@ export async function completeSale(
   res = await db.from("shop_sale_items").insert(
     lines.map((l) => ({
       id: newId("si_"),
+      business_id: businessId,
       sale_id: saleId,
       product_id: l.productId,
       name: l.name,
@@ -341,9 +370,12 @@ export async function completeSale(
   if (paidCash > 0) {
     await db.from("shop_cashbook").insert({
       id: newId("cb_"),
+      business_id: businessId,
       type: "in",
       amount: paidCash,
-      note: "Sale",
+      note:
+        `Sale${customerName ? ` — ${customerName}` : ""}` +
+        (itemsText ? `\n${itemsText}` : ""),
       party_type: customerId ? "customer" : null,
       party_id: customerId,
       party_name: customerName,
@@ -355,10 +387,14 @@ export async function completeSale(
   if (creditAmount > 0 && customerId) {
     await db.from("shop_khata_tx").insert({
       id: newId("kt_"),
+      business_id: businessId,
       customer_id: customerId,
       type: "credit",
       amount: creditAmount,
-      note: "Bill",
+      note:
+        (itemsText || "Bill") +
+        (args.note ? `\n${args.note}` : "") +
+        (paidCash > 0 ? `\nPaid cash Rs ${paidCash}` : ""),
       bill_id: saleId,
       date: nowIso,
     });
@@ -369,6 +405,7 @@ export async function completeSale(
 
 export async function restock(
   db: DB,
+  businessId: string,
   args: {
     productId: string;
     qty: number;
@@ -386,6 +423,7 @@ export async function restock(
 
   let res = await db.from("shop_purchases").insert({
     id: newId("pu_"),
+    business_id: businessId,
     product_id: productId,
     qty,
     price,
@@ -409,6 +447,7 @@ export async function restock(
   if (cashPaid > 0) {
     await db.from("shop_cashbook").insert({
       id: newId("cb_"),
+      business_id: businessId,
       type: "out",
       amount: cashPaid,
       note: "Restock" + (ref ? ` (${ref})` : ""),
@@ -416,11 +455,13 @@ export async function restock(
       party_id: args.supplierId ?? null,
       party_name: args.supplierName ?? null,
       date: nowIso,
+      category: "purchase",
     });
   }
   if (credit > 0 && args.supplierId) {
     await db.from("shop_supplier_tx").insert({
       id: newId("st_"),
+      business_id: businessId,
       supplier_id: args.supplierId,
       type: "credit",
       amount: credit,
@@ -433,6 +474,7 @@ export async function restock(
 
 export async function createProduct(
   db: DB,
+  businessId: string,
   row: {
     id: string;
     name: string;
@@ -445,6 +487,7 @@ export async function createProduct(
 ): Promise<void> {
   const { error } = await db.from("shop_products").insert({
     id: row.id,
+    business_id: businessId,
     name: row.name,
     unit: row.unit,
     sale_price: row.salePrice,

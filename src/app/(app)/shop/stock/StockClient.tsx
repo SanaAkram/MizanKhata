@@ -50,6 +50,7 @@ function UnitSelect({
 }
 
 type Props = {
+  businessId: string;
   products: Product[];
   purchases: Purchase[];
   moves: StockMove[];
@@ -57,6 +58,7 @@ type Props = {
 };
 
 export default function StockClient({
+  businessId,
   products,
   purchases,
   moves,
@@ -217,6 +219,7 @@ export default function StockClient({
         onClose={() => setRestocking(false)}
       >
         <RestockForm
+          businessId={businessId}
           products={products}
           suppliers={suppliers}
           supabase={supabase}
@@ -231,11 +234,13 @@ export default function StockClient({
 }
 
 function RestockForm({
+  businessId,
   products,
   suppliers,
   supabase,
   onDone,
 }: {
+  businessId: string;
   products: Product[];
   suppliers: { id: string; name: string }[];
   supabase: ReturnType<typeof createClient>;
@@ -278,7 +283,7 @@ function RestockForm({
       let pid = productId;
       if (isNew) {
         pid = newId("p_");
-        await createProduct(supabase, {
+        await createProduct(supabase, businessId, {
           id: pid,
           name: name.trim(),
           unit: unit || "pcs",
@@ -288,7 +293,7 @@ function RestockForm({
         });
       }
       const sup = suppliers.find((s) => s.id === supplierId);
-      await restock(supabase, {
+      await restock(supabase, businessId, {
         productId: pid,
         qty: q,
         price: c,
@@ -356,14 +361,14 @@ function RestockForm({
         </div>
       ) : null}
 
-      <div className="flex gap-2">
-        <div className="w-1/2">
-          <CalcField value={qty} onChange={setQty} placeholder="Quantity" />
-        </div>
-        <div className="w-1/2">
-          <CalcField value={cost} onChange={setCost} placeholder="Cost / unit" />
-        </div>
-      </div>
+      <label className="text-xs font-semibold text-muted">
+        Quantity
+        <CalcField value={qty} onChange={setQty} placeholder="Quantity" />
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        Cost / unit
+        <CalcField value={cost} onChange={setCost} placeholder="Cost / unit" />
+      </label>
       <input
         value={ref}
         onChange={(e) => setRef(e.target.value)}

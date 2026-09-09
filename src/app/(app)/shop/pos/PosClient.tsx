@@ -14,11 +14,12 @@ import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 
 type Props = {
+  businessId: string;
   products: Product[];
   customers: { id: string; name: string }[];
 };
 
-export default function PosClient({ products, customers }: Props) {
+export default function PosClient({ businessId, products, customers }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -75,7 +76,7 @@ export default function PosClient({ products, customers }: Props) {
     method: "cash" | "bank";
   }) {
     const cust = customers.find((c) => c.id === args.customerId) ?? null;
-    await completeSale(supabase, {
+    await completeSale(supabase, businessId, {
       lines: cart,
       paidCash: args.paidCash,
       creditAmount: args.creditAmount,

@@ -31,7 +31,7 @@ export default async function SettingsPage() {
 
       <SignOutButton />
 
-      <p className="text-center text-xs text-muted">Roznamcha · v0.1</p>
+      <p className="text-center text-xs text-muted">MizanKhata · v0.1</p>
     </div>
   );
 }

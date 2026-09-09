@@ -12,9 +12,11 @@ import CalcField from "@/components/CalcField";
 type PartyOpt = { id: string; name: string; kind: "customer" | "supplier" };
 
 export default function CashbookClient({
+  businessId,
   cash,
   parties,
 }: {
+  businessId: string;
   cash: Cash[];
   parties: PartyOpt[];
 }) {
@@ -142,6 +144,7 @@ export default function CashbookClient({
 
       <Sheet open={adding} title="Add cash entry" onClose={() => setAdding(false)}>
         <AddCashForm
+          businessId={businessId}
           parties={parties}
           onDone={() => {
             setAdding(false);
@@ -180,10 +183,12 @@ export default function CashbookClient({
 }
 
 function AddCashForm({
+  businessId,
   parties,
   onDone,
   supabase,
 }: {
+  businessId: string;
   parties: PartyOpt[];
   onDone: () => void;
   supabase: ReturnType<typeof createClient>;
@@ -211,7 +216,7 @@ function AddCashForm({
     setBusy(true);
     try {
       const p = parties.find((x) => `${x.kind}:${x.id}` === partyVal);
-      await addCash(supabase, {
+      await addCash(supabase, businessId, {
         id: newId("cb_"),
         type,
         amount: amt,

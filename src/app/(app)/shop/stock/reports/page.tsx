@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
 import {
   fetchProducts,
@@ -31,14 +32,16 @@ export default async function StockReportPage({
   const kind = type === "out" ? "out" : "in";
 
   const db = await createClient();
+  const { active } = await resolveBusiness(db);
+  const bid = active?.id ?? "";
   let products: Product[] = [];
   let purchases: Purchase[] = [];
   let moves: StockMove[] = [];
   try {
     [products, purchases, moves] = await Promise.all([
-      fetchProducts(db),
-      fetchPurchases(db),
-      fetchStockMoves(db),
+      fetchProducts(db, bid),
+      fetchPurchases(db, bid),
+      fetchStockMoves(db, bid),
     ]);
   } catch {
     /* empty */

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import { fmtRs } from "@/lib/format";
 import {
   buildParties,
@@ -33,6 +34,8 @@ async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
 
 export default async function ShopDashboardPage() {
   const db = await createClient();
+  const { active } = await resolveBusiness(db);
+  const bid = active?.id ?? "";
   const [
     customers,
     suppliers,
@@ -44,15 +47,15 @@ export default async function ShopDashboardPage() {
     saleItems,
     purchases,
   ] = await Promise.all([
-    safe(fetchCustomers(db), []),
-    safe(fetchSuppliers(db), []),
-    safe(fetchKhataTx(db), []),
-    safe(fetchSupplierTx(db), []),
-    safe(fetchCashbook(db), []),
-    safe(fetchProducts(db), []),
-    safe(fetchSales(db), []),
-    safe(fetchSaleItems(db), []),
-    safe(fetchPurchases(db), []),
+    safe(fetchCustomers(db, bid), []),
+    safe(fetchSuppliers(db, bid), []),
+    safe(fetchKhataTx(db, bid), []),
+    safe(fetchSupplierTx(db, bid), []),
+    safe(fetchCashbook(db, bid), []),
+    safe(fetchProducts(db, bid), []),
+    safe(fetchSales(db, bid), []),
+    safe(fetchSaleItems(db, bid), []),
+    safe(fetchPurchases(db, bid), []),
   ]);
 
   const parties = buildParties(customers, suppliers, khataTx, supplierTx);

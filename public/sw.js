@@ -1,4 +1,4 @@
-/* Roznamcha service worker — minimal.
+/* MizanKhata service worker — minimal.
    No fetch caching. It exists to (a) let routine reminders carry action
    buttons and (b) route Done / Snooze / Skip taps back into the app.
    Real background Web Push can be layered on later without changing this. */
@@ -17,10 +17,10 @@ self.addEventListener("push", (event) => {
   } catch {
     d = {};
   }
-  const title = d.title || "Roznamcha";
+  const title = d.title || "MizanKhata";
   const options = {
     body: d.body || "",
-    tag: d.tag || "roznamcha",
+    tag: d.tag || "mizankhata",
     renotify: true,
     requireInteraction: true,
     icon: "/icon.svg",

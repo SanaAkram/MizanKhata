@@ -37,6 +37,7 @@ type Row = {
 };
 
 type Props = {
+  businessId: string;
   kind: PartyKind;
   party: { id: string; name: string; phone: string | null };
   products: Product[];
@@ -53,6 +54,7 @@ function waLink(phone: string, text: string) {
 }
 
 export default function PartyDetailClient({
+  businessId,
   kind,
   party,
   products,
@@ -106,7 +108,7 @@ export default function PartyDetailClient({
     method: "cash" | "bank",
   ) {
     const id = newId("tx_");
-    await addPartyTx(supabase, kind, party.id, {
+    await addPartyTx(supabase, businessId, kind, party.id, {
       id,
       type,
       amount,
@@ -114,7 +116,7 @@ export default function PartyDetailClient({
       date: dateIso,
     });
     if (type === "payment") {
-      await addCash(supabase, {
+      await addCash(supabase, businessId, {
         id: newId("cb_"),
         type: isCust ? "in" : "out",
         amount,

@@ -14,7 +14,7 @@ import { fmtClock, fmtDuration, fmtTimeOfDay } from "@/lib/format";
 import { dateKey } from "@/lib/date";
 import { PlayIcon, StopIcon } from "@/components/icons";
 
-const RUNNING_KEY = "roznamcha:running";
+const RUNNING_KEY = "mizankhata:running";
 
 type Props = {
   initialSessions: WorkSession[];
