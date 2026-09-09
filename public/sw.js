@@ -9,6 +9,38 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Background reminder delivered by the routine-push edge function.
+self.addEventListener("push", (event) => {
+  let d = {};
+  try {
+    d = event.data ? event.data.json() : {};
+  } catch {
+    d = {};
+  }
+  const title = d.title || "Roznamcha";
+  const options = {
+    body: d.body || "",
+    tag: d.tag || "roznamcha",
+    renotify: true,
+    requireInteraction: true,
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    data: {
+      itemId: d.itemId || "",
+      dateKey: d.dateKey || "",
+      url: d.url || "/routine",
+    },
+    actions: [
+      { action: "done", title: "Done" },
+      { action: "snooze", title: "Snooze 15m" },
+    ],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// The push service rotated the subscription; the app re-subscribes on next open.
+self.addEventListener("pushsubscriptionchange", () => {});
+
 self.addEventListener("notificationclick", (event) => {
   const action = event.action || "open";
   const data = event.notification.data || {};

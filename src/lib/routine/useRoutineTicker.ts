@@ -11,6 +11,7 @@ import {
   showRoutineNotif,
   snoozedUntil,
 } from "./notify";
+import { playReminderSound } from "./sound";
 
 const TICK_MS = 20_000;
 const NUDGE_MS = 10 * 60 * 1000; // re-nag an unanswered item every 10 min
@@ -64,6 +65,7 @@ export function useRoutineTicker(
         const endMin = Math.min(startMin + (it.window_min || 0), 24 * 60);
         const kind = nowMin < endMin ? "start" : "ask";
         void showRoutineNotif(it, dk, kind);
+        playReminderSound();
         setLastNudge(dk, it.id, nowMs);
       }
     };

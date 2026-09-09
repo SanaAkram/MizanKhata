@@ -189,6 +189,60 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen: string
+          owner_id: string
+          p256dh: string
+          tz_offset_min: number
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id: string
+          last_seen?: string
+          owner_id?: string
+          p256dh: string
+          tz_offset_min?: number
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen?: string
+          owner_id?: string
+          p256dh?: string
+          tz_offset_min?: number
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      shop_push_sent: {
+        Row: {
+          id: string
+          owner_id: string
+          sent_at: string
+        }
+        Insert: {
+          id: string
+          owner_id: string
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       shop_purchases: {
         Row: {
           date: string
