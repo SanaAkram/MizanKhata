@@ -9,6 +9,15 @@ import { fmtEntryDate, fmtRs } from "@/lib/format";
 import { addCash, cashInHand, deleteCash, type Cash } from "@/lib/khata/db";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
+import DateRangeFilter from "@/components/DateRangeFilter";
+import { useT } from "@/lib/i18n";
+import {
+  ALL_TIME,
+  inRange,
+  isActive,
+  rangeLabel,
+  type DateRange,
+} from "@/lib/date-range";
 
 type PartyOpt = { id: string; name: string; kind: "customer" | "supplier" };
 
@@ -23,9 +32,11 @@ export default function CashbookClient({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const [adding, setAdding] = useState(false);
   const [detail, setDetail] = useState<Cash | null>(null);
   const [tab, setTab] = useState<"all" | "cash" | "bank">("all");
+  const [range, setRange] = useState<DateRange>(ALL_TIME);
 
   const cashBal = useMemo(
     () => cashInHand(cash.filter((c) => (c.method ?? "cash") === "cash")),
@@ -39,11 +50,19 @@ export default function CashbookClient({
     () =>
       [...cash]
         .filter((c) => tab === "all" || (c.method ?? "cash") === tab)
+        .filter((c) => inRange(c.date, range))
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         ),
-    [cash, tab],
+    [cash, tab, range],
   );
+
+  const periodIn = rows
+    .filter((r) => r.type === "in")
+    .reduce((s, r) => s + Number(r.amount || 0), 0);
+  const periodOut = rows
+    .filter((r) => r.type === "out")
+    .reduce((s, r) => s + Number(r.amount || 0), 0);
 
   async function remove(row: Cash) {
     await deleteCash(supabase, row.id);
@@ -94,13 +113,40 @@ export default function CashbookClient({
         ))}
       </div>
 
+      <DateRangeFilter onChange={setRange} />
+
+      {isActive(range) ? (
+        <div className="rounded-xl border border-line bg-card p-3 text-xs">
+          <p className="font-semibold text-ink">
+            {rangeLabel(range)} · {rows.length}{" "}
+            {rows.length === 1
+              ? t("range.entry", "entry")
+              : t("range.entries", "entries")}
+          </p>
+          <div className="mt-1 flex justify-between text-ok">
+            <span>{t("cash.in", "Cash in")}</span>
+            <span className="numeric">+ {fmtRs(periodIn)}</span>
+          </div>
+          <div className="flex justify-between text-danger">
+            <span>{t("cash.out", "Cash out")}</span>
+            <span className="numeric">− {fmtRs(periodOut)}</span>
+          </div>
+          <div className="mt-1 flex justify-between border-t border-line pt-1 font-semibold text-ink">
+            <span>{t("range.netForPeriod", "Net for period")}</span>
+            <span className="numeric">{fmtRs(periodIn - periodOut)}</span>
+          </div>
+        </div>
+      ) : null}
+
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
           Entries
         </h2>
         {rows.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-            No cash entries yet — tap + to add one.
+            {isActive(range)
+              ? t("range.noneInRange", "Nothing in this date range.")
+              : "No cash entries yet — tap + to add one."}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">

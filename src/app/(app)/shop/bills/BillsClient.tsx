@@ -15,6 +15,15 @@ import {
 import type { Business } from "@/lib/khata/business";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
+import DateRangeFilter from "@/components/DateRangeFilter";
+import { useT } from "@/lib/i18n";
+import {
+  ALL_TIME,
+  inRange,
+  isActive,
+  rangeLabel,
+  type DateRange,
+} from "@/lib/date-range";
 import { billText, shareBill, speakBill } from "@/lib/khata/bill-share";
 
 type Numbered = Sale & { no: number };
@@ -38,8 +47,10 @@ export default function BillsClient({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState<Numbered | null>(null);
   const [q, setQ] = useState("");
+  const [range, setRange] = useState<DateRange>(ALL_TIME);
   const [armDel, setArmDel] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -69,12 +80,18 @@ export default function BillsClient({
     year: "numeric",
   });
 
-  const shown = numbered.filter(
+  const ranged = numbered.filter((s) => inRange(s.time, range));
+  const shown = ranged.filter(
     (s) =>
       !q ||
       `bill ${s.no} ${s.customer_name ?? ""}`
         .toLowerCase()
         .includes(q.toLowerCase()),
+  );
+  const rangeTotal = ranged.reduce((a, s) => a + Number(s.total || 0), 0);
+  const rangeCredit = ranged.reduce(
+    (a, s) => a + Number(s.credit_amount || 0),
+    0,
   );
   const openItems = open ? items.filter((i) => i.sale_id === open.id) : [];
   const openCust = open?.customer_id
@@ -203,11 +220,19 @@ export default function BillsClient({
 
       <div className="rounded-2xl border border-line bg-card p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Total sale for {monthLabel}
+          {isActive(range)
+            ? `Sales · ${rangeLabel(range)}`
+            : `Total sale for ${monthLabel}`}
         </p>
         <p className="numeric mt-1 text-2xl font-semibold text-forest">
-          {fmtRs(monthTotal)}
+          {fmtRs(isActive(range) ? rangeTotal : monthTotal)}
         </p>
+        {isActive(range) ? (
+          <p className="mt-0.5 text-[11px] text-muted">
+            {ranged.length} {ranged.length === 1 ? "bill" : "bills"}
+            {rangeCredit > 0 ? ` · ${fmtRs(rangeCredit)} on credit` : ""}
+          </p>
+        ) : null}
       </div>
 
       <input
@@ -217,9 +242,15 @@ export default function BillsClient({
         className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm outline-none focus:border-forest"
       />
 
+      <DateRangeFilter onChange={setRange} />
+
       {shown.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-muted">
-          {numbered.length === 0 ? "No bills yet." : "No matches."}
+          {numbered.length === 0
+            ? "No bills yet."
+            : isActive(range)
+              ? t("range.noneInRange", "Nothing in this date range.")
+              : "No matches."}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">

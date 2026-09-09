@@ -18,8 +18,17 @@ import {
   type TxType,
 } from "@/lib/khata/db";
 import type { Product } from "@/lib/khata/shop-db";
+import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
+import DateRangeFilter from "@/components/DateRangeFilter";
+import {
+  ALL_TIME,
+  inRange,
+  isActive,
+  rangeLabel,
+  type DateRange,
+} from "@/lib/date-range";
 import ItemLinePicker, {
   linesToText,
   linesTotal,
@@ -62,9 +71,11 @@ export default function PartyDetailClient({
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const isCust = kind === "customer";
 
   const [q, setQ] = useState("");
+  const [range, setRange] = useState<DateRange>(ALL_TIME);
   const [addType, setAddType] = useState<TxType | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
   const [editRow, setEditRow] = useState<Row | null>(null);
@@ -86,9 +97,11 @@ export default function PartyDetailClient({
   const balTone =
     balance === 0 ? "text-muted" : moneyIn ? "text-ok" : "text-danger";
 
-  const shown = rows.filter(
+  const ranged = rows.filter((r) => inRange(r.date, range));
+  const shown = ranged.filter(
     (r) => !q || (r.note ?? "").toLowerCase().includes(q.toLowerCase()),
   );
+  const periodLife = partyLifetime(ranged);
 
   const creditLabel = isCust ? "You gave (credit)" : "Purchase (on credit)";
   const paymentLabel = isCust ? "You got (payment)" : "Payment made";
@@ -242,10 +255,41 @@ export default function PartyDetailClient({
         className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm outline-none focus:border-forest"
       />
 
+      <DateRangeFilter onChange={setRange} />
+
+      {isActive(range) ? (
+        <div className="rounded-xl border border-line bg-card p-3 text-xs">
+          <p className="font-semibold text-ink">
+            {rangeLabel(range)} · {ranged.length}{" "}
+            {ranged.length === 1
+              ? t("range.entry", "entry")
+              : t("range.entries", "entries")}
+          </p>
+          <div className="mt-1 flex justify-between text-muted">
+            <span>{creditLabel}</span>
+            <span className="numeric">{fmtRs(periodLife.credit)}</span>
+          </div>
+          <div className="flex justify-between text-muted">
+            <span>{paymentLabel}</span>
+            <span className="numeric">{fmtRs(periodLife.payment)}</span>
+          </div>
+          <div className="mt-1 flex justify-between border-t border-line pt-1 font-semibold text-ink">
+            <span>{t("range.netForPeriod", "Net for period")}</span>
+            <span className="numeric">
+              {fmtRs(periodLife.credit - periodLife.payment)}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       <section>
         {shown.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-            {rows.length === 0 ? "No entries yet." : "No matches."}
+            {rows.length === 0
+              ? "No entries yet."
+              : isActive(range)
+                ? t("range.noneInRange", "Nothing in this date range.")
+                : "No matches."}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
