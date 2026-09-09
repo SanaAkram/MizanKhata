@@ -1,0 +1,3 @@
+# Keep the frozen prototype and local tooling out of the deployment
+reference/
+.claude/
