@@ -1,0 +1,11 @@
+{
+  "name": "ridwan-shop-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ridwan — work timer, daily routine, POS sales, stock and Khata-style credit ledger. Single-file app (app.html) backed by Supabase.",
+  "scripts": {
+    "dev": "node server.mjs",
+    "gen:edge": "node scripts/gen-edge-function.mjs"
+  }
+}

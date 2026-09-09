@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#22331F">
+<title>Ridwan — Day, Work &amp; Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg: #EEEBE3; --paper: #FBF9F4; --ink: #22271F; --ink-soft: #5B6156;
+    --forest: #2F4A34; --forest-deep: #1C2E20; --gold: #B8892B; --line: #DCD6C7;
+    --danger: #8C3B2E; --radius: 18px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; height:100%;}
+  body{ background: var(--bg); color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; display:flex; justify-content:center; }
+  #app{ width:100%; max-width:480px; min-height:100vh; display:flex; flex-direction:column; background: var(--bg); padding-bottom: 84px; position:relative; }
+  header{ padding: 28px 22px 14px; }
+  .day-label{ font-size:13px; letter-spacing:0.02em; color: var(--ink-soft); }
+  h1{ font-family:'Source Serif 4', serif; font-weight:600; font-size:28px; margin: 2px 0 0; color: var(--forest-deep); }
+  main{ padding: 6px 18px 18px; flex:1; }
+  .card{ background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+
+  .timer-card{ text-align:center; padding: 32px 20px; }
+  .elapsed{ font-family:'Source Serif 4', serif; font-size: 46px; font-weight:600; color: var(--forest-deep); margin: 4px 0 22px; font-variant-numeric: tabular-nums; }
+  .timer-hint{ color: var(--ink-soft); font-size: 14px; margin-bottom: 6px;}
+  .btn-round{ width: 128px; height: 128px; border-radius: 50%; border: none; font-size: 17px; font-weight:600; color: #fff; background: var(--forest); cursor:pointer; transition: transform .12s ease; }
+  .btn-round:active{ transform: scale(0.95); }
+  .btn-round.running{ background: var(--danger); }
+
+  .today-total{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 4px; }
+  .today-total .label{ font-size:14px; color:var(--ink-soft); }
+  .today-total .value{ font-family:'Source Serif 4', serif; font-size:22px; font-weight:600; color:var(--forest-deep); }
+
+  .session{ display:flex; justify-content:space-between; gap:12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .session:first-of-type{ border-top:none; }
+  .session .meta{ font-size:13px; color:var(--ink-soft); margin-top:2px;}
+  .session .dur{ font-weight:600; white-space:nowrap; }
+  .session .note{ font-size:14px; margin-top:3px; color:var(--ink); }
+  .empty-note{ color: var(--ink-soft); font-size:14px; text-align:center; padding:8px 0 4px;}
+
+  .section-title{ font-family:'Source Serif 4', serif; font-size:16px; font-weight:600; color: var(--forest-deep); margin: 18px 4px 8px; }
+  .section-title:first-child{ margin-top:2px; }
+  .routine-item{ display:flex; align-items:center; gap:12px; background: var(--paper); border:1px solid var(--line); border-radius: 14px; padding: 13px 14px; margin-bottom: 8px; }
+  .routine-item.done{ opacity: 0.5; }
+  .check{ width: 24px; height:24px; border-radius:50%; border: 2px solid var(--forest); flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .check.checked{ background: var(--forest); }
+  .check.checked::after{ content:'✓'; color:#fff; font-size:14px; }
+  .routine-text{ flex:1; }
+  .routine-text .name{ font-size:15px; font-weight:500; }
+  .routine-text .time{ font-size:13px; color: var(--ink-soft); }
+  .routine-item.done .name{ text-decoration: line-through; }
+
+  .product-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-top:1px solid var(--line); }
+  .product-row:first-child{ border-top:none; }
+  .product-row .pname{ font-size:15px; }
+  .product-row .psub{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .product-row .pqty{ font-family:'Source Serif 4', serif; font-weight:600; color:var(--forest-deep); font-size:17px; text-align:right; }
+
+  .product-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; }
+  .product-btn{ background: var(--bg); border:1px solid var(--line); border-radius:14px; padding:14px 10px; text-align:left; cursor:pointer; }
+  .product-btn:disabled{ cursor:not-allowed; }
+  .product-btn .pname{ font-weight:600; font-size:14px; }
+  .product-btn .pprice{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .cart-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .cart-row:first-child{ border-top:none; }
+  .qty-controls{ display:flex; align-items:center; gap:10px; }
+  .qty-btn{ width:26px;height:26px;border-radius:50%;border:1px solid var(--forest); background:none; color:var(--forest); font-size:16px; cursor:pointer; display:flex;align-items:center;justify-content:center; }
+  .cart-total-row{ display:flex;justify-content:space-between; padding-top:12px; margin-top:6px; border-top:2px solid var(--line); font-weight:600; }
+  .btn-complete{ width:100%; margin-top:14px; padding:14px; border:none; border-radius:12px; background:var(--forest); color:#fff; font-weight:600; font-size:15px; cursor:pointer; }
+  .gear-btn{ background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft); }
+  .bill-card{ border-top:1px solid var(--line); padding:12px 0; }
+  .bill-card:first-child{ border-top:none; }
+  .bill-items{ font-size:13px; color:var(--ink-soft); margin-top:2px; }
+  .bill-head{ display:flex;justify-content:space-between; }
+  .bill-actions{ display:flex; gap:8px; margin-top:8px; }
+  .icon-btn{ background:none;border:1px solid var(--line); border-radius:10px; width:36px;height:34px; font-size:15px; cursor:pointer; display:flex;align-items:center;justify-content:center; color:var(--ink-soft); }
+  .product-row-manage{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .product-row-manage:first-child{ border-top:none; }
+  .manage-actions button{ background:none;border:none;color:var(--danger); font-size:13px; cursor:pointer; text-decoration:underline; }
+
+  .stock-card{ border-top:1px solid var(--line); padding:12px 0; }
+  .stock-card:first-child{ border-top:none; }
+  .stock-head{ display:flex; justify-content:space-between; align-items:baseline; }
+  .stock-head .pname{ font-weight:600; font-size:15px; }
+  .stock-head .qty{ font-family:'Source Serif 4', serif; font-weight:600; color:var(--forest-deep); font-size:18px; }
+  .stock-sub{ font-size:12.5px; color:var(--ink-soft); margin-top:3px; display:flex; gap:12px; flex-wrap:wrap; }
+  .purchase-log-row{ display:flex; justify-content:space-between; padding:9px 0; border-top:1px solid var(--line); font-size:13px; }
+  .purchase-log-row:first-child{ border-top:none; }
+  .tag-low{ background:#F6E4E0; color:var(--danger); font-size:11px; padding:2px 8px; border-radius:8px; margin-left:8px; }
+  .form-label{ font-size:12px; color:var(--ink-soft); margin:0 0 4px 2px; display:block; }
+  .toggle-btn{ flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans'; font-size:13px; cursor:pointer; }
+  .toggle-btn.active{ background:var(--forest); color:#fff; border-color:var(--forest); }
+  .select-field, .sheet input[type=text], .sheet input[type=number]{ width:100%; border:1px solid var(--line); border-radius:10px; padding:11px; font-family:'IBM Plex Sans'; font-size:14px; margin-bottom:12px; background:#fff; }
+  .receipt-preview{ width:100%; border-radius:12px; border:1px solid var(--line); margin-bottom:14px; display:block; }
+
+  .subtab-row{ display:flex; gap:8px; margin-bottom:14px; }
+  .subtab-btn{ flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); font-family:'IBM Plex Sans'; font-size:13px; font-weight:600; cursor:pointer; }
+  .subtab-btn.active{ background:var(--forest-deep); color:#fff; border-color:var(--forest-deep); }
+  .customer-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-top:1px solid var(--line); cursor:pointer; }
+  .customer-row:first-child{ border-top:none; }
+  .customer-row .cname{ font-size:15px; font-weight:600; }
+  .customer-row .cphone{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .customer-row .cbal{ font-family:'Source Serif 4', serif; font-weight:600; font-size:16px; text-align:right; }
+  .cbal.owe{ color: var(--danger); }
+  .cbal.clear{ color: var(--ink-soft); font-weight:400; font-size:13px; }
+  .cash-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-top:1px solid var(--line); font-size:14px; }
+  .cash-row:first-child{ border-top:none; }
+  .cash-row .cnote{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .camt.in{ color: var(--forest-deep); font-weight:600; }
+  .camt.out{ color: var(--danger); font-weight:600; }
+  .btn-whatsapp{ background:#25D366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; }
+  .tx-row{ display:flex; justify-content:space-between; padding:9px 0; border-top:1px solid var(--line); font-size:13.5px; }
+  .tx-row:first-child{ border-top:none; }
+  .pay-badge{ display:inline-block; font-size:11px; padding:2px 8px; border-radius:8px; margin-top:5px; }
+  .pay-badge.cash{ background:#E3ECE4; color:var(--forest-deep); }
+  .pay-badge.credit{ background:#F6E4E0; color:var(--danger); }
+  .pay-badge.partial{ background:#FBF3DD; color:#6B4E12; }
+  .calc-row-wrap{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .calc-row-wrap input{ margin-bottom:0 !important; flex:1; }
+  .calc-toggle{ background:var(--bg); border:1px solid var(--line); border-radius:8px; width:38px; height:38px; font-size:16px; cursor:pointer; color:var(--ink-soft); flex-shrink:0; }
+  .calc-pad{ display:none; grid-template-columns: repeat(4,1fr); gap:7px; margin-bottom:12px; }
+  .calc-pad.open{ display:grid; }
+  .calc-key{ padding:11px 0; border-radius:9px; border:1px solid var(--line); background:var(--paper); font-family:'IBM Plex Sans'; font-size:15px; cursor:pointer; text-align:center; color:var(--ink); }
+  .calc-key.op{ background:var(--bg); color:var(--forest-deep); font-weight:600; }
+  .calc-key.eq{ background:var(--forest); color:#fff; font-weight:600; }
+  .calc-key.ac{ background:#F6E4E0; color:var(--danger); font-weight:600; }
+  .calc-key.wide{ grid-column: span 2; }
+
+  .fab-wrap{ position:fixed; bottom:78px; left:0; right:0; display:flex; justify-content:center; pointer-events:none; z-index:15; }
+  .fab-inner{ width:100%; max-width:480px; display:flex; justify-content:flex-end; padding-right:20px; }
+  .fab{ pointer-events:auto; width:58px;height:58px;border-radius:50%; background:var(--forest); color:#fff; border:none; font-size:28px; line-height:1; box-shadow:0 6px 16px rgba(28,46,32,.35); cursor:pointer; }
+
+  nav{ position: fixed; bottom:0; left:0; right:0; display:flex; justify-content:center; background: var(--forest-deep); padding-bottom: env(safe-area-inset-bottom); }
+  .nav-inner{ width:100%; max-width:480px; display:flex; }
+  .nav-btn{ flex:1; background:none; border:none; color: rgba(255,255,255,0.55); font-size:12.5px; padding: 14px 0 12px; cursor:pointer; }
+  .nav-btn.active{ color: var(--gold); font-weight:600; }
+  .nav-btn .dot{ display:block; width:6px; height:6px; border-radius:50%; background:transparent; margin:0 auto 5px; }
+  .nav-btn.active .dot{ background: var(--gold); }
+
+  .sheet-backdrop{ position:fixed; inset:0; background:rgba(28,46,32,0.45); display:flex; align-items:flex-end; justify-content:center; z-index:20; }
+  .sheet{ width:100%; max-width:480px; background: var(--paper); border-radius: 22px 22px 0 0; padding: 22px 20px calc(22px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y:auto; }
+  .sheet h2{ font-family:'Source Serif 4', serif; font-size:19px; margin:0 0 4px; color:var(--forest-deep);}
+  .sheet p{ font-size:13px; color:var(--ink-soft); margin:0 0 14px;}
+  .sheet textarea{ width:100%; min-height:80px; border:1px solid var(--line); border-radius:12px; padding:12px; font-family:'IBM Plex Sans'; font-size:15px; resize:none; margin-bottom:14px; }
+  .sheet-actions{ display:flex; gap:10px; }
+  .sheet-actions button{ flex:1; padding:13px; border-radius:12px; border:none; font-family:'IBM Plex Sans'; font-size:15px; font-weight:600; cursor:pointer; }
+  .btn-save{ background: var(--forest); color:#fff; }
+  .btn-skip{ background: var(--line); color: var(--ink); }
+
+  .toast{ position:fixed; top:16px; left:50%; transform:translateX(-50%); background: var(--forest-deep); color:#fff; padding:11px 18px; border-radius:12px; font-size:14px; z-index:30; opacity:0; transition:opacity .3s ease; max-width: 90%; text-align:center; }
+  .toast.show{ opacity:1; }
+  .banner{ background: #FBF3DD; border:1px solid var(--gold); color: #6B4E12; border-radius:14px; padding:12px 14px; font-size:13px; margin-bottom:14px; display:none; }
+
+  #authScreen{ width:100%; max-width:480px; min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding:28px 24px; background:var(--bg); }
+  #authScreen h1{ text-align:center; margin-bottom:4px; }
+  #authScreen .auth-sub{ text-align:center; color:var(--ink-soft); font-size:14px; margin-bottom:28px; }
+  #authScreen input{ width:100%; border:1px solid var(--line); border-radius:10px; padding:13px; font-family:'IBM Plex Sans'; font-size:15px; margin-bottom:12px; background:#fff; }
+  #authScreen .btn-save{ width:100%; padding:14px; }
+  #authScreen .auth-toggle{ text-align:center; margin-top:16px; font-size:13.5px; color:var(--ink-soft); }
+  #authScreen .auth-toggle a{ color:var(--forest-deep); font-weight:600; text-decoration:underline; cursor:pointer; }
+  #authScreen .auth-error{ color:var(--danger); font-size:13px; margin:-4px 0 12px; display:none; }
+  #signOutBtn{ background:none; border:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="authScreen" style="display:none;">
+  <h1>Ridwan</h1>
+  <div class="auth-sub">Sign in to your shop account</div>
+  <div class="auth-error" id="authError"></div>
+  <input type="email" id="authEmail" placeholder="Email" autocomplete="username">
+  <input type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
+  <button class="btn-save" id="authSubmitBtn">Sign in</button>
+  <div class="auth-toggle" id="authToggleWrap">New here? <a id="authToggleLink">Create an account</a></div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <div class="day-label" id="dayLabel">Today</div>
+    <h1 id="pageTitle">Work</h1>
+    <button id="signOutBtn">Sign out</button>
+  </header>
+
+  <main>
+    <div class="banner" id="notifyBanner">
+      Turn on notifications so routine reminders can pop up while this page is open. <span id="notifyBtn" style="text-decoration:underline; cursor:pointer;">Enable</span>
+    </div>
+
+    <div id="workTab">
+      <div class="card timer-card">
+        <div class="timer-hint" id="timerHint">Not working right now</div>
+        <div class="elapsed" id="elapsed">00:00:00</div>
+        <button class="btn-round" id="toggleBtn">Start work</button>
+      </div>
+      <div class="card">
+        <div class="today-total"><span class="label">Worked today</span><span class="value" id="totalToday">0h 0m</span></div>
+      </div>
+      <div class="card" id="sessionsCard">
+        <div class="section-title" style="margin-top:0;">Today's sessions</div>
+        <div id="sessionsList"></div>
+      </div>
+    </div>
+
+    <div id="routineTab" style="display:none;"></div>
+    <div id="salesTab" style="display:none;"></div>
+    <div id="stockTab" style="display:none;"></div>
+    <div id="ledgerTab" style="display:none;"></div>
+  </main>
+
+  <nav>
+    <div class="nav-inner">
+      <button class="nav-btn active" data-tab="work"><span class="dot"></span>Work</button>
+      <button class="nav-btn" data-tab="routine"><span class="dot"></span>Routine</button>
+      <button class="nav-btn" data-tab="sales"><span class="dot"></span>Sales</button>
+      <button class="nav-btn" data-tab="stock"><span class="dot"></span>Stock</button>
+      <button class="nav-btn" data-tab="ledger"><span class="dot"></span>Ledger</button>
+    </div>
+  </nav>
+</div>
+
+<div id="sheetLayer"></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+
+<script>
+const SUPABASE_URL = "https://fksdpsecfnaibquymiir.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrc2Rwc2VjZm5haWJxdXltaWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MjY1MDMsImV4cCI6MjEwNDUwMjUwM30.dny1Fpf0XdLYqZcFUxAvvFD9I53MlFY6nSQCA3tw-1o";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let authMode = "signin";
+
+function showAuthScreen(){
+  document.getElementById("authScreen").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+}
+function showApp(){
+  document.getElementById("authScreen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+}
+function setAuthError(msg){
+  const el = document.getElementById("authError");
+  el.textContent = msg;
+  el.style.display = msg ? "block" : "none";
+}
+document.getElementById("authToggleWrap").addEventListener("click", (e)=>{
+  if(e.target.tagName !== "A") return;
+  authMode = authMode === "signin" ? "signup" : "signin";
+  document.getElementById("authSubmitBtn").textContent = authMode === "signin" ? "Sign in" : "Create account";
+  document.getElementById("authToggleWrap").innerHTML = authMode === "signin"
+    ? 'New here? <a>Create an account</a>'
+    : 'Already have an account? <a>Sign in</a>';
+  setAuthError("");
+});
+document.getElementById("authSubmitBtn").addEventListener("click", async ()=>{
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  if(!email || !password){ setAuthError("Enter both email and password"); return; }
+  setAuthError("");
+  const btn = document.getElementById("authSubmitBtn");
+  btn.textContent = "Please wait...";
+  try{
+    if(authMode === "signin"){
+      const {error} = await sb.auth.signInWithPassword({email, password});
+      if(error){ setAuthError(error.message); btn.textContent = "Sign in"; return; }
+    } else {
+      const {error} = await sb.auth.signUp({email, password});
+      if(error){ setAuthError(error.message); btn.textContent = "Create account"; return; }
+    }
+    await startApp();
+  }catch(e){
+    setAuthError("Something went wrong — try again");
+    btn.textContent = authMode === "signin" ? "Sign in" : "Create account";
+  }
+});
+document.getElementById("signOutBtn").addEventListener("click", async ()=>{
+  await sb.auth.signOut();
+  showAuthScreen();
+});
+
+const ROUTINE = [
+  {section:"Prayer", items:[
+    {id:"fajr", name:"Fajr", time:"05:30"},
+    {id:"dhuhr", name:"Dhuhr", time:"13:30"},
+    {id:"asr", name:"Asr", time:"17:00"},
+    {id:"maghrib", name:"Maghrib", time:"19:00"},
+    {id:"isha", name:"Isha", time:"21:00"},
+  ]},
+  {section:"Work", items:[
+    {id:"deepwork", name:"Deep work block", time:"09:00"},
+    {id:"studyblock", name:"Study / learning block", time:"15:00"},
+  ]},
+  {section:"Health", items:[
+    {id:"gym", name:"Gym", time:"06:30"},
+    {id:"water1", name:"Drink water", time:"10:00"},
+    {id:"break1", name:"Short break", time:"11:00"},
+    {id:"water2", name:"Drink water", time:"14:00"},
+    {id:"break2", name:"Short break", time:"16:00"},
+    {id:"water3", name:"Drink water", time:"18:00"},
+    {id:"winddown", name:"Wind down / sleep prep", time:"22:30"},
+  ]},
+];
+const UNIT_LABELS = {pcs:'pieces', kg:'kg', g:'grams', litre:'litres', dozen:'dozens', box:'boxes'};
+
+function todayKey(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function fmtClock(ms){
+  const s = Math.floor(ms/1000);
+  const h = String(Math.floor(s/3600)).padStart(2,"0");
+  const m = String(Math.floor((s%3600)/60)).padStart(2,"0");
+  const sec = String(s%60).padStart(2,"0");
+  return h+":"+m+":"+sec;
+}
+function fmtHM(ms){
+  const mins = Math.round(ms/60000);
+  return Math.floor(mins/60)+"h "+(mins%60)+"m";
+}
+function fmtTimeLabel(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+}
+function formatQty(qty, unit){
+  const q = Number(qty) || 0;
+  const qtyStr = Number.isInteger(q) ? q.toString() : q.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+  return `${qtyStr} ${unit || 'pcs'}`;
+}
+function unitStep(unit){
+  return (unit === 'kg' || unit === 'litre' || unit === 'g') ? 0.5 : 1;
+}
+async function localGet(key){
+  try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+async function localSet(key, value){
+  try{ localStorage.setItem(key, JSON.stringify(value)); }
+  catch(e){ console.error("save failed", e); showToast("Couldn't save — try again"); }
+}
+
+/* ---- Supabase row <-> app object mappers ---- */
+function custRowToObj(r){ return {id:r.id, name:r.name, phone:r.phone||""}; }
+function prodRowToObj(r){ return {id:r.id, name:r.name, unit:r.unit||"pcs", salePrice:Number(r.sale_price), stock:Number(r.stock)}; }
+function purchRowToObj(r){ return {id:r.id, productId:r.product_id, qty:Number(r.qty), price:Number(r.price), ref:r.ref||"", date:r.date}; }
+function khataRowToObj(r){ return {id:r.id, customerId:r.customer_id, type:r.type, amount:Number(r.amount), note:r.note||"", ref:r.ref||"", billId:r.bill_id, date:r.date}; }
+function supTxRowToObj(r){ return {id:r.id, supplierId:r.supplier_id, type:r.type, amount:Number(r.amount), note:r.note||"", ref:r.ref||"", date:r.date}; }
+function cashRowToObj(r){ return {id:r.id, type:r.type, amount:Number(r.amount), note:r.note||"", partyType:r.party_type, partyId:r.party_id, partyName:r.party_name, date:r.date}; }
+
+async function sbFetchSimple(table){
+  const {data, error} = await sb.from(table).select("*").order("created_at");
+  if(error){ console.error(error); showToast("Couldn't load data"); return []; }
+  return data.map(custRowToObj);
+}
+async function sbSyncSimple(table, arr){
+  if(!arr.length) return;
+  const {error} = await sb.from(table).upsert(arr.map(x=>({id:x.id, name:x.name, phone:x.phone||null})));
+  if(error){ console.error(error); showToast("Couldn't save — try again"); }
+}
+async function sbFetchProducts(){
+  const {data, error} = await sb.from("shop_products").select("*").order("created_at");
+  if(error){ console.error(error); showToast("Couldn't load products"); return []; }
+  return data.map(prodRowToObj);
+}
+async function sbSyncProducts(arr){
+  if(!arr.length) return;
+  const {error} = await sb.from("shop_products").upsert(arr.map(p=>({id:p.id, name:p.name, unit:p.unit||"pcs", sale_price:p.salePrice, stock:p.stock})));
+  if(error){ console.error(error); showToast("Couldn't save — try again"); }
+}
+async function sbDeleteRow(table, id){
+  const {error} = await sb.from(table).delete().eq("id", id);
+  if(error){ console.error(error); showToast("Couldn't delete — try again"); }
+}
+async function sbFetchPurchases(){
+  const {data, error} = await sb.from("shop_purchases").select("*").order("date");
+  if(error){ console.error(error); showToast("Couldn't load purchases"); return []; }
+  return data.map(purchRowToObj);
+}
+async function sbSyncPurchases(arr){
+  if(!arr.length) return;
+  const {error} = await sb.from("shop_purchases").upsert(arr.map(p=>({id:p.id, product_id:p.productId, qty:p.qty, price:p.price, ref:p.ref||null, date:p.date})));
+  if(error){ console.error(error); showToast("Couldn't save — try again"); }
+}
+async function sbFetchKhataTx(){
+  const {data, error} = await sb.from("shop_khata_tx").select("*").order("date");
+  if(error){ console.error(error); showToast("Couldn't load ledger"); return []; }
+  return data.map(khataRowToObj);
+}
+async function sbSyncKhataTx(arr){
+  if(!arr.length) return;
+  const {error} = await sb.from("shop_khata_tx").upsert(arr.map(t=>({id:t.id, customer_id:t.customerId, type:t.type, amount:t.amount, note:t.note||null, ref:t.ref||null, bill_id:t.billId||null, date:t.date})));
+  if(error){ console.error(error); showToast("Couldn't save — try again"); }
+}
+async function sbFetchSupplierTx(){
+  const {data, error} = await sb.from("shop_supplier_tx").select("*").order("date");
+  if(error){ console.error(error); showToast("Couldn't load ledger"); return []; }
+  return data.map(supTxRowToObj);
+}
+async function sbSyncSupplierTx(arr){
+  if(!arr.length) return;
+  const {error} = await sb.from("shop_supplier_tx").upsert(arr.map(t=>({id:t.id, supplier_id:t.supplierId, type:t.type, amount:t.amount, note:t.note||null, ref:t.ref||null, date:t.date})));
+  if(error){ console.error(error); showToast("Couldn't save — try again"); }
+}
+async function sbFetchCashbook(){
+  const {data, error} = await sb.from("shop_cashbook").select("*").order("date");
+  if(error){ console.error(error); showToast("Couldn't load cash book"); return []; }
+  return data.map(cashRowToObj);
+}
+async function sbSyncCashbook(arr){
+  if(!arr.length) return;
+  const {error} = await sb.from("shop_cashbook").upsert(arr.map(e=>({id:e.id, type:e.type, amount:e.amount, note:e.note||null, party_type:e.partyType||null, party_id:e.partyId||null, party_name:e.partyName||null, date:e.date})));
+  if(error){ console.error(error); showToast("Couldn't save — try again"); }
+}
+async function sbFetchSalesForDate(dateKey){
+  const {data, error} = await sb.from("shop_sales").select("*, shop_sale_items(*)").gte("time", dateKey+"T00:00:00").lte("time", dateKey+"T23:59:59.999").order("time");
+  if(error){ console.error(error); showToast("Couldn't load sales"); return []; }
+  return data.map(r=>({
+    id:r.id, time:r.time, total:Number(r.total), paidCash:Number(r.paid_cash), creditAmount:Number(r.credit_amount),
+    customerId:r.customer_id, customerName:r.customer_name, hasPaperPhoto:r.has_paper_photo,
+    items:(r.shop_sale_items||[]).map(i=>({productId:i.product_id, name:i.name, unit:i.unit, price:Number(i.price), qty:Number(i.qty)}))
+  }));
+}
+async function sbSyncSalesForDate(arr){
+  if(!arr.length) return;
+  const {error} = await sb.from("shop_sales").upsert(arr.map(s=>({
+    id:s.id, time:s.time, total:s.total, paid_cash:s.paidCash, credit_amount:s.creditAmount,
+    customer_id:s.customerId||null, customer_name:s.customerName||null, has_paper_photo:!!s.hasPaperPhoto
+  })));
+  if(error){ console.error(error); showToast("Couldn't save sale"); return; }
+  for(const s of arr){
+    await sb.from("shop_sale_items").delete().eq("sale_id", s.id);
+    if(s.items && s.items.length){
+      await sb.from("shop_sale_items").insert(s.items.map(i=>({
+        id: s.id+"-"+Math.random().toString(36).slice(2,8), sale_id:s.id, product_id:i.productId||null, name:i.name, unit:i.unit||"pcs", price:i.price, qty:i.qty
+      })));
+    }
+  }
+}
+
+/* ---- Work sessions <-> shop_work_sessions ---- */
+function dayRangeIso(dateKey){
+  // local calendar day -> UTC instants, so near-midnight rows land on the right day
+  return {
+    from: new Date(dateKey + "T00:00:00").toISOString(),
+    to: new Date(dateKey + "T23:59:59.999").toISOString()
+  };
+}
+async function sbFetchWorkSessions(dateKey){
+  const {from, to} = dayRangeIso(dateKey);
+  const {data, error} = await sb.from("shop_work_sessions")
+    .select("*").gte("start_time", from).lte("start_time", to).order("start_time");
+  if(error){ console.error(error); showToast("Couldn't load sessions"); return []; }
+  return data.map(r=>({id:r.id, start:r.start_time, end:r.end_time, durationMs:Number(r.duration_ms), note:r.note||""}));
+}
+async function sbSyncWorkSessions(arr){
+  if(!arr.length) return;
+  const {error} = await sb.from("shop_work_sessions").upsert(arr.map(s=>({
+    id:s.id, start_time:s.start, end_time:s.end, duration_ms:s.durationMs, note:s.note||null
+  })));
+  if(error){ console.error(error); showToast("Couldn't save session"); }
+}
+
+/* ---- Daily routine <-> shop_routine_state (one row per checked item) ---- */
+async function sbFetchRoutine(dateKey){
+  const {data, error} = await sb.from("shop_routine_state").select("item_id, done").eq("date", dateKey);
+  if(error){ console.error(error); showToast("Couldn't load routine"); return {}; }
+  const out = {};
+  (data||[]).forEach(r=>{ out[r.item_id] = r.done; });
+  return out;
+}
+async function sbSyncRoutine(dateKey, obj){
+  const upserts = [], deletes = [];
+  Object.keys(obj || {}).forEach(itemId=>{
+    if(obj[itemId]) upserts.push({id: dateKey + "-" + itemId, date: dateKey, item_id: itemId, done: true});
+    else deletes.push(dateKey + "-" + itemId);
+  });
+  if(upserts.length){
+    const {error} = await sb.from("shop_routine_state").upsert(upserts);
+    if(error){ console.error(error); showToast("Couldn't save — try again"); }
+  }
+  for(const id of deletes){
+    await sb.from("shop_routine_state").delete().eq("id", id);
+  }
+}
+
+async function storeGet(key){
+  if(key === "pos-products") return await sbFetchProducts();
+  if(key === "purchases") return await sbFetchPurchases();
+  if(key === "khata-customers") return await sbFetchSimple("shop_customers");
+  if(key === "khata-suppliers") return await sbFetchSimple("shop_suppliers");
+  if(key === "khata-tx") return await sbFetchKhataTx();
+  if(key === "supplier-tx") return await sbFetchSupplierTx();
+  if(key === "cashbook") return await sbFetchCashbook();
+  if(key.startsWith("pos-sales:")) return await sbFetchSalesForDate(key.slice(10));
+  if(key.startsWith("bill-photo:")){
+    const {data, error} = await sb.from("shop_sales").select("photo_data_url").eq("id", key.slice(11)).maybeSingle();
+    if(error || !data) return null;
+    return data.photo_data_url || null;
+  }
+  if(key.startsWith("work-sessions:")) return await sbFetchWorkSessions(key.slice(14));
+  if(key.startsWith("routine:")) return await sbFetchRoutine(key.slice(8));
+  return await localGet(key);
+}
+async function storeSet(key, value){
+  if(key === "pos-products") return await sbSyncProducts(value);
+  if(key === "purchases") return await sbSyncPurchases(value);
+  if(key === "khata-customers") return await sbSyncSimple("shop_customers", value);
+  if(key === "khata-suppliers") return await sbSyncSimple("shop_suppliers", value);
+  if(key === "khata-tx") return await sbSyncKhataTx(value);
+  if(key === "supplier-tx") return await sbSyncSupplierTx(value);
+  if(key === "cashbook") return await sbSyncCashbook(value);
+  if(key.startsWith("pos-sales:")) return await sbSyncSalesForDate(value);
+  if(key.startsWith("bill-photo:")){
+    const {error} = await sb.from("shop_sales").update({photo_data_url:value, has_paper_photo:true}).eq("id", key.slice(11));
+    if(error){ console.error(error); showToast("Couldn't save photo"); }
+    return;
+  }
+  if(key.startsWith("work-sessions:")) return await sbSyncWorkSessions(value);
+  if(key.startsWith("routine:")) return await sbSyncRoutine(key.slice(8), value);
+  return await localSet(key, value);
+}
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200);
+}
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+function calcFieldHtml(id, placeholder){
+  return `<div class="calc-row-wrap">
+    <input type="text" inputmode="decimal" id="${id}" placeholder="${placeholder||''}">
+    <button type="button" class="calc-toggle" data-calc-for="${id}">🖩</button>
+  </div>
+  <div class="calc-pad" id="${id}_pad">
+    <button type="button" class="calc-key ac" data-k="AC">AC</button>
+    <button type="button" class="calc-key op" data-k="/">÷</button>
+    <button type="button" class="calc-key op" data-k="*">×</button>
+    <button type="button" class="calc-key op" data-k="back">⌫</button>
+    <button type="button" class="calc-key" data-k="7">7</button>
+    <button type="button" class="calc-key" data-k="8">8</button>
+    <button type="button" class="calc-key" data-k="9">9</button>
+    <button type="button" class="calc-key op" data-k="-">−</button>
+    <button type="button" class="calc-key" data-k="4">4</button>
+    <button type="button" class="calc-key" data-k="5">5</button>
+    <button type="button" class="calc-key" data-k="6">6</button>
+    <button type="button" class="calc-key op" data-k="+">+</button>
+    <button type="button" class="calc-key" data-k="1">1</button>
+    <button type="button" class="calc-key" data-k="2">2</button>
+    <button type="button" class="calc-key" data-k="3">3</button>
+    <button type="button" class="calc-key eq" data-k="=" style="grid-row: span 2;">=</button>
+    <button type="button" class="calc-key wide" data-k="0">0</button>
+    <button type="button" class="calc-key" data-k=".">.</button>
+  </div>`;
+}
+document.getElementById("sheetLayer").addEventListener("click", (e)=>{
+  const toggleBtn = e.target.closest(".calc-toggle");
+  if(toggleBtn){
+    const pad = document.getElementById(toggleBtn.dataset.calcFor + "_pad");
+    if(pad) pad.classList.toggle("open");
+    return;
+  }
+  const key = e.target.closest(".calc-key");
+  if(key){
+    const pad = key.closest(".calc-pad");
+    const inputId = pad.id.slice(0, -4);
+    const input = document.getElementById(inputId);
+    if(!input) return;
+    const k = key.dataset.k;
+    if(k === "AC"){ input.value = ""; }
+    else if(k === "back"){ input.value = input.value.slice(0, -1); }
+    else if(k === "="){
+      try{
+        const expr = input.value.replace(/[^0-9+\-*/.() ]/g, "");
+        if(expr.trim()){
+          const result = Function('"use strict"; return (' + expr + ')')();
+          if(isFinite(result)) input.value = (Math.round(result * 100) / 100).toString();
+        }
+      }catch(err){ /* ignore invalid expression */ }
+    } else {
+      input.value += k;
+    }
+  }
+});
+
+/* ---------- WORK TAB ---------- */
+let running = null;
+let sessions = [];
+let tickHandle = null;
+
+async function loadWork(){
+  running = await storeGet("work-running");
+  sessions = (await storeGet("work-sessions:"+todayKey())) || [];
+  renderWork();
+  if(running){ startTicking(); }
+}
+function renderWork(){
+  document.getElementById("toggleBtn").textContent = running ? "Stop work" : "Start work";
+  document.getElementById("toggleBtn").classList.toggle("running", !!running);
+  document.getElementById("timerHint").textContent = running ? "Working since " + fmtTimeLabel(running.start) : "Not working right now";
+  const totalMs = sessions.reduce((sum,s)=>sum+s.durationMs,0);
+  document.getElementById("totalToday").textContent = fmtHM(totalMs);
+  const list = document.getElementById("sessionsList");
+  if(sessions.length === 0){
+    list.innerHTML = '<div class="empty-note">No sessions yet today</div>';
+  } else {
+    list.innerHTML = sessions.slice().reverse().map(s => `
+      <div class="session">
+        <div>
+          <div class="meta">${fmtTimeLabel(s.start)} – ${fmtTimeLabel(s.end)}</div>
+          ${s.note ? `<div class="note">${escapeHtml(s.note)}</div>` : ""}
+        </div>
+        <div class="dur">${fmtHM(s.durationMs)}</div>
+      </div>
+    `).join("");
+  }
+}
+function startTicking(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(()=>{
+    if(!running) return;
+    document.getElementById("elapsed").textContent = fmtClock(Date.now() - new Date(running.start).getTime());
+  }, 1000);
+}
+function stopTicking(){ if(tickHandle) clearInterval(tickHandle); document.getElementById("elapsed").textContent = "00:00:00"; }
+document.getElementById("toggleBtn").addEventListener("click", async ()=>{
+  if(!running){
+    running = { start: new Date().toISOString() };
+    await storeSet("work-running", running);
+    renderWork(); startTicking();
+  } else { openNoteSheet(); }
+});
+function openNoteSheet(){
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `
+    <div class="sheet-backdrop"><div class="sheet">
+      <h2>Nice work</h2>
+      <p>You worked ${fmtHM(Date.now() - new Date(running.start).getTime())}. Add a quick note about what you did?</p>
+      <textarea id="noteInput" placeholder="e.g. Client emails, invoice follow-ups..."></textarea>
+      <div class="sheet-actions">
+        <button class="btn-skip" id="skipNote">Skip</button>
+        <button class="btn-save" id="saveNote">Save session</button>
+      </div>
+    </div></div>`;
+  document.getElementById("skipNote").addEventListener("click", ()=>finishSession(""));
+  document.getElementById("saveNote").addEventListener("click", ()=>finishSession(document.getElementById("noteInput").value.trim()));
+}
+async function finishSession(note){
+  const end = new Date().toISOString();
+  const durationMs = new Date(end).getTime() - new Date(running.start).getTime();
+  sessions.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), start: running.start, end, durationMs, note });
+  await storeSet("work-sessions:"+todayKey(), sessions);
+  running = null;
+  await storeSet("work-running", null);
+  document.getElementById("sheetLayer").innerHTML = "";
+  stopTicking(); renderWork();
+  showToast("Session saved");
+}
+
+/* ---------- ROUTINE TAB ---------- */
+let routineState = {};
+async function loadRoutine(){ routineState = (await storeGet("routine:"+todayKey())) || {}; renderRoutine(); }
+function renderRoutine(){
+  const el = document.getElementById("routineTab");
+  el.innerHTML = ROUTINE.map(sec => `
+    <div class="section-title">${sec.section}</div>
+    ${sec.items.map(item => `
+      <div class="routine-item ${routineState[item.id] ? 'done':''}" data-id="${item.id}">
+        <div class="check ${routineState[item.id] ? 'checked':''}"></div>
+        <div class="routine-text"><div class="name">${item.name}</div><div class="time">${to12h(item.time)}</div></div>
+      </div>`).join("")}
+  `).join("");
+  el.querySelectorAll(".routine-item").forEach(row=>{
+    row.addEventListener("click", async ()=>{
+      const id = row.dataset.id;
+      routineState[id] = !routineState[id];
+      await storeSet("routine:"+todayKey(), routineState);
+      renderRoutine();
+    });
+  });
+}
+function to12h(t){
+  const [h,m] = t.split(":").map(Number);
+  const period = h>=12 ? "PM" : "AM";
+  const hh = h%12 === 0 ? 12 : h%12;
+  return hh+":"+String(m).padStart(2,"0")+" "+period;
+}
+
+/* ---------- SALES + STOCK (shared inventory) ---------- */
+let products = [];     // {id, name, unit, salePrice, stock}
+let purchases = [];    // {id, productId, qty, price, date}
+let cart = [];
+let salesToday = [];
+let currentPhotoBillId = null;
+
+// Khata (customer credit ledger) + Suppliers + Cash Book
+let customers = [];   // {id, name, phone}
+let khataTx = [];     // {id, customerId, type:'credit'|'payment', amount, note, date, billId?}
+let suppliers = [];   // {id, name, phone}
+let supplierTx = [];  // {id, supplierId, type:'credit'|'payment', amount, note, date}
+let cashbook = [];    // {id, type:'in'|'out', amount, note, date}
+let ledgerView = "khata";
+
+async function loadInventory(){
+  products = (await storeGet("pos-products")) || [];
+  purchases = (await storeGet("purchases")) || [];
+  cart = (await storeGet("pos-cart")) || [];
+  salesToday = (await storeGet("pos-sales:"+todayKey())) || [];
+  renderPOS();
+  renderStock();
+}
+async function loadLedger(){
+  customers = (await storeGet("khata-customers")) || [];
+  khataTx = (await storeGet("khata-tx")) || [];
+  suppliers = (await storeGet("khata-suppliers")) || [];
+  supplierTx = (await storeGet("supplier-tx")) || [];
+  cashbook = (await storeGet("cashbook")) || [];
+  renderLedger();
+}
+function customerBalance(customerId){
+  return khataTx.filter(t=>t.customerId===customerId).reduce((s,t)=> s + (t.type==="credit" ? t.amount : -t.amount), 0);
+}
+function supplierBalance(supplierId){
+  return supplierTx.filter(t=>t.supplierId===supplierId).reduce((s,t)=> s + (t.type==="credit" ? t.amount : -t.amount), 0);
+}
+function cashInHand(){
+  return cashbook.reduce((s,e)=> s + (e.type==="in" ? e.amount : -e.amount), 0);
+}
+function waLink(phone, text){
+  const digits = (phone||"").replace(/[^0-9]/g, "");
+  return "https://wa.me/" + digits + "?text=" + encodeURIComponent(text);
+}
+function avgCost(productId){
+  const rel = purchases.filter(p=>p.productId===productId);
+  if(rel.length===0) return null;
+  const totalQty = rel.reduce((s,p)=>s+p.qty,0);
+  const totalCost = rel.reduce((s,p)=>s+p.qty*p.price,0);
+  return totalQty>0 ? totalCost/totalQty : null;
+}
+
+/* --- Sales tab (overview) --- */
+function renderPOS(){
+  const el = document.getElementById("salesTab");
+  const totalRevenue = salesToday.reduce((s,b)=>s+b.total,0);
+  const profitToday = salesToday.reduce((s,b)=> s + b.items.reduce((ss,i)=> ss + (i.price - (avgCost(i.productId)||0))*i.qty, 0), 0);
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Products &amp; stock</div>
+      <div id="productList"></div>
+    </div>
+    <div class="card">
+      <div class="today-total"><span class="label">Sold today</span><span class="value">Rs ${totalRevenue.toFixed(0)}</span></div>
+      <div class="today-total" style="margin-top:6px;"><span class="label">Bills today</span><span class="value">${salesToday.length}</span></div>
+      <div class="today-total" style="margin-top:6px;"><span class="label">Profit today</span><span class="value">Rs ${profitToday.toFixed(0)}</span></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Today's bills</div>
+      <div id="billsList"></div>
+    </div>
+    <div class="fab-wrap"><div class="fab-inner"><button class="fab" id="newBillFab">+</button></div></div>
+  `;
+
+  const productList = document.getElementById("productList");
+  if(products.length === 0){
+    productList.innerHTML = '<div class="empty-note">No products yet — add one from the Stock tab</div>';
+  } else {
+    productList.innerHTML = products.map(p => `
+      <div class="product-row">
+        <div>
+          <div class="pname">${escapeHtml(p.name)}</div>
+          <div class="psub">Rs ${p.salePrice} / ${escapeHtml(p.unit || 'pcs')}</div>
+        </div>
+        <div class="pqty">
+          ${formatQty(p.stock, p.unit)}
+          ${p.stock <= 5 ? '<div class="tag-low" style="margin-top:3px;display:inline-block;">Low</div>' : ''}
+        </div>
+      </div>`).join("");
+  }
+
+  const billsList = document.getElementById("billsList");
+  if(salesToday.length === 0){
+    billsList.innerHTML = '<div class="empty-note">No sales yet today</div>';
+  } else {
+    billsList.innerHTML = salesToday.slice().reverse().map(b => `
+      <div class="bill-card">
+        <div class="bill-head"><span>${fmtTimeLabel(b.time)}</span><span class="dur">Rs ${b.total.toFixed(0)}</span></div>
+        <div class="bill-items">${b.items.map(i=>`${formatQty(i.qty, i.unit)} ${escapeHtml(i.name)}`).join(", ")}</div>
+        ${b.creditAmount ? `<span class="pay-badge ${b.paidCash>0?'partial':'credit'}">${b.paidCash>0 ? 'Partial · Rs '+b.creditAmount.toFixed(0)+' credit' : 'On credit'}${b.customerName ? ' — '+escapeHtml(b.customerName) : ''}</span>` : `<span class="pay-badge cash">Cash</span>`}
+        <div class="bill-actions">
+          <button class="icon-btn" data-act="photo" data-id="${b.id}" title="Bill photo">${b.hasPaperPhoto?'🖼️':'📷'}</button>
+          <button class="icon-btn" data-act="receipt" data-id="${b.id}" title="Receipt image">🧾</button>
+        </div>
+      </div>`).join("");
+    billsList.querySelectorAll('[data-act="photo"]').forEach(btn=> btn.addEventListener("click", ()=>openPhotoSheet(btn.dataset.id)));
+    billsList.querySelectorAll('[data-act="receipt"]').forEach(btn=> btn.addEventListener("click", ()=>{
+      const bill = salesToday.find(x=>x.id===btn.dataset.id);
+      if(bill) openReceiptSheet(bill);
+    }));
+  }
+
+  document.getElementById("newBillFab").addEventListener("click", openCreateBillSheet);
+}
+
+/* --- Create bill sheet (opened from the + button) --- */
+let billPartyId = null;
+let billPartyName = null;
+function openCreateBillSheet(){
+  billPartyId = null;
+  billPartyName = null;
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>New bill</h2>
+    <p>Who is this bill for?</p>
+    <select id="billPartySelect" class="select-field">
+      <option value="">Walk-in / cash customer</option>
+      <option value="__new__">+ New customer</option>
+      ${customerSelectOptions()}
+    </select>
+    <div id="billNewPartyFields" style="display:none;">
+      <span class="form-label">Name</span>
+      <input type="text" id="billNewPartyName" placeholder="Customer name">
+      <span class="form-label">Phone (optional)</span>
+      <input type="text" id="billNewPartyPhone" placeholder="e.g. 03001234567">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelBillParty">Cancel</button>
+      <button class="btn-save" id="continueBillParty">Continue</button>
+    </div>
+  </div></div>`;
+  const sel = document.getElementById("billPartySelect");
+  sel.addEventListener("change", ()=>{
+    document.getElementById("billNewPartyFields").style.display = sel.value === "__new__" ? "block" : "none";
+  });
+  document.getElementById("cancelBillParty").addEventListener("click", ()=> layer.innerHTML="");
+  document.getElementById("continueBillParty").addEventListener("click", async ()=>{
+    if(sel.value === "__new__"){
+      const name = document.getElementById("billNewPartyName").value.trim();
+      if(!name){ showToast("Enter customer name"); return; }
+      const phone = document.getElementById("billNewPartyPhone").value.trim();
+      const newCust = {id: Date.now().toString(36), name, phone};
+      customers.push(newCust);
+      await storeSet("khata-customers", customers);
+      billPartyId = newCust.id; billPartyName = newCust.name;
+    } else if(sel.value){
+      const c = customers.find(x=>x.id===sel.value);
+      billPartyId = c.id; billPartyName = c.name;
+    }
+    renderBillPickItemsStep();
+  });
+}
+function renderBillPickItemsStep(){
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>${billPartyName ? escapeHtml(billPartyName) : "Walk-in sale"}</h2>
+    <div class="cart-total-row" style="margin-bottom:14px;"><span>Total</span><span id="runningTotalVal">Rs 0</span></div>
+    <div class="product-grid" id="billProductGrid"></div>
+    <div id="billCartWrap" style="margin-top:14px;"></div>
+  </div></div>`;
+  renderBillSheet();
+}
+function renderBillSheet(){
+  const grid = document.getElementById("billProductGrid");
+  if(!grid) return;
+  if(products.length === 0){
+    grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1;">No products yet — add one from the Stock tab first</div>';
+  } else {
+    grid.innerHTML = products.map(p=>{
+      const inCart = cart.find(i=>i.productId===p.id);
+      const remaining = p.stock - (inCart?inCart.qty:0);
+      const out = remaining<=0;
+      return `<button class="product-btn" data-id="${p.id}" ${out?'disabled style="opacity:0.45;"':''}>
+        <div class="pname">${escapeHtml(p.name)}</div>
+        <div class="pprice">Rs ${p.salePrice}/${escapeHtml(p.unit||'pcs')}</div>
+        <div class="pprice">${out?'Out of stock':formatQty(remaining,p.unit)+' left'}</div>
+      </button>`;
+    }).join("");
+    grid.querySelectorAll(".product-btn:not(:disabled)").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ addToCart(btn.dataset.id); renderBillSheet(); });
+    });
+  }
+  const wrap = document.getElementById("billCartWrap");
+  const cartTotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const totalVal = document.getElementById("runningTotalVal");
+  if(totalVal) totalVal.textContent = "Rs " + cartTotal.toFixed(0);
+  wrap.innerHTML = `
+    ${cart.length===0 ? '<div class="empty-note">No items added yet</div>' : '<div id="billCartList"></div>'}
+    <div class="sheet-actions" style="margin-top:14px;">
+      <button class="btn-skip" id="cancelBill">Cancel</button>
+      ${cart.length>0 ? '<button class="btn-save" id="completeBillBtn">Complete sale</button>' : ''}
+    </div>`;
+  if(cart.length>0){
+    document.getElementById("billCartList").innerHTML = cart.map(i=>`
+      <div class="cart-row">
+        <div>${escapeHtml(i.name)} <span style="color:var(--ink-soft); font-size:13px;">Rs ${i.price}/${escapeHtml(i.unit||'pcs')}</span></div>
+        <div class="qty-controls">
+          <button class="qty-btn" data-id="${i.productId}" data-act="dec">−</button>
+          <span>${formatQty(i.qty, i.unit)}</span>
+          <button class="qty-btn" data-id="${i.productId}" data-act="inc">+</button>
+        </div>
+      </div>`).join("");
+    document.querySelectorAll("#billCartList .qty-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ changeQty(btn.dataset.id, btn.dataset.act); renderBillSheet(); });
+    });
+    document.getElementById("completeBillBtn").addEventListener("click", ()=> openBillPaymentStep(cartTotal));
+  }
+  document.getElementById("cancelBill").addEventListener("click", ()=>{ document.getElementById("sheetLayer").innerHTML = ""; });
+}
+function openBillPaymentStep(total){
+  const layer = document.getElementById("sheetLayer");
+  const partyLine = billPartyId ? `<p>Adding to <strong>${escapeHtml(billPartyName)}</strong>'s account if not paid in full.</p>` : "";
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Payment</h2>
+    <p>Total due: Rs ${total.toFixed(0)}</p>
+    ${partyLine}
+    <div class="subtab-row">
+      <button type="button" class="subtab-btn active" id="payCash">Full cash</button>
+      <button type="button" class="subtab-btn" id="payCredit">Full credit</button>
+      <button type="button" class="subtab-btn" id="payPartial">Partial</button>
+    </div>
+    <div id="paymentFields"></div>
+    <div class="sheet-actions" style="margin-top:6px;">
+      <button class="btn-skip" id="backToBill">Back</button>
+      <button class="btn-save" id="confirmPayment">Complete sale</button>
+    </div>
+  </div></div>`;
+  let payMode = "cash";
+  const fieldsEl = document.getElementById("paymentFields");
+  function customerPickerHtml(){
+    if(billPartyId){
+      return `<p style="margin-top:0;">This will be added to <strong>${escapeHtml(billPartyName)}</strong>'s balance.</p>`;
+    }
+    return `
+      <span class="form-label">Customer</span>
+      <select id="payCustomer" class="select-field">
+        <option value="__new__">+ New customer</option>
+        ${customerSelectOptions()}
+      </select>
+      <div id="payNewCustFields" style="display:${customers.length===0?'block':'none'};">
+        <span class="form-label">Name</span>
+        <input type="text" id="payNewName" placeholder="Customer name">
+        <span class="form-label">Phone (optional)</span>
+        <input type="text" id="payNewPhone" placeholder="e.g. 03001234567">
+      </div>`;
+  }
+  function renderFields(){
+    if(payMode === "cash"){
+      fieldsEl.innerHTML = `<p style="margin-top:0;">Full amount is paid now in cash.</p>`;
+    } else if(payMode === "credit"){
+      fieldsEl.innerHTML = customerPickerHtml();
+      if(!billPartyId) wireNewCustomerFields(document.getElementById("payCustomer"), "payNewCustFields");
+    } else {
+      fieldsEl.innerHTML = `
+        <span class="form-label">Amount received now (cash)</span>
+        <input type="number" id="payCashNow" placeholder="e.g. ${Math.round(total/2)}">
+        ${customerPickerHtml()}`;
+      if(!billPartyId) wireNewCustomerFields(document.getElementById("payCustomer"), "payNewCustFields");
+    }
+  }
+  renderFields();
+  function selectMode(mode, btn){
+    payMode = mode;
+    [payCashBtn, payCreditBtn, payPartialBtn].forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    renderFields();
+  }
+  const payCashBtn = document.getElementById("payCash");
+  const payCreditBtn = document.getElementById("payCredit");
+  const payPartialBtn = document.getElementById("payPartial");
+  payCashBtn.addEventListener("click", ()=> selectMode("cash", payCashBtn));
+  payCreditBtn.addEventListener("click", ()=> selectMode("credit", payCreditBtn));
+  payPartialBtn.addEventListener("click", ()=> selectMode("partial", payPartialBtn));
+
+  document.getElementById("backToBill").addEventListener("click", ()=>{ renderBillPickItemsStep(); });
+  document.getElementById("confirmPayment").addEventListener("click", async ()=>{
+    let paidCash = total, creditAmount = 0, customerId = billPartyId;
+    if(payMode === "credit" || payMode === "partial"){
+      if(payMode === "partial"){
+        const entered = parseFloat(document.getElementById("payCashNow").value);
+        paidCash = isNaN(entered) ? 0 : Math.min(Math.max(entered,0), total);
+        creditAmount = Math.round((total - paidCash)*100)/100;
+      } else {
+        paidCash = 0; creditAmount = total;
+      }
+      if(!billPartyId){
+        const sel = document.getElementById("payCustomer");
+        customerId = sel.value;
+        if(customerId === "__new__"){
+          const name = document.getElementById("payNewName").value.trim();
+          if(!name){ showToast("Enter customer name"); return; }
+          const phone = document.getElementById("payNewPhone").value.trim();
+          const newCust = {id: Date.now().toString(36), name, phone};
+          customers.push(newCust);
+          await storeSet("khata-customers", customers);
+          customerId = newCust.id;
+        }
+      }
+    }
+    await completeSale({paidCash, creditAmount, customerId});
+    document.getElementById("sheetLayer").innerHTML = "";
+  });
+}
+function addToCart(productId){
+  const p = products.find(x=>x.id===productId);
+  if(!p) return;
+  const existing = cart.find(i=>i.productId===productId);
+  const currentQty = existing?existing.qty:0;
+  if(currentQty >= p.stock){ showToast("Out of stock"); return; }
+  if(existing) existing.qty += 1;
+  else cart.push({productId:p.id, name:p.name, price:p.salePrice, unit:p.unit||'pcs', qty:1});
+  storeSet("pos-cart", cart);
+}
+function changeQty(productId, act){
+  const item = cart.find(i=>i.productId===productId);
+  if(!item) return;
+  const prod = products.find(p=>p.id===productId);
+  const step = unitStep(item.unit);
+  if(act === "inc"){
+    if(prod && item.qty + step > prod.stock + 0.0001){ showToast("Out of stock"); return; }
+    item.qty = Math.round((item.qty + step) * 100) / 100;
+  } else {
+    item.qty = Math.round((item.qty - step) * 100) / 100;
+  }
+  if(item.qty <= 0) cart = cart.filter(i=>i.productId!==productId);
+  storeSet("pos-cart", cart);
+}
+async function completeSale(payment){
+  const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const paidCash = payment ? payment.paidCash : total;
+  const creditAmount = payment ? payment.creditAmount : 0;
+  const customerId = payment ? payment.customerId : null;
+  const customer = customerId ? customers.find(c=>c.id===customerId) : null;
+  const bill = {
+    id: Date.now().toString(36), time: new Date().toISOString(),
+    items: cart.map(i=>({...i})), total, hasPaperPhoto:false,
+    paidCash, creditAmount, customerId, customerName: customer ? customer.name : null
+  };
+  cart.forEach(i=>{
+    const prod = products.find(p=>p.id===i.productId);
+    if(prod) prod.stock = Math.max(0, Math.round((prod.stock - i.qty)*100)/100);
+  });
+  await storeSet("pos-products", products);
+  salesToday.push(bill);
+  await storeSet("pos-sales:"+todayKey(), salesToday);
+  cart = [];
+  await storeSet("pos-cart", cart);
+
+  if(paidCash > 0){
+    cashbook.push({id: Date.now().toString(36)+"c", type:"in", amount: paidCash, note:"Sale", date: bill.time, partyType: customer?"customer":null, partyId: customer?customer.id:null, partyName: customer?customer.name:null});
+    await storeSet("cashbook", cashbook);
+  }
+  if(creditAmount > 0 && customerId){
+    khataTx.push({id: Date.now().toString(36)+"k", customerId, type:"credit", amount: creditAmount, note: "Bill "+bill.id, date: bill.time, billId: bill.id});
+    await storeSet("khata-tx", khataTx);
+  }
+
+  renderPOS(); renderStock(); renderLedger();
+  showToast("Sale recorded");
+}
+
+/* --- Bill photo (paper receipt) --- */
+async function openPhotoSheet(billId){
+  const layer = document.getElementById("sheetLayer");
+  const existing = await storeGet("bill-photo:"+billId);
+  if(existing){
+    layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+      <h2>Bill photo</h2>
+      <img src="${existing}" class="receipt-preview">
+      <div class="sheet-actions">
+        <button class="btn-skip" id="closePhoto">Close</button>
+        <button class="btn-save" id="retakePhoto">Retake</button>
+      </div></div></div>`;
+    document.getElementById("closePhoto").addEventListener("click", ()=>layer.innerHTML="");
+    document.getElementById("retakePhoto").addEventListener("click", ()=>{ layer.innerHTML=""; triggerPhotoCapture(billId); });
+  } else {
+    triggerPhotoCapture(billId);
+  }
+}
+function triggerPhotoCapture(billId){
+  currentPhotoBillId = billId;
+  document.getElementById("photoInput").click();
+}
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 800;
+        const scale = Math.min(1, maxW/img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width*scale);
+        canvas.height = Math.round(img.height*scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.6));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+document.getElementById("photoInput").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  if(!file || !currentPhotoBillId) return;
+  try{
+    const dataUrl = await compressImage(file);
+    await storeSet("bill-photo:"+currentPhotoBillId, dataUrl);
+    const bill = salesToday.find(b=>b.id===currentPhotoBillId);
+    if(bill){ bill.hasPaperPhoto = true; await storeSet("pos-sales:"+todayKey(), salesToday); }
+    showToast("Photo attached");
+    renderPOS();
+  }catch(err){ showToast("Couldn't process photo"); }
+  e.target.value = "";
+});
+
+/* --- Auto-generated receipt image --- */
+function generateReceiptDataUrl(bill){
+  const width = 380;
+  const lineHeight = 22;
+  const height = 150 + bill.items.length*lineHeight + 50;
+  const canvas = document.createElement("canvas");
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#FBF9F4"; ctx.fillRect(0,0,width,height);
+  ctx.fillStyle = "#1C2E20";
+  ctx.font = "600 20px Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Receipt", width/2, 34);
+  ctx.font = "13px Arial";
+  ctx.fillStyle = "#5B6156";
+  ctx.fillText(new Date(bill.time).toLocaleString(), width/2, 54);
+  ctx.strokeStyle = "#DCD6C7";
+  ctx.beginPath(); ctx.moveTo(20,68); ctx.lineTo(width-20,68); ctx.stroke();
+  let y = 92;
+  ctx.font = "14px Arial";
+  bill.items.forEach(i=>{
+    ctx.textAlign = "left"; ctx.fillStyle = "#22271F";
+    ctx.fillText(`${formatQty(i.qty,i.unit)} × ${i.name}`, 20, y);
+    ctx.textAlign = "right";
+    ctx.fillText("Rs " + (i.price*i.qty).toFixed(0), width-20, y);
+    y += lineHeight;
+  });
+  y += 6;
+  ctx.beginPath(); ctx.moveTo(20,y); ctx.lineTo(width-20,y); ctx.stroke();
+  y += 28;
+  ctx.font = "600 17px Arial";
+  ctx.textAlign = "left"; ctx.fillText("Total", 20, y);
+  ctx.textAlign = "right"; ctx.fillText("Rs " + bill.total.toFixed(0), width-20, y);
+  return canvas.toDataURL("image/png");
+}
+function openReceiptSheet(bill){
+  const layer = document.getElementById("sheetLayer");
+  const dataUrl = generateReceiptDataUrl(bill);
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Receipt</h2>
+    <img src="${dataUrl}" class="receipt-preview">
+    <div class="sheet-actions">
+      <button class="btn-skip" id="closeReceipt">Close</button>
+      <button class="btn-save" id="downloadReceipt">${navigator.share ? 'Share' : 'Download'}</button>
+    </div></div></div>`;
+  document.getElementById("closeReceipt").addEventListener("click", ()=>layer.innerHTML="");
+  document.getElementById("downloadReceipt").addEventListener("click", async ()=>{
+    if(navigator.share){
+      try{
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], "receipt.png", {type:"image/png"});
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({files:[file], title:"Receipt"});
+          return;
+        }
+      }catch(e){}
+    }
+    const a = document.createElement("a");
+    a.href = dataUrl; a.download = "receipt-"+bill.id+".png"; a.click();
+  });
+}
+
+/* --- Stock tab --- */
+function renderStock(){
+  const el = document.getElementById("stockTab");
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="section-title" style="margin:0;">Inventory</div>
+        <button class="gear-btn" style="font-size:13px; text-decoration:underline;" id="importProductsBtn">⬆ Import list</button>
+      </div>
+      <button class="btn-complete" id="restockBtn">+ Restock / add product</button>
+    </div>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="section-title" style="margin:0;">Stock on hand</div>
+        <button class="gear-btn" id="manageProductsBtn">⚙</button>
+      </div>
+      <div id="stockList" style="margin-top:6px;"></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Recent purchases</div>
+      <div id="purchaseLog"></div>
+    </div>
+  `;
+  const stockList = document.getElementById("stockList");
+  if(products.length===0){
+    stockList.innerHTML = '<div class="empty-note">No products yet — tap "+ Restock" to add one</div>';
+  } else {
+    stockList.innerHTML = products.map(p=>{
+      const cost = avgCost(p.id);
+      const value = (cost||0)*p.stock;
+      return `<div class="stock-card">
+        <div class="stock-head">
+          <span class="pname">${escapeHtml(p.name)}${p.stock<=5?'<span class="tag-low">Low stock</span>':''}</span>
+          <span class="qty">${formatQty(p.stock, p.unit)}</span>
+        </div>
+        <div class="stock-sub">
+          <span>Sale Rs ${p.salePrice}/${escapeHtml(p.unit||'pcs')}</span>
+          <span>${cost!==null ? 'Avg cost Rs '+cost.toFixed(1) : 'No purchases yet'}</span>
+          ${cost!==null ? `<span>Value Rs ${value.toFixed(0)}</span>` : ''}
+        </div>
+      </div>`;
+    }).join("");
+  }
+  const log = document.getElementById("purchaseLog");
+  const recent = purchases.slice().sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,15);
+  if(recent.length===0){
+    log.innerHTML = '<div class="empty-note">No purchases logged yet</div>';
+  } else {
+    log.innerHTML = recent.map(pu=>{
+      const prod = products.find(x=>x.id===pu.productId);
+      return `<div class="purchase-log-row"><span>${formatQty(pu.qty, prod?prod.unit:'')} × ${escapeHtml(prod?prod.name:'Unknown')} @ Rs ${pu.price}${pu.ref ? ' · '+escapeHtml(pu.ref) : ''}</span><span>${new Date(pu.date).toLocaleDateString()}</span></div>`;
+    }).join("");
+  }
+  document.getElementById("restockBtn").addEventListener("click", openRestockSheet);
+  document.getElementById("manageProductsBtn").addEventListener("click", openManageProductsSheet);
+  document.getElementById("importProductsBtn").addEventListener("click", openProductImportSheet);
+}
+function openRestockSheet(){
+  const layer = document.getElementById("sheetLayer");
+  const options = products.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Restock</h2>
+    <p>Log a purchase batch — this adds to stock automatically.</p>
+    <span class="form-label">Product</span>
+    <select id="restockProduct" class="select-field">
+      <option value="__new__">+ New product</option>
+      ${options}
+    </select>
+    <div id="newProductFields" style="display:none;">
+      <span class="form-label">Product name</span>
+      <input type="text" id="newProdName" placeholder="e.g. 115 No. Bracket">
+      <span class="form-label">Unit</span>
+      <select id="newProdUnit" class="select-field">
+        <option value="pcs">Piece (pcs)</option>
+        <option value="kg">Kilogram (kg)</option>
+        <option value="g">Gram (g)</option>
+        <option value="litre">Litre</option>
+        <option value="dozen">Dozen</option>
+        <option value="box">Box</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <input type="text" id="newProdUnitCustom" placeholder="Unit name (e.g. bag, roll)" style="display:none;">
+      <span class="form-label">Sale price (per unit)</span>
+      <input type="number" id="newProdSalePrice" placeholder="e.g. 65">
+    </div>
+    <span class="form-label">Quantity purchased <span id="qtyUnitHint"></span></span>
+    <input type="number" step="0.01" id="restockQty" placeholder="e.g. 4000">
+    <span class="form-label">Price entry</span>
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <button type="button" class="toggle-btn active" id="priceModeUnit">Per unit</button>
+      <button type="button" class="toggle-btn" id="priceModeTotal">Total paid</button>
+    </div>
+    <span class="form-label" id="priceFieldLabel">Purchase price (per unit)</span>
+    ${calcFieldHtml("restockPrice", "e.g. 53")}
+    <span class="form-label">Bill / reference no. (optional)</span>
+    <input type="text" id="restockBillNo" placeholder="e.g. INV-2201">
+
+    <div class="cart-total-row" style="margin:4px 0 12px;"><span>Batch total</span><span id="restockBatchTotal">Rs 0</span></div>
+    <span class="form-label">Payment to supplier</span>
+    <div class="subtab-row">
+      <button type="button" class="subtab-btn active" id="rsPayCash">Paid cash</button>
+      <button type="button" class="subtab-btn" id="rsPayCredit">On credit</button>
+      <button type="button" class="subtab-btn" id="rsPayPartial">Partial</button>
+    </div>
+    <div id="rsSupplierWrap" style="display:none;">
+      <span class="form-label">Supplier</span>
+      <select id="rsSupplier" class="select-field">
+        ${suppliers.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}
+        <option value="__new__">+ New supplier</option>
+      </select>
+      <div id="rsNewSupWrap" style="display:${suppliers.length===0?'block':'none'};">
+        <span class="form-label">Name</span>
+        <input type="text" id="rsNewSupName" placeholder="Supplier name">
+        <span class="form-label">Phone (optional)</span>
+        <input type="text" id="rsNewSupPhone" placeholder="e.g. 03001234567">
+      </div>
+    </div>
+    <div id="rsPartialWrap" style="display:none;">
+      <span class="form-label">Amount paid now (cash)</span>
+      <input type="number" id="rsCashNow" placeholder="e.g. 2500">
+    </div>
+
+    <div class="sheet-actions" style="margin-top:6px;">
+      <button class="btn-skip" id="cancelRestock">Cancel</button>
+      <button class="btn-save" id="saveRestock">Add to stock</button>
+    </div></div></div>`;
+  const sel = document.getElementById("restockProduct");
+  const newFields = document.getElementById("newProductFields");
+  const unitSel = document.getElementById("newProdUnit");
+  const unitCustom = document.getElementById("newProdUnitCustom");
+
+  function updateHint(){
+    const hint = document.getElementById("qtyUnitHint");
+    if(sel.value === "__new__"){
+      const u = unitSel.value === "custom" ? (unitCustom.value.trim() || "unit") : unitSel.value;
+      hint.textContent = "(in " + (UNIT_LABELS[u] || u) + ")";
+    } else {
+      const prod = products.find(p=>p.id===sel.value);
+      const u = prod ? (prod.unit || "pcs") : "pcs";
+      hint.textContent = "(in " + (UNIT_LABELS[u] || u) + ")";
+    }
+  }
+  sel.addEventListener("change", ()=>{
+    newFields.style.display = sel.value === "__new__" ? "block" : "none";
+    updateHint();
+  });
+  unitSel.addEventListener("change", ()=>{
+    unitCustom.style.display = unitSel.value === "custom" ? "block" : "none";
+    updateHint();
+  });
+  unitCustom.addEventListener("input", updateHint);
+  newFields.style.display = sel.value === "__new__" ? "block" : "none";
+  updateHint();
+
+  let priceMode = "unit";
+  const modeUnitBtn = document.getElementById("priceModeUnit");
+  const modeTotalBtn = document.getElementById("priceModeTotal");
+  const priceFieldLabel = document.getElementById("priceFieldLabel");
+  const priceInput = document.getElementById("restockPrice");
+  function setPriceMode(mode){
+    priceMode = mode;
+    modeUnitBtn.classList.toggle("active", mode === "unit");
+    modeTotalBtn.classList.toggle("active", mode === "total");
+    priceFieldLabel.textContent = mode === "unit" ? "Purchase price (per unit)" : "Total amount paid (for this batch)";
+    priceInput.placeholder = mode === "unit" ? "e.g. 53" : "e.g. 5300";
+  }
+  modeUnitBtn.addEventListener("click", ()=>{ setPriceMode("unit"); updateBatchTotal(); });
+  modeTotalBtn.addEventListener("click", ()=>{ setPriceMode("total"); updateBatchTotal(); });
+
+  // --- Payment to supplier (Cash / Credit / Partial) ---
+  let payMode = "cash";
+  const rsCashBtn = document.getElementById("rsPayCash");
+  const rsCreditBtn = document.getElementById("rsPayCredit");
+  const rsPartialBtn = document.getElementById("rsPayPartial");
+  const rsSupplierWrap = document.getElementById("rsSupplierWrap");
+  const rsPartialWrap = document.getElementById("rsPartialWrap");
+  const rsSupplierSel = document.getElementById("rsSupplier");
+  wireNewCustomerFields(rsSupplierSel, "rsNewSupWrap");
+  function setPayMode(mode){
+    payMode = mode;
+    [rsCashBtn, rsCreditBtn, rsPartialBtn].forEach(b=>b.classList.remove("active"));
+    ({cash:rsCashBtn, credit:rsCreditBtn, partial:rsPartialBtn})[mode].classList.add("active");
+    rsSupplierWrap.style.display = mode === "cash" ? "none" : "block";
+    rsPartialWrap.style.display = mode === "partial" ? "block" : "none";
+  }
+  rsCashBtn.addEventListener("click", ()=>setPayMode("cash"));
+  rsCreditBtn.addEventListener("click", ()=>setPayMode("credit"));
+  rsPartialBtn.addEventListener("click", ()=>setPayMode("partial"));
+
+  function currentBatchTotal(){
+    const q = parseFloat(document.getElementById("restockQty").value);
+    const ep = parseFloat(document.getElementById("restockPrice").value);
+    if(isNaN(q) || q<=0 || isNaN(ep) || ep<0) return 0;
+    const unitPrice = priceMode === "total" ? ep / q : ep;
+    return Math.round(q * unitPrice * 100) / 100;
+  }
+  function updateBatchTotal(){
+    document.getElementById("restockBatchTotal").textContent = "Rs " + currentBatchTotal().toFixed(0);
+  }
+  document.getElementById("restockQty").addEventListener("input", updateBatchTotal);
+  document.getElementById("restockPrice").addEventListener("input", updateBatchTotal);
+  const rpPad = document.getElementById("restockPrice_pad");
+  if(rpPad) rpPad.addEventListener("click", ()=> setTimeout(updateBatchTotal, 0));
+  updateBatchTotal();
+
+  document.getElementById("cancelRestock").addEventListener("click", ()=> layer.innerHTML="");
+  document.getElementById("saveRestock").addEventListener("click", async ()=>{
+    const qty = parseFloat(document.getElementById("restockQty").value);
+    const enteredPrice = parseFloat(document.getElementById("restockPrice").value);
+    if(isNaN(qty) || qty<=0 || isNaN(enteredPrice) || enteredPrice<0){ showToast("Enter a valid quantity and price"); return; }
+    const price = priceMode === "total" ? Math.round((enteredPrice / qty) * 100) / 100 : enteredPrice;
+    const batchTotal = Math.round(qty * price * 100) / 100;
+
+    // Resolve supplier when this isn't a straight cash purchase
+    let supplierId = null, supplierName = null;
+    if(payMode !== "cash"){
+      supplierId = rsSupplierSel.value;
+      if(supplierId === "__new__"){
+        const sName = document.getElementById("rsNewSupName").value.trim();
+        if(!sName){ showToast("Enter supplier name"); return; }
+        const newSup = {id: Date.now().toString(36), name: sName, phone: document.getElementById("rsNewSupPhone").value.trim()};
+        suppliers.push(newSup);
+        await storeSet("khata-suppliers", suppliers);
+        supplierId = newSup.id; supplierName = newSup.name;
+      } else {
+        const s = suppliers.find(x=>x.id===supplierId);
+        if(!s){ showToast("Pick a supplier"); return; }
+        supplierName = s.name;
+      }
+    }
+
+    // Split batch total into cash-now vs credit
+    let cashPaid = batchTotal, creditAmount = 0;
+    if(payMode === "credit"){ cashPaid = 0; creditAmount = batchTotal; }
+    else if(payMode === "partial"){
+      const entered = parseFloat(document.getElementById("rsCashNow").value);
+      cashPaid = isNaN(entered) ? 0 : Math.min(Math.max(entered, 0), batchTotal);
+      creditAmount = Math.round((batchTotal - cashPaid) * 100) / 100;
+    }
+
+    let productId = sel.value;
+    if(productId === "__new__"){
+      const name = document.getElementById("newProdName").value.trim();
+      const salePrice = parseFloat(document.getElementById("newProdSalePrice").value);
+      const unit = unitSel.value === "custom" ? (unitCustom.value.trim() || "unit") : unitSel.value;
+      if(!name || isNaN(salePrice)){ showToast("Enter product name and sale price"); return; }
+      const newProd = {id: Date.now().toString(36), name, unit, salePrice, stock:0};
+      products.push(newProd);
+      productId = newProd.id;
+    }
+    const ref = document.getElementById("restockBillNo").value.trim();
+    const nowIso = new Date().toISOString();
+    purchases.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), productId, qty, price, date: nowIso, ref});
+    const prod = products.find(p=>p.id===productId);
+    prod.stock = Math.round((prod.stock + qty)*100)/100;
+    await storeSet("pos-products", products);
+    await storeSet("purchases", purchases);
+
+    if(cashPaid > 0){
+      cashbook.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), type:"out", amount: cashPaid, note: "Restock — " + prod.name + (ref ? " ("+ref+")" : ""), date: nowIso, partyType: supplierId ? "supplier" : null, partyId: supplierId, partyName: supplierName});
+      await storeSet("cashbook", cashbook);
+    }
+    if(creditAmount > 0 && supplierId){
+      supplierTx.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), supplierId, type:"credit", amount: creditAmount, note: formatQty(qty, prod.unit) + " " + prod.name, ref, date: nowIso});
+      await storeSet("supplier-tx", supplierTx);
+    }
+
+    layer.innerHTML = "";
+    showToast(creditAmount > 0 ? "Stock added · Rs " + creditAmount.toFixed(0) + " on credit" : "Stock updated");
+    renderStock(); renderPOS(); renderLedger();
+  });
+}
+function openProductImportSheet(){
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Import products</h2>
+    <p>One per line: <strong>Name, Unit, Sale price, Stock qty</strong>. Unit and sale price can be left blank. Example:<br>pipe goli 5no, pcs, 165, 100<br>aam loha sari ring, pcs, , 600</p>
+    <textarea id="importProductText" style="min-height:160px;" placeholder="Name, Unit, Sale price, Stock qty"></textarea>
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelProductImport">Cancel</button>
+      <button class="btn-save" id="saveProductImport">Import</button>
+    </div>
+  </div></div>`;
+  document.getElementById("cancelProductImport").addEventListener("click", ()=> layer.innerHTML="");
+  document.getElementById("saveProductImport").addEventListener("click", async ()=>{
+    const text = document.getElementById("importProductText").value;
+    const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+    if(lines.length===0){ showToast("Paste at least one line"); return; }
+    let added = 0, updated = 0;
+    for(const line of lines){
+      const parts = line.split(",").map(p=>p.trim());
+      if(!parts[0]) continue;
+      const name = parts[0];
+      const unit = parts[1] || "pcs";
+      const salePrice = parseFloat(parts[2]) || 0;
+      const stock = parseFloat(parts[3]) || 0;
+      let prod = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if(!prod){
+        prod = {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), name, unit, salePrice, stock};
+        products.push(prod);
+        added++;
+      } else {
+        prod.stock = Math.round((prod.stock + stock)*100)/100;
+        updated++;
+      }
+    }
+    await storeSet("pos-products", products);
+    layer.innerHTML = "";
+    showToast(`Imported ${added} new${updated ? ", "+updated+" updated" : ""}`);
+    renderStock(); renderPOS();
+  });
+}
+function openManageProductsSheet(){
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Manage products</h2>
+    <p>Update sale price or remove a product.</p>
+    <div id="manageProdList"></div>
+    <div class="sheet-actions" style="margin-top:16px;"><button class="btn-skip" id="closeManageProd" style="flex:1;">Done</button></div>
+  </div></div>`;
+  renderManageProdList();
+  document.getElementById("closeManageProd").addEventListener("click", ()=>{ layer.innerHTML=""; renderStock(); renderPOS(); });
+}
+function renderManageProdList(){
+  const list = document.getElementById("manageProdList");
+  if(products.length===0){ list.innerHTML = '<div class="empty-note">No products yet</div>'; return; }
+  list.innerHTML = products.map(p=>`
+    <div class="product-row-manage">
+      <div style="flex:1;">
+        <div style="font-weight:600;">${escapeHtml(p.name)} <span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;">(${escapeHtml(p.unit||'pcs')})</span></div>
+        <input type="number" data-id="${p.id}" class="edit-price" value="${p.salePrice}" style="width:100px; margin-top:6px; border:1px solid var(--line); border-radius:8px; padding:7px;">
+      </div>
+      <div class="manage-actions"><button data-id="${p.id}" data-act="del">Remove</button></div>
+    </div>`).join("");
+  list.querySelectorAll(".edit-price").forEach(inp=>{
+    inp.addEventListener("change", async ()=>{
+      const prod = products.find(p=>p.id===inp.dataset.id);
+      const val = parseFloat(inp.value);
+      if(prod && !isNaN(val)){ prod.salePrice = val; await storeSet("pos-products", products); showToast("Price updated"); }
+    });
+  });
+  list.querySelectorAll("[data-act='del']").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      await sbDeleteRow("shop_products", btn.dataset.id);
+      products = products.filter(p=>p.id!==btn.dataset.id);
+      renderManageProdList();
+    });
+  });
+}
+
+/* --- Ledger tab: Khata + Suppliers + Cash Book --- */
+function renderLedger(){
+  const el = document.getElementById("ledgerTab");
+  el.innerHTML = `
+    <div class="subtab-row">
+      <button class="subtab-btn ${ledgerView==='khata'?'active':''}" id="subKhata">Customers</button>
+      <button class="subtab-btn ${ledgerView==='suppliers'?'active':''}" id="subSuppliers">Suppliers</button>
+      <button class="subtab-btn ${ledgerView==='cash'?'active':''}" id="subCash">Cash Book</button>
+    </div>
+    <div id="ledgerBody"></div>
+    <div class="fab-wrap"><div class="fab-inner"><button class="fab" id="ledgerFab">+</button></div></div>
+  `;
+  document.getElementById("subKhata").addEventListener("click", ()=>{ ledgerView="khata"; renderLedger(); });
+  document.getElementById("subSuppliers").addEventListener("click", ()=>{ ledgerView="suppliers"; renderLedger(); });
+  document.getElementById("subCash").addEventListener("click", ()=>{ ledgerView="cash"; renderLedger(); });
+  document.getElementById("ledgerFab").addEventListener("click", ()=>{
+    if(ledgerView==="khata") openNewCreditSheet();
+    else if(ledgerView==="suppliers") openNewSupplierCreditSheet();
+    else openCashEntrySheet();
+  });
+  if(ledgerView==="khata") renderKhataBody();
+  else if(ledgerView==="suppliers") renderSuppliersBody();
+  else renderCashBody();
+}
+function renderKhataBody(){
+  const body = document.getElementById("ledgerBody");
+  const totalOwed = customers.reduce((s,c)=> s + Math.max(0, customerBalance(c.id)), 0);
+  const importLink = `<div style="text-align:right; margin-bottom:8px;"><button class="gear-btn" style="font-size:13px; text-decoration:underline;" id="importCustBtn">⬆ Import list</button></div>`;
+  if(customers.length===0){
+    body.innerHTML = `
+      ${importLink}
+      <div class="card">
+        <div class="today-total"><span class="label">Total credit out</span><span class="value">Rs ${totalOwed.toFixed(0)}</span></div>
+      </div>
+      <div class="card"><div class="empty-note">No customers yet — tap + to add a credit entry, or import a list</div></div>`;
+    document.getElementById("importCustBtn").addEventListener("click", ()=> openImportSheet("customer"));
+    return;
+  }
+  const sorted = customers.slice().sort((a,b)=> customerBalance(b.id) - customerBalance(a.id));
+  body.innerHTML = `
+    ${importLink}
+    <div class="card">
+      <div class="today-total"><span class="label">Total credit out</span><span class="value">Rs ${totalOwed.toFixed(0)}</span></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Customers</div>
+      <div id="customerList"></div>
+    </div>`;
+  document.getElementById("importCustBtn").addEventListener("click", ()=> openImportSheet("customer"));
+  document.getElementById("customerList").innerHTML = sorted.map(c=>{
+    const bal = customerBalance(c.id);
+    return `<div class="customer-row" data-id="${c.id}">
+      <div>
+        <div class="cname">${escapeHtml(c.name)}</div>
+        ${c.phone ? `<div class="cphone">${escapeHtml(c.phone)}</div>` : ''}
+      </div>
+      <div class="cbal ${bal>0?'owe':'clear'}">${bal>0 ? 'Owes Rs '+bal.toFixed(0) : 'Settled'}</div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".customer-row").forEach(row=>{
+    row.addEventListener("click", ()=>openCustomerSheet(row.dataset.id));
+  });
+}
+function renderSuppliersBody(){
+  const body = document.getElementById("ledgerBody");
+  const totalOwed = suppliers.reduce((s,sup)=> s + Math.max(0, supplierBalance(sup.id)), 0);
+  const importLink = `<div style="text-align:right; margin-bottom:8px;"><button class="gear-btn" style="font-size:13px; text-decoration:underline;" id="importSupBtn">⬆ Import list</button></div>`;
+  if(suppliers.length===0){
+    body.innerHTML = `
+      ${importLink}
+      <div class="card">
+        <div class="today-total"><span class="label">Total you owe</span><span class="value">Rs ${totalOwed.toFixed(0)}</span></div>
+      </div>
+      <div class="card"><div class="empty-note">No suppliers yet — tap + to add a credit entry, import a list, or use "Partial"/"Full credit" when restocking</div></div>`;
+    document.getElementById("importSupBtn").addEventListener("click", ()=> openImportSheet("supplier"));
+    return;
+  }
+  const sorted = suppliers.slice().sort((a,b)=> supplierBalance(b.id) - supplierBalance(a.id));
+  body.innerHTML = `
+    ${importLink}
+    <div class="card">
+      <div class="today-total"><span class="label">Total you owe</span><span class="value">Rs ${totalOwed.toFixed(0)}</span></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Suppliers</div>
+      <div id="supplierList"></div>
+    </div>`;
+  document.getElementById("importSupBtn").addEventListener("click", ()=> openImportSheet("supplier"));
+  document.getElementById("supplierList").innerHTML = sorted.map(s=>{
+    const bal = supplierBalance(s.id);
+    return `<div class="customer-row" data-id="${s.id}">
+      <div>
+        <div class="cname">${escapeHtml(s.name)}</div>
+        ${s.phone ? `<div class="cphone">${escapeHtml(s.phone)}</div>` : ''}
+      </div>
+      <div class="cbal ${bal>0?'owe':'clear'}">${bal>0 ? 'You owe Rs '+bal.toFixed(0) : 'Settled'}</div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#supplierList .customer-row").forEach(row=>{
+    row.addEventListener("click", ()=>openSupplierSheet(row.dataset.id));
+  });
+}
+function openImportSheet(kind){
+  const layer = document.getElementById("sheetLayer");
+  const label = kind === "customer" ? "customers" : "suppliers";
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Import ${label}</h2>
+    <p>One per line: <strong>Name, Phone (optional), Balance</strong>. Balance is what they currently owe. Example:<br>Subhan H/W, 03001234567, 808100<br>Mehboob H/W, , 399200</p>
+    <textarea id="importText" style="min-height:160px;" placeholder="Name, Phone, Balance"></textarea>
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelImport">Cancel</button>
+      <button class="btn-save" id="saveImport">Import</button>
+    </div>
+  </div></div>`;
+  document.getElementById("cancelImport").addEventListener("click", ()=> layer.innerHTML="");
+  document.getElementById("saveImport").addEventListener("click", async ()=>{
+    const text = document.getElementById("importText").value;
+    const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+    if(lines.length===0){ showToast("Paste at least one line"); return; }
+    let added = 0, updated = 0;
+    const list = kind === "customer" ? customers : suppliers;
+    const txArr = kind === "customer" ? khataTx : supplierTx;
+    for(const line of lines){
+      const parts = line.split(",").map(p=>p.trim());
+      if(!parts[0]) continue;
+      const name = parts[0];
+      let phone = "", balance = 0;
+      if(parts.length === 2){ balance = parseFloat(parts[1]) || 0; }
+      else if(parts.length >= 3){ phone = parts[1]; balance = parseFloat(parts[2]) || 0; }
+      let party = list.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if(!party){
+        party = {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), name, phone};
+        list.push(party);
+        added++;
+      } else {
+        updated++;
+      }
+      if(balance > 0){
+        const entry = {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), type:"credit", amount: balance, note:"Opening balance (imported)", date: new Date().toISOString()};
+        if(kind === "customer") entry.customerId = party.id; else entry.supplierId = party.id;
+        txArr.push(entry);
+      }
+    }
+    if(kind === "customer"){
+      await storeSet("khata-customers", customers);
+      await storeSet("khata-tx", khataTx);
+    } else {
+      await storeSet("khata-suppliers", suppliers);
+      await storeSet("supplier-tx", supplierTx);
+    }
+    layer.innerHTML = "";
+    showToast(`Imported ${added} new${updated ? ", "+updated+" matched existing" : ""}`);
+    renderLedger();
+  });
+}
+function openNewSupplierCreditSheet(){
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>New supplier credit</h2>
+    <p>Record stock or goods you took from a supplier on credit.</p>
+    <span class="form-label">Supplier</span>
+    <select id="supCreditSupplier" class="select-field">
+      <option value="__new__">+ New supplier</option>
+      ${suppliers.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}
+    </select>
+    <div id="newSupplierFields" style="display:${suppliers.length===0?'block':'none'};">
+      <span class="form-label">Name</span>
+      <input type="text" id="newSupName2" placeholder="Supplier name">
+      <span class="form-label">Phone (optional)</span>
+      <input type="text" id="newSupPhone2" placeholder="e.g. 03001234567">
+    </div>
+    <span class="form-label">Amount</span>
+    ${calcFieldHtml("supCreditAmount", "e.g. 15000")}
+    <span class="form-label">Bill / reference no. (optional)</span>
+    <input type="text" id="supCreditBillNo" placeholder="e.g. INV-2201">
+    <span class="form-label">Note (optional)</span>
+    <input type="text" id="supCreditNote" placeholder="e.g. 5 bags cement">
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelSupCredit">Cancel</button>
+      <button class="btn-save" id="saveSupCredit">Save</button>
+    </div>
+  </div></div>`;
+  const sel = document.getElementById("supCreditSupplier");
+  wireNewCustomerFields(sel, "newSupplierFields");
+  document.getElementById("cancelSupCredit").addEventListener("click", ()=> layer.innerHTML="");
+  document.getElementById("saveSupCredit").addEventListener("click", async ()=>{
+    const amount = parseFloat(document.getElementById("supCreditAmount").value);
+    if(isNaN(amount) || amount<=0){ showToast("Enter a valid amount"); return; }
+    let supplierId = sel.value;
+    if(supplierId === "__new__"){
+      const name = document.getElementById("newSupName2").value.trim();
+      if(!name){ showToast("Enter supplier name"); return; }
+      const phone = document.getElementById("newSupPhone2").value.trim();
+      const newSup = {id: Date.now().toString(36), name, phone};
+      suppliers.push(newSup);
+      supplierId = newSup.id;
+      await storeSet("khata-suppliers", suppliers);
+    }
+    supplierTx.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), supplierId, type:"credit", amount, note: document.getElementById("supCreditNote").value.trim(), ref: document.getElementById("supCreditBillNo").value.trim(), date: new Date().toISOString()});
+    await storeSet("supplier-tx", supplierTx);
+    layer.innerHTML = "";
+    showToast("Credit recorded");
+    renderLedger();
+  });
+}
+function openSupplierSheet(supplierId){
+  const layer = document.getElementById("sheetLayer");
+  const sup = suppliers.find(s=>s.id===supplierId);
+  if(!sup) return;
+  const bal = supplierBalance(supplierId);
+  const history = supplierTx.filter(t=>t.supplierId===supplierId).sort((a,b)=> new Date(b.date)-new Date(a.date));
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>${escapeHtml(sup.name)}</h2>
+    <p>${bal>0 ? 'You owe Rs '+bal.toFixed(0) : 'Settled up'}${sup.phone ? ' · '+escapeHtml(sup.phone) : ''}</p>
+    <div class="sheet-actions" style="margin-bottom:16px;">
+      <button class="btn-save" id="recordSupplierPayment" style="flex:1;">Record payment made</button>
+    </div>
+    <div class="section-title" style="margin-top:0;">History</div>
+    <div id="supHistory"></div>
+    <div class="sheet-actions" style="margin-top:16px;"><button class="btn-skip" id="closeSup" style="flex:1;">Close</button></div>
+  </div></div>`;
+  const hist = document.getElementById("supHistory");
+  hist.innerHTML = history.length===0 ? '<div class="empty-note">No entries yet</div>' : history.map(t=>`
+    <div class="tx-row" data-tx="${t.id}" style="cursor:pointer;">
+      <span>${t.type==='credit' ? 'Bought on credit' : 'Paid'}${t.note ? ' — '+escapeHtml(t.note) : ''}${t.ref ? ' ('+escapeHtml(t.ref)+')' : ''}<span style="color:var(--ink-soft);"> ›</span></span>
+      <span style="color:${t.type==='credit'?'var(--danger)':'var(--forest-deep)'}; font-weight:600;">${t.type==='credit'?'+':'−'} Rs ${t.amount.toFixed(0)}</span>
+    </div>`).join("");
+  hist.querySelectorAll(".tx-row[data-tx]").forEach(row=>{
+    row.addEventListener("click", ()=> openTxDetailSheet("supplier", row.dataset.tx, supplierId));
+  });
+  document.getElementById("closeSup").addEventListener("click", ()=>{ layer.innerHTML=""; renderLedger(); });
+  document.getElementById("recordSupplierPayment").addEventListener("click", ()=> openRecordSupplierPaymentSheet(supplierId));
+}
+function openRecordSupplierPaymentSheet(supplierId){
+  const layer = document.getElementById("sheetLayer");
+  const sup = suppliers.find(s=>s.id===supplierId);
+  const bal = supplierBalance(supplierId);
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Record payment</h2>
+    <p>You currently owe ${escapeHtml(sup.name)} Rs ${bal.toFixed(0)}.</p>
+    <span class="form-label">Amount paid</span>
+    ${calcFieldHtml("supPaymentAmount", "e.g. 5000")}
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelSupPayment">Cancel</button>
+      <button class="btn-save" id="saveSupPayment">Save</button>
+    </div>
+  </div></div>`;
+  document.getElementById("cancelSupPayment").addEventListener("click", ()=>{ layer.innerHTML=""; openSupplierSheet(supplierId); });
+  document.getElementById("saveSupPayment").addEventListener("click", async ()=>{
+    const amount = parseFloat(document.getElementById("supPaymentAmount").value);
+    if(isNaN(amount) || amount<=0){ showToast("Enter a valid amount"); return; }
+    supplierTx.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), supplierId, type:"payment", amount, note:"", date: new Date().toISOString()});
+    await storeSet("supplier-tx", supplierTx);
+    cashbook.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), type:"out", amount, note:"Payment made", date: new Date().toISOString(), partyType:"supplier", partyId:supplierId, partyName:sup.name});
+    await storeSet("cashbook", cashbook);
+    layer.innerHTML = "";
+    showToast("Payment recorded");
+    renderLedger();
+  });
+}
+function renderCashBody(){
+  const body = document.getElementById("ledgerBody");
+  const balance = cashInHand();
+  const recent = cashbook.slice().sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,30);
+  body.innerHTML = `
+    <div class="card">
+      <div class="today-total"><span class="label">Cash in hand</span><span class="value">Rs ${balance.toFixed(0)}</span></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Recent entries</div>
+      <div id="cashList"></div>
+    </div>`;
+  const list = document.getElementById("cashList");
+  if(recent.length===0){
+    list.innerHTML = '<div class="empty-note">No entries yet — tap + to add one</div>';
+  } else {
+    list.innerHTML = recent.map(e=>`
+      <div class="cash-row">
+        <div>
+          <div>${escapeHtml(e.note || (e.type==='in' ? 'Cash in' : 'Cash out'))}${e.partyName ? ` <span style="color:var(--ink-soft); font-weight:400;">— ${escapeHtml(e.partyName)}</span>` : ''}</div>
+          <div class="cnote">${new Date(e.date).toLocaleDateString()} · ${fmtTimeLabel(e.date)}</div>
+        </div>
+        <div class="camt ${e.type}">${e.type==='in'?'+':'−'} Rs ${e.amount.toFixed(0)}</div>
+      </div>`).join("");
+  }
+}
+function customerSelectOptions(){
+  return customers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+}
+function wireNewCustomerFields(sel, wrapId){
+  sel.addEventListener("change", ()=>{
+    document.getElementById(wrapId).style.display = sel.value === "__new__" ? "block" : "none";
+  });
+}
+function openNewCreditSheet(){
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>New credit entry</h2>
+    <p>Record goods or money given on credit (not through a bill).</p>
+    <span class="form-label">Customer</span>
+    <select id="creditCustomer" class="select-field">
+      <option value="__new__">+ New customer</option>
+      ${customerSelectOptions()}
+    </select>
+    <div id="newCustomerFields" style="display:${customers.length===0?'block':'none'};">
+      <span class="form-label">Name</span>
+      <input type="text" id="newCustName" placeholder="Customer name">
+      <span class="form-label">Phone (optional, for WhatsApp reminders)</span>
+      <input type="text" id="newCustPhone" placeholder="e.g. 03001234567">
+    </div>
+    <span class="form-label">Amount</span>
+    ${calcFieldHtml("creditAmount", "e.g. 1500")}
+    <span class="form-label">Bill / reference no. (optional)</span>
+    <input type="text" id="creditBillNo" placeholder="e.g. INV-2201">
+    <span class="form-label">Note (optional)</span>
+    <input type="text" id="creditNote" placeholder="e.g. 2 bags cement">
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelCredit">Cancel</button>
+      <button class="btn-save" id="saveCredit">Save</button>
+    </div>
+  </div></div>`;
+  const sel = document.getElementById("creditCustomer");
+  wireNewCustomerFields(sel, "newCustomerFields");
+  document.getElementById("cancelCredit").addEventListener("click", ()=> layer.innerHTML="");
+  document.getElementById("saveCredit").addEventListener("click", async ()=>{
+    const amount = parseFloat(document.getElementById("creditAmount").value);
+    if(isNaN(amount) || amount<=0){ showToast("Enter a valid amount"); return; }
+    let customerId = sel.value;
+    if(customerId === "__new__"){
+      const name = document.getElementById("newCustName").value.trim();
+      if(!name){ showToast("Enter customer name"); return; }
+      const phone = document.getElementById("newCustPhone").value.trim();
+      const newCust = {id: Date.now().toString(36), name, phone};
+      customers.push(newCust);
+      customerId = newCust.id;
+      await storeSet("khata-customers", customers);
+    }
+    khataTx.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), customerId, type:"credit", amount, note: document.getElementById("creditNote").value.trim(), ref: document.getElementById("creditBillNo").value.trim(), date: new Date().toISOString()});
+    await storeSet("khata-tx", khataTx);
+    layer.innerHTML = "";
+    showToast("Credit recorded");
+    renderLedger();
+  });
+}
+function openCustomerSheet(customerId){
+  const layer = document.getElementById("sheetLayer");
+  const cust = customers.find(c=>c.id===customerId);
+  if(!cust) return;
+  const bal = customerBalance(customerId);
+  const history = khataTx.filter(t=>t.customerId===customerId).sort((a,b)=> new Date(b.date)-new Date(a.date));
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>${escapeHtml(cust.name)}</h2>
+    <p>${bal>0 ? 'Owes Rs '+bal.toFixed(0) : 'Settled up'}${cust.phone ? ' · '+escapeHtml(cust.phone) : ''}</p>
+    <div class="sheet-actions" style="margin-bottom:16px;">
+      <button class="btn-save" id="recordPayment">Record payment</button>
+      ${cust.phone ? `<a class="btn-whatsapp" id="waRemind" href="${waLink(cust.phone, bal>0 ? `Assalam-o-Alaikum ${cust.name}, aap ka humare taraf Rs ${bal.toFixed(0)} baqaya hai. Meharbani farma k jald ada karein. Shukriya.` : `Assalam-o-Alaikum ${cust.name}, shukriya!`)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+    </div>
+    <div class="section-title" style="margin-top:0;">History</div>
+    <div id="custHistory"></div>
+    <div class="sheet-actions" style="margin-top:16px;"><button class="btn-skip" id="closeCust" style="flex:1;">Close</button></div>
+  </div></div>`;
+  const hist = document.getElementById("custHistory");
+  hist.innerHTML = history.length===0 ? '<div class="empty-note">No entries yet</div>' : history.map(t=>`
+    <div class="tx-row" data-tx="${t.id}" style="cursor:pointer;">
+      <span>${t.type==='credit' ? 'Credit given' : 'Payment received'}${t.note ? ' — '+escapeHtml(t.note) : ''}${t.ref ? ' ('+escapeHtml(t.ref)+')' : ''}<span style="color:var(--ink-soft);"> ›</span></span>
+      <span style="color:${t.type==='credit'?'var(--danger)':'var(--forest-deep)'}; font-weight:600;">${t.type==='credit'?'+':'−'} Rs ${t.amount.toFixed(0)}</span>
+    </div>`).join("");
+  hist.querySelectorAll(".tx-row[data-tx]").forEach(row=>{
+    row.addEventListener("click", ()=> openTxDetailSheet("customer", row.dataset.tx, customerId));
+  });
+  document.getElementById("closeCust").addEventListener("click", ()=>{ layer.innerHTML=""; renderLedger(); });
+  document.getElementById("recordPayment").addEventListener("click", ()=> openRecordPaymentSheet(customerId));
+}
+function openRecordPaymentSheet(customerId){
+  const layer = document.getElementById("sheetLayer");
+  const cust = customers.find(c=>c.id===customerId);
+  const bal = customerBalance(customerId);
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Record payment</h2>
+    <p>${escapeHtml(cust.name)} currently owes Rs ${bal.toFixed(0)}.</p>
+    <span class="form-label">Amount received</span>
+    ${calcFieldHtml("paymentAmount", "e.g. 500")}
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelPayment">Cancel</button>
+      <button class="btn-save" id="savePayment">Save</button>
+    </div>
+  </div></div>`;
+  document.getElementById("cancelPayment").addEventListener("click", ()=>{ layer.innerHTML=""; openCustomerSheet(customerId); });
+  document.getElementById("savePayment").addEventListener("click", async ()=>{
+    const amount = parseFloat(document.getElementById("paymentAmount").value);
+    if(isNaN(amount) || amount<=0){ showToast("Enter a valid amount"); return; }
+    khataTx.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), customerId, type:"payment", amount, note:"", date: new Date().toISOString()});
+    await storeSet("khata-tx", khataTx);
+    cashbook.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), type:"in", amount, note:"Payment received", date: new Date().toISOString(), partyType:"customer", partyId:customerId, partyName:cust.name});
+    await storeSet("cashbook", cashbook);
+    layer.innerHTML = "";
+    showToast("Payment recorded");
+    renderLedger();
+  });
+}
+function txShareText(kind, tx, party, partyId){
+  const isCust = kind === "customer";
+  const isCredit = tx.type === "credit";
+  const amt = "Rs " + tx.amount.toFixed(0);
+  const dateStr = new Date(tx.date).toLocaleDateString();
+  const bal = isCust ? customerBalance(partyId) : supplierBalance(partyId);
+  const balLine = bal > 0
+    ? (isCust ? `Ab baqaya: Rs ${bal.toFixed(0)}.` : `Ab hum par baqaya: Rs ${bal.toFixed(0)}.`)
+    : "Hisaab clear hai.";
+  const line = isCust
+    ? (isCredit ? `Udhaar: ${amt}` : `Jama: ${amt}`)
+    : (isCredit ? `Maal udhaar: ${amt}` : `Adaigi: ${amt}`);
+  return `${party.name} — ${line}${tx.note ? ` (${tx.note})` : ""} — ${dateStr}. ${balLine}`;
+}
+function openTxDetailSheet(kind, txId, partyId){
+  const layer = document.getElementById("sheetLayer");
+  const isCust = kind === "customer";
+  const txArr = isCust ? khataTx : supplierTx;
+  const tx = txArr.find(t=>t.id===txId);
+  if(!tx){ showToast("Entry not found"); return; }
+  const party = (isCust ? customers : suppliers).find(p=>p.id===partyId);
+  const isCredit = tx.type === "credit";
+  const typeLabel = isCust
+    ? (isCredit ? "Credit given" : "Payment received")
+    : (isCredit ? "Bought on credit" : "Payment made");
+  const d0 = new Date(tx.date);
+  const dateVal = isNaN(d0) ? "" : d0.getFullYear()+"-"+String(d0.getMonth()+1).padStart(2,"0")+"-"+String(d0.getDate()).padStart(2,"0");
+  const reopenParty = ()=> isCust ? openCustomerSheet(partyId) : openSupplierSheet(partyId);
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Entry detail</h2>
+    <p>${typeLabel}${tx.billId ? ' · from a bill' : ''} · ${new Date(tx.date).toLocaleString()}</p>
+    <span class="form-label">Amount</span>
+    ${calcFieldHtml("txEditAmount", "")}
+    <span class="form-label">Note</span>
+    <input type="text" id="txEditNote" placeholder="Note (optional)">
+    <span class="form-label">Date</span>
+    <input type="date" id="txEditDate">
+    ${tx.billId ? `<p style="color:var(--ink-soft);">This entry came from a bill — changing it here won't change the original bill.</p>` : ''}
+    <div class="sheet-actions">
+      <button class="btn-skip" id="txDelete" style="background:var(--danger); color:#fff;">Delete</button>
+      <button class="btn-save" id="txSave">Save changes</button>
+    </div>
+    ${party && party.phone ? `<a class="btn-whatsapp" style="margin-top:10px;" target="_blank" rel="noopener" href="${waLink(party.phone, txShareText(kind, tx, party, partyId))}">Share on WhatsApp</a>` : ''}
+    <div class="sheet-actions" style="margin-top:10px;"><button class="btn-skip" id="txBack" style="flex:1;">Back</button></div>
+  </div></div>`;
+  document.getElementById("txEditAmount").value = tx.amount;
+  document.getElementById("txEditNote").value = tx.note || "";
+  if(dateVal) document.getElementById("txEditDate").value = dateVal;
+
+  document.getElementById("txBack").addEventListener("click", ()=>{ layer.innerHTML=""; reopenParty(); });
+  document.getElementById("txSave").addEventListener("click", async ()=>{
+    const newAmount = parseFloat(document.getElementById("txEditAmount").value);
+    if(isNaN(newAmount) || newAmount<=0){ showToast("Enter a valid amount"); return; }
+    tx.amount = Math.round(newAmount*100)/100;
+    tx.note = document.getElementById("txEditNote").value.trim();
+    const d = document.getElementById("txEditDate").value;
+    if(d) tx.date = new Date(d + "T12:00:00").toISOString();
+    await storeSet(isCust ? "khata-tx" : "supplier-tx", txArr);
+    layer.innerHTML = "";
+    showToast("Entry updated");
+    renderLedger();
+    reopenParty();
+  });
+  let armed = false, armTimer = null;
+  const delBtn = document.getElementById("txDelete");
+  delBtn.addEventListener("click", async ()=>{
+    if(!armed){
+      armed = true;
+      delBtn.textContent = "Tap again to delete";
+      armTimer = setTimeout(()=>{ armed = false; delBtn.textContent = "Delete"; }, 3000);
+      return;
+    }
+    if(armTimer) clearTimeout(armTimer);
+    await sbDeleteRow(isCust ? "shop_khata_tx" : "shop_supplier_tx", tx.id);
+    if(isCust) khataTx = khataTx.filter(t=>t.id!==tx.id);
+    else supplierTx = supplierTx.filter(t=>t.id!==tx.id);
+    layer.innerHTML = "";
+    showToast("Entry deleted");
+    renderLedger();
+    reopenParty();
+  });
+}
+function openCashEntrySheet(){
+  const layer = document.getElementById("sheetLayer");
+  layer.innerHTML = `<div class="sheet-backdrop"><div class="sheet">
+    <h2>Add cash entry</h2>
+    <div class="subtab-row">
+      <button type="button" class="subtab-btn active" id="cashModeIn">Cash in</button>
+      <button type="button" class="subtab-btn" id="cashModeOut">Cash out</button>
+    </div>
+    <span class="form-label">Amount</span>
+    ${calcFieldHtml("cashAmount", "e.g. 2000")}
+    <span class="form-label">Party (optional)</span>
+    <select id="cashParty" class="select-field">
+      <option value="">No party — general expense/income</option>
+      ${customers.length ? `<optgroup label="Customers">${customers.map(c=>`<option value="c:${c.id}">${escapeHtml(c.name)}</option>`).join("")}</optgroup>` : ''}
+      ${suppliers.length ? `<optgroup label="Suppliers">${suppliers.map(s=>`<option value="s:${s.id}">${escapeHtml(s.name)}</option>`).join("")}</optgroup>` : ''}
+    </select>
+    <span class="form-label">Note</span>
+    <input type="text" id="cashNote" placeholder="e.g. Paid shop rent">
+    <div class="sheet-actions">
+      <button class="btn-skip" id="cancelCash">Cancel</button>
+      <button class="btn-save" id="saveCash">Save</button>
+    </div>
+  </div></div>`;
+  let cashType = "in";
+  const inBtn = document.getElementById("cashModeIn");
+  const outBtn = document.getElementById("cashModeOut");
+  inBtn.addEventListener("click", ()=>{ cashType="in"; inBtn.classList.add("active"); outBtn.classList.remove("active"); });
+  outBtn.addEventListener("click", ()=>{ cashType="out"; outBtn.classList.add("active"); inBtn.classList.remove("active"); });
+  document.getElementById("cancelCash").addEventListener("click", ()=> layer.innerHTML="");
+  document.getElementById("saveCash").addEventListener("click", async ()=>{
+    const amount = parseFloat(document.getElementById("cashAmount").value);
+    if(isNaN(amount) || amount<=0){ showToast("Enter a valid amount"); return; }
+    const partyVal = document.getElementById("cashParty").value;
+    let partyType = null, partyId = null, partyName = null;
+    if(partyVal){
+      const [kind, id] = partyVal.split(":");
+      partyType = kind === "c" ? "customer" : "supplier";
+      const list = kind === "c" ? customers : suppliers;
+      const found = list.find(x=>x.id===id);
+      if(found){ partyId = found.id; partyName = found.name; }
+    }
+    cashbook.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), type: cashType, amount, note: document.getElementById("cashNote").value.trim(), date: new Date().toISOString(), partyType, partyId, partyName});
+    await storeSet("cashbook", cashbook);
+    layer.innerHTML = "";
+    showToast("Entry saved");
+    renderLedger();
+  });
+}
+
+/* ---------- Reminders (while page is open) ---------- */
+let notifiedToday = {};
+function checkReminders(){
+  const now = new Date();
+  const hm = String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  ROUTINE.forEach(sec => sec.items.forEach(item=>{
+    if(item.time === hm && !notifiedToday[item.id]){
+      notifiedToday[item.id] = true;
+      fireReminder(item.name);
+    }
+  }));
+}
+function fireReminder(name){
+  showToast("Reminder: " + name);
+  if(window.Notification && Notification.permission === "granted"){
+    try{ new Notification("Time for: " + name); }catch(e){}
+  }
+}
+setInterval(checkReminders, 20000);
+document.getElementById("notifyBtn").addEventListener("click", async ()=>{
+  if(window.Notification){
+    const perm = await Notification.requestPermission();
+    if(perm === "granted"){ document.getElementById("notifyBanner").style.display = "none"; showToast("Notifications on"); }
+  }
+});
+if(window.Notification && Notification.permission === "default"){
+  document.getElementById("notifyBanner").style.display = "block";
+}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll(".nav-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.getElementById("workTab").style.display = tab === "work" ? "block" : "none";
+    document.getElementById("routineTab").style.display = tab === "routine" ? "block" : "none";
+    document.getElementById("salesTab").style.display = tab === "sales" ? "block" : "none";
+    document.getElementById("stockTab").style.display = tab === "stock" ? "block" : "none";
+    document.getElementById("ledgerTab").style.display = tab === "ledger" ? "block" : "none";
+    const titles = {work:"Work", routine:"Today's routine", sales:"Sales", stock:"Stock", ledger:"Ledger"};
+    document.getElementById("pageTitle").textContent = titles[tab];
+  });
+});
+
+async function seedDemoData(){
+  const alreadySeeded = customers.length > 0 || suppliers.length > 0 || products.length > 0;
+  if(alreadySeeded) return;
+
+  const custData = [
+    ["M.A H/w", 282914],
+    ["Mehboob H/W Saif Bh", 399205],
+    ["Irfan Ahmad Nwa", 298800],
+    ["Nadeem H/w Guj", 18960],
+    ["Subhan H/W", 808145],
+    ["Azeem H/w Guj", 52300],
+    ["Ali Pipe H/w", 23906],
+  ];
+  const supData = [
+    ["Bhai", 1381257.32],
+    ["Hunana Box Maker", 23478],
+    ["Amjad Silver Dhlai", 38644],
+    ["Abdullah", 260029.02],
+    ["Billo Bhai", 6401.66],
+    ["Mazer Sorak Mose", 36756.45],
+    ["mal ksai", 274],
+    ["Asim Mal Ksai", 1500],
+    ["Umer Fectory", 5100],
+  ];
+  const prodData = [
+    ["pipe goli 5no", "pcs", 165, 100],
+    ["aam loha sari ring", "pcs", 0, 600],
+    ["degi T lacer", "pcs", 0, 1250],
+    ["double T wazni", "pcs", 0, 750],
+    ["degi silver T", "pcs", 0, 2160],
+  ];
+
+  for(const [name, balance] of custData){
+    const c = {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), name, phone:""};
+    customers.push(c);
+    khataTx.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), customerId:c.id, type:"credit", amount:balance, note:"Opening balance (imported from Digikhata)", date:new Date().toISOString()});
+  }
+  for(const [name, balance] of supData){
+    const s = {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), name, phone:""};
+    suppliers.push(s);
+    supplierTx.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), supplierId:s.id, type:"credit", amount:balance, note:"Opening balance (imported from Digikhata)", date:new Date().toISOString()});
+  }
+  for(const [name, unit, price, stock] of prodData){
+    products.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), name, unit, salePrice:price, stock});
+  }
+
+  await sbSyncSimple("shop_customers", customers);
+  await sbSyncSimple("shop_suppliers", suppliers);
+  await sbSyncProducts(products);
+  await sbSyncKhataTx(khataTx);
+  await sbSyncSupplierTx(supplierTx);
+}
+
+document.getElementById("dayLabel").textContent = new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+
+async function startApp(){
+  showApp();
+  loadWork();
+  loadRoutine();
+  await loadInventory();
+  await loadLedger();
+  // seedDemoData() intentionally not called — demo data is kept dormant (see function below).
+  renderPOS();
+  renderStock();
+  renderLedger();
+}
+
+(async function boot(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(session){
+    await startApp();
+  } else {
+    showAuthScreen();
+  }
+  sb.auth.onAuthStateChange((event, session)=>{
+    if(event === "SIGNED_IN" && document.getElementById("app").style.display === "none"){
+      startApp();
+    }
+    if(event === "SIGNED_OUT"){
+      showAuthScreen();
+    }
+  });
+})();
+</script>
+</body>
+</html>
