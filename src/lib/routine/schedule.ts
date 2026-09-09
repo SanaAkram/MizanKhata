@@ -16,8 +16,59 @@ export type Occurrence = {
 
 function scheduledOn(item: RoutineItem, date: Date): boolean {
   if (!item.enabled) return false;
+  if (item.kind === "interval" || !item.at_time) return false;
   const days = item.days ?? [];
   return days.length === 0 || days.includes(date.getDay());
+}
+
+// ---- interval items (drink water, take medicine, …) -----------------
+
+export type IntervalProgress = {
+  item: RoutineItem;
+  count: number;
+  target: number;
+  unit: string;
+  done: boolean;
+  activeNow: boolean; // within the item's active window right now
+  nextDueMin: number | null; // minutes from now until the next nudge
+};
+
+export function intervalItems(items: RoutineItem[], date: Date): RoutineItem[] {
+  const dow = date.getDay();
+  return items.filter((it) => {
+    if (!it.enabled || it.kind !== "interval") return false;
+    const days = it.days ?? [];
+    return days.length === 0 || days.includes(dow);
+  });
+}
+
+export function intervalProgress(
+  item: RoutineItem,
+  logs: RoutineLog[],
+  now: Date = new Date(),
+): IntervalProgress {
+  const log = logs.find((l) => l.item_id === item.id);
+  const count = Number(log?.count ?? 0);
+  const target = Number(item.target_count ?? 0);
+  const fromMin = minutesOfDay(item.active_from);
+  const toMin = minutesOfDay(item.active_to) || 24 * 60;
+  const nowMin = minutesNow(now);
+  const activeNow = nowMin >= fromMin && nowMin < toMin;
+  const every = item.interval_min || 0;
+  let nextDueMin: number | null = null;
+  if (every > 0 && activeNow) {
+    const sinceStart = nowMin - fromMin;
+    nextDueMin = every - (sinceStart % every);
+  }
+  return {
+    item,
+    count,
+    target,
+    unit: item.count_unit ?? "time",
+    done: target > 0 && count >= target,
+    activeNow,
+    nextDueMin,
+  };
 }
 
 /**
@@ -103,10 +154,11 @@ export function adherence(occs: Occurrence[]): Adherence {
 
 /** Hour bounds [startHour, endHour] to render on the timeline for these items. */
 export function timelineBounds(items: RoutineItem[]): [number, number] {
-  if (items.length === 0) return [5, 23];
+  const timed = items.filter((it) => it.kind !== "interval" && it.at_time);
+  if (timed.length === 0) return [5, 23];
   let lo = 24;
   let hi = 0;
-  for (const it of items) {
+  for (const it of timed) {
     const s = Math.floor(minutesOfDay(it.at_time) / 60);
     const e = Math.ceil(
       Math.min(minutesOfDay(it.at_time) + (it.window_min || 0), 24 * 60) / 60,

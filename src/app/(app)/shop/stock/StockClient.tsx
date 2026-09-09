@@ -7,15 +7,46 @@ import { createClient } from "@/lib/supabase/client";
 import { newId } from "@/lib/ids";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
 import {
-  avgCost,
   createProduct,
+  effectiveCost,
   restock,
   stockValue,
   updateProduct,
   type Product,
   type Purchase,
 } from "@/lib/khata/shop-db";
+import { UNITS } from "@/lib/khata/units";
 import Sheet from "@/components/Sheet";
+
+const inputCls =
+  "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
+
+function UnitSelect({
+  value,
+  onChange,
+  className = "",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`${inputCls} ${className}`}
+    >
+      {UNITS.map((u) => (
+        <option key={u} value={u}>
+          {u}
+        </option>
+      ))}
+      {!(UNITS as readonly string[]).includes(value) && value ? (
+        <option value={value}>{value}</option>
+      ) : null}
+    </select>
+  );
+}
 
 type Props = {
   products: Product[];
@@ -78,8 +109,8 @@ export default function StockClient({ products, purchases, suppliers }: Props) {
         ) : (
           <ul className="flex flex-col gap-2">
             {products.map((p) => {
-              const cost = avgCost(purchases, p.id);
-              const low = Number(p.stock) <= 5;
+              const cost = effectiveCost(p, purchases);
+              const low = Number(p.stock) <= (Number(p.low_stock) || 5);
               return (
                 <li key={p.id}>
                   <button
@@ -104,15 +135,9 @@ export default function StockClient({ products, purchases, suppliers }: Props) {
                       <span>
                         Sale {fmtRs(Number(p.sale_price))}/{p.unit}
                       </span>
-                      <span>
-                        {cost !== null
-                          ? `Cost ${fmtRs(cost)}`
-                          : "No purchases"}
-                      </span>
-                      {cost !== null ? (
-                        <span>
-                          Value {fmtRs(cost * Number(p.stock))}
-                        </span>
+                      <span>{cost > 0 ? `Cost ${fmtRs(cost)}` : "No cost set"}</span>
+                      {cost > 0 ? (
+                        <span>Value {fmtRs(cost * Number(p.stock))}</span>
                       ) : null}
                     </div>
                   </button>
@@ -202,6 +227,8 @@ function RestockForm({
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("pcs");
   const [salePrice, setSalePrice] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [lowStock, setLowStock] = useState("5");
   const [qty, setQty] = useState("");
   const [cost, setCost] = useState("");
   const [ref, setRef] = useState("");
@@ -236,8 +263,10 @@ function RestockForm({
         await createProduct(supabase, {
           id: pid,
           name: name.trim(),
-          unit: unit.trim() || "pcs",
+          unit: unit || "pcs",
           salePrice: parseFloat(salePrice) || 0,
+          purchasePrice: parseFloat(purchasePrice) || c,
+          lowStock: parseFloat(lowStock) || 5,
         });
       }
       const sup = suppliers.find((s) => s.id === supplierId);
@@ -278,21 +307,32 @@ function RestockForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Product name"
-            className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+            className={inputCls}
           />
           <div className="flex gap-2">
-            <input
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              placeholder="Unit (pcs / dzn / kg)"
-              className="w-1/2 rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
-            />
+            <UnitSelect value={unit} onChange={setUnit} className="w-1/2" />
             <input
               value={salePrice}
               onChange={(e) => setSalePrice(e.target.value)}
               placeholder="Sale price"
               inputMode="decimal"
-              className="w-1/2 rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+              className={`${inputCls} w-1/2`}
+            />
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              placeholder="Purchase price"
+              inputMode="decimal"
+              className={`${inputCls} w-1/2`}
+            />
+            <input
+              value={lowStock}
+              onChange={(e) => setLowStock(e.target.value)}
+              placeholder="Low-stock alert"
+              inputMode="decimal"
+              className={`${inputCls} w-1/2`}
             />
           </div>
         </div>
@@ -385,8 +425,10 @@ function EditProductForm({
   onDone: () => void;
 }) {
   const [name, setName] = useState(product.name);
-  const [unit, setUnit] = useState(product.unit);
+  const [unit, setUnit] = useState(product.unit || "pcs");
   const [price, setPrice] = useState(String(product.sale_price));
+  const [purchase, setPurchase] = useState(String(product.purchase_price ?? 0));
+  const [low, setLow] = useState(String(product.low_stock ?? 5));
   const [stock, setStock] = useState(String(product.stock));
   const [busy, setBusy] = useState(false);
 
@@ -395,8 +437,10 @@ function EditProductForm({
     try {
       await updateProduct(supabase, product.id, {
         name: name.trim() || product.name,
-        unit: unit.trim() || "pcs",
+        unit: unit || "pcs",
         sale_price: parseFloat(price) || 0,
+        purchase_price: parseFloat(purchase) || 0,
+        low_stock: parseFloat(low) || 5,
         stock: parseFloat(stock) || 0,
       });
       onDone();
@@ -411,30 +455,41 @@ function EditProductForm({
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+        className={inputCls}
       />
       <div className="flex gap-2">
+        <UnitSelect value={unit} onChange={setUnit} className="w-1/2" />
         <input
-          value={unit}
-          onChange={(e) => setUnit(e.target.value)}
-          placeholder="Unit"
-          className="w-1/3 rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+          placeholder="Stock on hand"
+          inputMode="decimal"
+          className={`${inputCls} w-1/2`}
         />
+      </div>
+      <div className="flex gap-2">
         <input
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="Sale price"
           inputMode="decimal"
-          className="w-1/3 rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+          className={`${inputCls} w-1/2`}
         />
         <input
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          placeholder="Stock"
+          value={purchase}
+          onChange={(e) => setPurchase(e.target.value)}
+          placeholder="Purchase price"
           inputMode="decimal"
-          className="w-1/3 rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
+          className={`${inputCls} w-1/2`}
         />
       </div>
+      <input
+        value={low}
+        onChange={(e) => setLow(e.target.value)}
+        placeholder="Low-stock alert level"
+        inputMode="decimal"
+        className={inputCls}
+      />
       <button
         onClick={save}
         disabled={busy}

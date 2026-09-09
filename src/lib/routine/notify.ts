@@ -1,7 +1,7 @@
-import { fmt12h } from "@/lib/format";
+import { fmt12h, fmtInterval } from "@/lib/format";
 import type { RoutineItem } from "./types";
 
-export type NudgeKind = "start" | "ask";
+export type NudgeKind = "start" | "ask" | "interval";
 
 export const SNOOZE_MS = 15 * 60 * 1000;
 
@@ -24,6 +24,10 @@ export async function requestNotif(): Promise<NotificationPermission> {
 
 export function notifTitle(item: RoutineItem, kind: NudgeKind): string {
   const isPrayer = item.category === "prayer";
+  if (kind === "interval") {
+    const u = item.count_unit ?? "one";
+    return `${item.label} — time for a ${u}`;
+  }
   if (kind === "start") {
     return isPrayer
       ? `${item.label} — prayer time`
@@ -35,6 +39,12 @@ export function notifTitle(item: RoutineItem, kind: NudgeKind): string {
 }
 
 function notifBody(item: RoutineItem, kind: NudgeKind): string {
+  if (kind === "interval") {
+    const iv = fmtInterval(item.interval_min || 0);
+    return item.target_count
+      ? `${item.target_count} ${item.count_unit ?? ""} a day${iv ? ` · ${iv}` : ""}. Tap +1.`
+      : `${iv || "Reminder"}. Tap +1 when done.`;
+  }
   if (kind === "start") return `Scheduled for ${fmt12h(item.at_time)}.`;
   return item.category === "prayer"
     ? "Tap Done once you've prayed — or Snooze."
@@ -45,6 +55,11 @@ const ACTIONS = [
   { action: "done", title: "Done" },
   { action: "snooze", title: "Snooze 15m" },
   { action: "skip", title: "Skip" },
+];
+
+const INTERVAL_ACTIONS = [
+  { action: "plus", title: "+1" },
+  { action: "snooze", title: "Snooze 15m" },
 ];
 
 /**
@@ -67,7 +82,7 @@ export async function showRoutineNotif(
     icon: "/icon.svg",
     badge: "/icon.svg",
     data: { itemId: item.id, dateKey, kind },
-    actions: ACTIONS,
+    actions: kind === "interval" ? INTERVAL_ACTIONS : ACTIONS,
   } as NotificationOptions;
 
   try {

@@ -63,14 +63,24 @@ export function avgCost(
   return qty > 0 ? cost / qty : null;
 }
 
+/** avgCost from purchases, falling back to the product's set purchase price. */
+export function effectiveCost(
+  product: Pick<Product, "id" | "purchase_price">,
+  purchases: Purchase[],
+): number {
+  return (
+    avgCost(purchases, product.id) ?? (Number(product.purchase_price) || 0)
+  );
+}
+
 export function stockValue(
   products: Product[],
   purchases: Purchase[],
 ): number {
-  return products.reduce((s, p) => {
-    const c = avgCost(purchases, p.id);
-    return s + (c ?? 0) * (Number(p.stock) || 0);
-  }, 0);
+  return products.reduce(
+    (s, p) => s + effectiveCost(p, purchases) * (Number(p.stock) || 0),
+    0,
+  );
 }
 
 export function topSellers(
@@ -96,9 +106,17 @@ export function topSellers(
 export function grossProfit(
   saleItems: SaleItem[],
   purchases: Purchase[],
+  products: Product[] = [],
 ): number {
   return saleItems.reduce((s, it) => {
-    const cost = it.product_id ? (avgCost(purchases, it.product_id) ?? 0) : 0;
+    const prod = it.product_id
+      ? products.find((p) => p.id === it.product_id)
+      : undefined;
+    const cost = it.product_id
+      ? prod
+        ? effectiveCost(prod, purchases)
+        : (avgCost(purchases, it.product_id) ?? 0)
+      : 0;
     return s + ((Number(it.price) || 0) - cost) * (Number(it.qty) || 0);
   }, 0);
 }
@@ -260,14 +278,24 @@ export async function restock(
 
 export async function createProduct(
   db: DB,
-  row: { id: string; name: string; unit: string; salePrice: number },
+  row: {
+    id: string;
+    name: string;
+    unit: string;
+    salePrice: number;
+    purchasePrice?: number;
+    lowStock?: number;
+    stock?: number;
+  },
 ): Promise<void> {
   const { error } = await db.from("shop_products").insert({
     id: row.id,
     name: row.name,
     unit: row.unit,
     sale_price: row.salePrice,
-    stock: 0,
+    purchase_price: row.purchasePrice ?? 0,
+    low_stock: row.lowStock ?? 5,
+    stock: row.stock ?? 0,
   });
   if (error) throw error;
 }
@@ -275,7 +303,14 @@ export async function createProduct(
 export async function updateProduct(
   db: DB,
   id: string,
-  patch: { name?: string; unit?: string; sale_price?: number; stock?: number },
+  patch: {
+    name?: string;
+    unit?: string;
+    sale_price?: number;
+    purchase_price?: number;
+    low_stock?: number;
+    stock?: number;
+  },
 ): Promise<void> {
   const { error } = await db.from("shop_products").update(patch).eq("id", id);
   if (error) throw error;

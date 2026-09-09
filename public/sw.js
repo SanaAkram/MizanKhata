@@ -30,10 +30,16 @@ self.addEventListener("push", (event) => {
       dateKey: d.dateKey || "",
       url: d.url || "/routine",
     },
-    actions: [
-      { action: "done", title: "Done" },
-      { action: "snooze", title: "Snooze 15m" },
-    ],
+    actions:
+      d.kind === "interval"
+        ? [
+            { action: "plus", title: "+1" },
+            { action: "snooze", title: "Snooze 15m" },
+          ]
+        : [
+            { action: "done", title: "Done" },
+            { action: "snooze", title: "Snooze 15m" },
+          ],
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

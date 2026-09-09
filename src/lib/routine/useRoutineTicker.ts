@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { dateKey, minutesNow, minutesOfDay } from "@/lib/date";
-import type { RoutineItem } from "./types";
+import type { RoutineItem, RoutineLog } from "./types";
 import {
   clearReminderState,
   lastNudge,
@@ -14,30 +14,39 @@ import {
 import { playReminderSound } from "./sound";
 
 const TICK_MS = 20_000;
-const NUDGE_MS = 10 * 60 * 1000; // re-nag an unanswered item every 10 min
+const NUDGE_MS = 10 * 60 * 1000; // re-nag a scheduled item every 10 min
+const SLACK_MS = 30_000; // let the interval fire ~1 tick early
 
 /**
- * Drives the routine clock and the snooze-style reminder loop while a tab is
- * open. Every ~20s it re-checks each scheduled item; anything still unanswered
- * inside (or past) its window gets re-notified every NUDGE_MS until it's logged
- * or snoozed. Returns `now` (refreshed each tick) for the UI.
- *
- * `loggedTodayIds` = items already answered today (skips + clears their state).
+ * Drives the routine clock + the reminder loop while a tab is open.
+ * - scheduled items: nag every 10 min while unanswered in/just-past the window
+ * - interval items: nag every `interval_min` inside the active window until the
+ *   daily target is met
+ * Returns `now`, refreshed each tick.
  */
 export function useRoutineTicker(
   items: RoutineItem[],
-  loggedTodayIds: Set<string>,
+  todayLogs: RoutineLog[],
 ): Date {
   const [now, setNow] = useState<Date>(() => new Date());
 
+  const logSig = useMemo(
+    () =>
+      todayLogs
+        .map((l) => `${l.item_id}:${l.status}:${l.count}`)
+        .sort()
+        .join(","),
+    [todayLogs],
+  );
+
   useEffect(() => {
     let stopped = false;
+    const logByItem = new Map(todayLogs.map((l) => [l.item_id, l]));
 
     const tick = () => {
       if (stopped) return;
       const d = new Date();
       setNow(d);
-
       if (notifPermission() !== "granted") return;
 
       const dk = dateKey(d);
@@ -49,22 +58,39 @@ export function useRoutineTicker(
         if (!it.enabled) continue;
         const days = it.days ?? [];
         if (days.length > 0 && !days.includes(dow)) continue;
+        const log = logByItem.get(it.id);
 
-        if (loggedTodayIds.has(it.id)) {
-          clearReminderState(dk, it.id);
+        if (it.kind === "interval") {
+          const target = Number(it.target_count) || 0;
+          const count = Number(log?.count ?? 0);
+          if (target > 0 && count >= target) {
+            clearReminderState(dk, it.id);
+            continue;
+          }
+          const fromMin = minutesOfDay(it.active_from);
+          const toMin = minutesOfDay(it.active_to) || 24 * 60;
+          if (nowMin < fromMin || nowMin >= toMin) continue;
+          const every = it.interval_min || 0;
+          if (every <= 0) continue;
+          if (nowMs < snoozedUntil(dk, it.id)) continue;
+          if (nowMs - lastNudge(dk, it.id) < every * 60_000 - SLACK_MS) continue;
+          void showRoutineNotif(it, dk, "interval");
+          playReminderSound();
+          setLastNudge(dk, it.id, nowMs);
           continue;
         }
 
+        // scheduled
+        if (log && log.status !== "pending") {
+          clearReminderState(dk, it.id);
+          continue;
+        }
         const startMin = minutesOfDay(it.at_time);
-        if (nowMin < startMin) continue; // hasn't started
-        // (nowMin naturally < 1440, so we stop nagging at local midnight)
-
+        if (nowMin < startMin) continue;
         if (nowMs < snoozedUntil(dk, it.id)) continue;
         if (nowMs - lastNudge(dk, it.id) < NUDGE_MS) continue;
-
         const endMin = Math.min(startMin + (it.window_min || 0), 24 * 60);
-        const kind = nowMin < endMin ? "start" : "ask";
-        void showRoutineNotif(it, dk, kind);
+        void showRoutineNotif(it, dk, nowMin < endMin ? "start" : "ask");
         playReminderSound();
         setLastNudge(dk, it.id, nowMs);
       }
@@ -83,7 +109,7 @@ export function useRoutineTicker(
       document.removeEventListener("visibilitychange", onVis);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, Array.from(loggedTodayIds).sort().join(",")]);
+  }, [items, logSig]);
 
   return now;
 }

@@ -189,60 +189,6 @@ export type Database = {
         }
         Relationships: []
       }
-      shop_push_subscriptions: {
-        Row: {
-          auth: string
-          created_at: string
-          endpoint: string
-          id: string
-          last_seen: string
-          owner_id: string
-          p256dh: string
-          tz_offset_min: number
-          user_agent: string | null
-        }
-        Insert: {
-          auth: string
-          created_at?: string
-          endpoint: string
-          id: string
-          last_seen?: string
-          owner_id?: string
-          p256dh: string
-          tz_offset_min?: number
-          user_agent?: string | null
-        }
-        Update: {
-          auth?: string
-          created_at?: string
-          endpoint?: string
-          id?: string
-          last_seen?: string
-          owner_id?: string
-          p256dh?: string
-          tz_offset_min?: number
-          user_agent?: string | null
-        }
-        Relationships: []
-      }
-      shop_push_sent: {
-        Row: {
-          id: string
-          owner_id: string
-          sent_at: string
-        }
-        Insert: {
-          id: string
-          owner_id: string
-          sent_at?: string
-        }
-        Update: {
-          id?: string
-          owner_id?: string
-          sent_at?: string
-        }
-        Relationships: []
-      }
       shop_purchases: {
         Row: {
           date: string
@@ -281,47 +227,120 @@ export type Database = {
           },
         ]
       }
+      shop_push_sent: {
+        Row: {
+          id: string
+          owner_id: string
+          sent_at: string
+        }
+        Insert: {
+          id: string
+          owner_id: string
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
+      shop_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen: string
+          owner_id: string
+          p256dh: string
+          tz_offset_min: number
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id: string
+          last_seen?: string
+          owner_id?: string
+          p256dh: string
+          tz_offset_min?: number
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen?: string
+          owner_id?: string
+          p256dh?: string
+          tz_offset_min?: number
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       shop_routine_items: {
         Row: {
-          at_time: string
+          active_from: string
+          active_to: string
+          at_time: string | null
           category: string
+          count_unit: string | null
           created_at: string
           days: number[]
           enabled: boolean
           id: string
+          interval_min: number | null
+          kind: string
           label: string
           owner_id: string
           sort: number
+          target_count: number
           window_min: number
         }
         Insert: {
-          at_time: string
+          active_from?: string
+          active_to?: string
+          at_time?: string | null
           category?: string
+          count_unit?: string | null
           created_at?: string
           days?: number[]
           enabled?: boolean
           id: string
+          interval_min?: number | null
+          kind?: string
           label: string
           owner_id?: string
           sort?: number
+          target_count?: number
           window_min?: number
         }
         Update: {
-          at_time?: string
+          active_from?: string
+          active_to?: string
+          at_time?: string | null
           category?: string
+          count_unit?: string | null
           created_at?: string
           days?: number[]
           enabled?: boolean
           id?: string
+          interval_min?: number | null
+          kind?: string
           label?: string
           owner_id?: string
           sort?: number
+          target_count?: number
           window_min?: number
         }
         Relationships: []
       }
       shop_routine_log: {
         Row: {
+          count: number
           created_at: string
           date: string
           id: string
@@ -332,6 +351,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          count?: number
           created_at?: string
           date: string
           id: string
@@ -342,6 +362,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          count?: number
           created_at?: string
           date?: string
           id?: string

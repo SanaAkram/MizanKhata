@@ -52,9 +52,18 @@ export function fmtEntryDate(iso: string): string {
 }
 
 /** "8:00 AM" from a "HH:MM[:SS]" time string. */
-export function fmt12h(time: string): string {
+export function fmt12h(time: string | null | undefined): string {
+  if (!time) return "";
   const [h, m] = time.split(":").map(Number);
   const ap = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${ap}`;
+  return `${h12}:${String(m || 0).padStart(2, "0")} ${ap}`;
+}
+
+/** "every 3h" / "every 90m" from minutes. */
+export function fmtInterval(min: number): string {
+  if (!min || min <= 0) return "";
+  if (min % 60 === 0) return `every ${min / 60}h`;
+  if (min < 60) return `every ${min}m`;
+  return `every ${Math.floor(min / 60)}h ${min % 60}m`;
 }

@@ -41,6 +41,8 @@ export async function seedKhata(db: DB): Promise<{
     name: p.name,
     unit: p.unit,
     sale_price: p.salePrice,
+    purchase_price:
+      p.salePrice > 0 ? Math.round(p.salePrice * 0.72 * 100) / 100 : 0,
     stock: p.stock,
   }));
 

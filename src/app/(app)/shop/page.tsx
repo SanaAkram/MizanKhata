@@ -67,7 +67,7 @@ export default async function ShopDashboardPage() {
     (s, p) => s + Number(p.qty || 0) * Number(p.price || 0),
     0,
   );
-  const profit = grossProfit(saleItems, purchases);
+  const profit = grossProfit(saleItems, purchases, products);
   const stockVal = stockValue(products, purchases);
   const inStock = products.filter((p) => Number(p.stock) > 0).length;
   const top = topSellers(saleItems, products, 5);
@@ -81,6 +81,14 @@ export default async function ShopDashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Link
+          href="/shop/settings"
+          className="text-xs font-semibold text-muted underline underline-offset-4"
+        >
+          Shop details
+        </Link>
+      </div>
       <section className="rounded-2xl border border-line bg-card p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           Net profit (lifetime)
