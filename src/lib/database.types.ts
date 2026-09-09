@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -17,8 +15,10 @@ export type Database = {
       shop_cashbook: {
         Row: {
           amount: number
+          category: string | null
           date: string
           id: string
+          method: string
           note: string | null
           owner_id: string
           party_id: string | null
@@ -28,8 +28,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          category?: string | null
           date?: string
           id: string
+          method?: string
           note?: string | null
           owner_id?: string
           party_id?: string | null
@@ -39,8 +41,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          category?: string | null
           date?: string
           id?: string
+          method?: string
           note?: string | null
           owner_id?: string
           party_id?: string | null
@@ -129,8 +133,10 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          low_stock: number
           name: string
           owner_id: string
+          purchase_price: number
           sale_price: number
           stock: number
           unit: string
@@ -138,8 +144,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id: string
+          low_stock?: number
           name: string
           owner_id?: string
+          purchase_price?: number
           sale_price?: number
           stock?: number
           unit?: string
@@ -147,11 +155,37 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          low_stock?: number
           name?: string
           owner_id?: string
+          purchase_price?: number
           sale_price?: number
           stock?: number
           unit?: string
+        }
+        Relationships: []
+      }
+      shop_profile: {
+        Row: {
+          address: string | null
+          owner_id: string
+          phone: string | null
+          shop_name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          owner_id?: string
+          phone?: string | null
+          shop_name?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          owner_id?: string
+          phone?: string | null
+          shop_name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -319,11 +353,15 @@ export type Database = {
           credit_amount: number
           customer_id: string | null
           customer_name: string | null
+          discount: number
           has_paper_photo: boolean
           id: string
+          method: string
+          note: string | null
           owner_id: string
           paid_cash: number
           photo_data_url: string | null
+          tax: number
           time: string
           total: number
         }
@@ -332,11 +370,15 @@ export type Database = {
           credit_amount?: number
           customer_id?: string | null
           customer_name?: string | null
+          discount?: number
           has_paper_photo?: boolean
           id: string
+          method?: string
+          note?: string | null
           owner_id?: string
           paid_cash?: number
           photo_data_url?: string | null
+          tax?: number
           time?: string
           total: number
         }
@@ -345,11 +387,15 @@ export type Database = {
           credit_amount?: number
           customer_id?: string | null
           customer_name?: string | null
+          discount?: number
           has_paper_photo?: boolean
           id?: string
+          method?: string
+          note?: string | null
           owner_id?: string
           paid_cash?: number
           photo_data_url?: string | null
+          tax?: number
           time?: string
           total?: number
         }
@@ -362,6 +408,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shop_stock_moves: {
+        Row: {
+          date: string
+          id: string
+          kind: string
+          note: string | null
+          owner_id: string
+          party_id: string | null
+          party_type: string | null
+          product_id: string
+          qty: number
+          rate: number | null
+          ref: string | null
+        }
+        Insert: {
+          date?: string
+          id: string
+          kind: string
+          note?: string | null
+          owner_id?: string
+          party_id?: string | null
+          party_type?: string | null
+          product_id: string
+          qty: number
+          rate?: number | null
+          ref?: string | null
+        }
+        Update: {
+          date?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          owner_id?: string
+          party_id?: string | null
+          party_type?: string | null
+          product_id?: string
+          qty?: number
+          rate?: number | null
+          ref?: string | null
+        }
+        Relationships: []
       }
       shop_supplier_tx: {
         Row: {
