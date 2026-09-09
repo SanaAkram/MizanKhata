@@ -10,12 +10,14 @@ export default function DueNowCard({
   catchUp,
   now,
   onMark,
+  onSnooze,
 }: {
   active: Occurrence | null;
   next: Occurrence | null;
   catchUp: Occurrence[];
   now: Date;
   onMark: (itemId: string, status: RoutineStatus) => void;
+  onSnooze: (itemId: string) => void;
 }) {
   if (catchUp.length > 0) {
     return (
@@ -24,30 +26,43 @@ export default function DueNowCard({
           Check in
         </p>
         <ul className="mt-3 flex flex-col gap-3">
-          {catchUp.map((o) => (
-            <li key={o.item.id} className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {o.item.label}
-                </p>
-                <p className="text-xs text-muted">{fmt12h(o.item.at_time)}</p>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <button
-                  onClick={() => onMark(o.item.id, "done")}
-                  className="rounded-lg bg-forest px-3 py-2 text-xs font-semibold text-paper"
-                >
-                  Yes
-                </button>
-                <button
-                  onClick={() => onMark(o.item.id, "missed")}
-                  className="rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-muted"
-                >
-                  No
-                </button>
-              </div>
-            </li>
-          ))}
+          {catchUp.map((o) => {
+            const prayer = o.item.category === "prayer";
+            return (
+              <li key={o.item.id} className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {prayer
+                      ? `Did you offer ${o.item.label} prayer?`
+                      : `${o.item.label} — done?`}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {fmt12h(o.item.at_time)}
+                    <button
+                      onClick={() => onSnooze(o.item.id)}
+                      className="ml-2 font-semibold text-gold underline underline-offset-2"
+                    >
+                      Later
+                    </button>
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    onClick={() => onMark(o.item.id, "done")}
+                    className="rounded-lg bg-forest px-3 py-2 text-xs font-semibold text-paper"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => onMark(o.item.id, "missed")}
+                    className="rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-muted"
+                  >
+                    No
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
     );
@@ -74,6 +89,12 @@ export default function DueNowCard({
             Mark done
           </button>
           <button
+            onClick={() => onSnooze(active.item.id)}
+            className="rounded-xl border border-line bg-card px-4 py-3 text-sm font-semibold text-muted"
+          >
+            Snooze 15m
+          </button>
+          <button
             onClick={() => onMark(active.item.id, "skipped")}
             className="rounded-xl border border-line bg-card px-4 py-3 text-sm font-semibold text-muted"
           >
@@ -86,6 +107,7 @@ export default function DueNowCard({
 
   if (next) {
     const ms = next.start.getTime() - now.getTime();
+    const prayer = next.item.category === "prayer";
     return (
       <div className="rounded-2xl border border-line bg-card p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
@@ -96,12 +118,18 @@ export default function DueNowCard({
           {fmt12h(next.item.at_time)}
           {ms > 0 ? ` · in ${fmtDuration(ms)}` : ""}
         </p>
-        <button
-          onClick={() => onMark(next.item.id, "done")}
-          className="mt-3 text-xs font-semibold text-forest underline underline-offset-4"
-        >
-          Mark done early
-        </button>
+        {prayer ? (
+          <p className="mt-3 text-xs text-muted">
+            Can be logged once the prayer time begins.
+          </p>
+        ) : (
+          <button
+            onClick={() => onMark(next.item.id, "done")}
+            className="mt-3 text-xs font-semibold text-forest underline underline-offset-4"
+          >
+            Mark done early
+          </button>
+        )}
       </div>
     );
   }

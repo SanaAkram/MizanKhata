@@ -1,6 +1,9 @@
 import { fmt12h } from "@/lib/format";
+import type { RoutineItem } from "./types";
 
-type Kind = "start" | "end";
+export type NudgeKind = "start" | "ask";
+
+export const SNOOZE_MS = 15 * 60 * 1000;
 
 export function notifSupported(): boolean {
   return typeof window !== "undefined" && "Notification" in window;
@@ -19,62 +22,113 @@ export async function requestNotif(): Promise<NotificationPermission> {
   }
 }
 
-export async function showNotif(
-  title: string,
-  body: string,
-  tag: string,
+export function notifTitle(item: RoutineItem, kind: NudgeKind): string {
+  const isPrayer = item.category === "prayer";
+  if (kind === "start") {
+    return isPrayer
+      ? `${item.label} — prayer time`
+      : `${item.label} — it's time`;
+  }
+  return isPrayer
+    ? `Did you offer ${item.label} prayer?`
+    : `${item.label} — done?`;
+}
+
+function notifBody(item: RoutineItem, kind: NudgeKind): string {
+  if (kind === "start") return `Scheduled for ${fmt12h(item.at_time)}.`;
+  return item.category === "prayer"
+    ? "Tap Done once you've prayed — or Snooze."
+    : "Tap Done when it's finished — or Snooze.";
+}
+
+const ACTIONS = [
+  { action: "done", title: "Done" },
+  { action: "snooze", title: "Snooze 15m" },
+  { action: "skip", title: "Skip" },
+];
+
+/**
+ * Fire a routine reminder. Uses the service worker's showNotification (so the
+ * Done / Snooze / Skip buttons work and the toast stays put) and falls back to
+ * a plain Notification when there's no SW registration.
+ */
+export async function showRoutineNotif(
+  item: RoutineItem,
+  dateKey: string,
+  kind: NudgeKind,
 ): Promise<void> {
   if (notifPermission() !== "granted") return;
-  const opts: NotificationOptions = {
-    body,
-    tag,
+  const title = notifTitle(item, kind);
+  const options = {
+    body: notifBody(item, kind),
+    tag: `routine-${item.id}`,
+    renotify: true,
+    requireInteraction: true,
     icon: "/icon.svg",
     badge: "/icon.svg",
-  };
+    data: { itemId: item.id, dateKey, kind },
+    actions: ACTIONS,
+  } as NotificationOptions;
+
   try {
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg) {
-        await reg.showNotification(title, { ...opts });
+        await reg.showNotification(title, options);
         return;
       }
     }
-    new Notification(title, opts);
+    new Notification(title, { body: options.body, tag: options.tag });
   } catch {
     try {
-      new Notification(title, opts);
+      new Notification(title, { body: notifBody(item, kind) });
     } catch {
       /* give up silently */
     }
   }
 }
 
-export function startBody(atTime: string): string {
-  return `Scheduled for ${fmt12h(atTime)}.`;
-}
+// ---- per-item reminder state (localStorage) --------------------------------
 
-const flagKey = (dateKey: string, itemId: string, kind: Kind) =>
-  `roznamcha:notified:${dateKey}:${itemId}:${kind}`;
+const snoozeKey = (d: string, id: string) => `roznamcha:snooze:${d}:${id}`;
+const nudgeKey = (d: string, id: string) => `roznamcha:nudge:${d}:${id}`;
 
-export function wasNotified(
-  dateKey: string,
-  itemId: string,
-  kind: Kind,
-): boolean {
+export function snoozedUntil(d: string, id: string): number {
   try {
-    return localStorage.getItem(flagKey(dateKey, itemId, kind)) === "1";
+    return Number(localStorage.getItem(snoozeKey(d, id))) || 0;
   } catch {
-    return false;
+    return 0;
   }
 }
 
-export function markNotified(
-  dateKey: string,
-  itemId: string,
-  kind: Kind,
-): void {
+export function setSnooze(d: string, id: string, until: number): void {
   try {
-    localStorage.setItem(flagKey(dateKey, itemId, kind), "1");
+    localStorage.setItem(snoozeKey(d, id), String(until));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function lastNudge(d: string, id: string): number {
+  try {
+    return Number(localStorage.getItem(nudgeKey(d, id))) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function setLastNudge(d: string, id: string, at: number): void {
+  try {
+    localStorage.setItem(nudgeKey(d, id), String(at));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearReminderState(d: string, id: string): void {
+  try {
+    localStorage.removeItem(snoozeKey(d, id));
+    localStorage.removeItem(nudgeKey(d, id));
   } catch {
     /* ignore */
   }

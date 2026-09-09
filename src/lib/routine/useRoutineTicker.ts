@@ -4,20 +4,24 @@ import { useEffect, useState } from "react";
 import { dateKey, minutesNow, minutesOfDay } from "@/lib/date";
 import type { RoutineItem } from "./types";
 import {
-  markNotified,
+  clearReminderState,
+  lastNudge,
   notifPermission,
-  showNotif,
-  startBody,
-  wasNotified,
+  setLastNudge,
+  showRoutineNotif,
+  snoozedUntil,
 } from "./notify";
 
+const TICK_MS = 20_000;
+const NUDGE_MS = 10 * 60 * 1000; // re-nag an unanswered item every 10 min
+
 /**
- * Drives the routine section's clock and fires the two per-item notifications
- * (window start, window end) while a tab is open. Returns `now`, refreshed
- * every 20s, so the UI can recompute what is due.
+ * Drives the routine clock and the snooze-style reminder loop while a tab is
+ * open. Every ~20s it re-checks each scheduled item; anything still unanswered
+ * inside (or past) its window gets re-notified every NUDGE_MS until it's logged
+ * or snoozed. Returns `now` (refreshed each tick) for the UI.
  *
- * `loggedTodayIds` suppresses the "did you do it?" ping for items already
- * answered.
+ * `loggedTodayIds` = items already answered today (skips + clears their state).
  */
 export function useRoutineTicker(
   items: RoutineItem[],
@@ -34,7 +38,9 @@ export function useRoutineTicker(
       setNow(d);
 
       if (notifPermission() !== "granted") return;
+
       const dk = dateKey(d);
+      const nowMs = d.getTime();
       const nowMin = minutesNow(d);
       const dow = d.getDay();
 
@@ -42,37 +48,28 @@ export function useRoutineTicker(
         if (!it.enabled) continue;
         const days = it.days ?? [];
         if (days.length > 0 && !days.includes(dow)) continue;
-        if (loggedTodayIds.has(it.id)) continue;
+
+        if (loggedTodayIds.has(it.id)) {
+          clearReminderState(dk, it.id);
+          continue;
+        }
 
         const startMin = minutesOfDay(it.at_time);
+        if (nowMin < startMin) continue; // hasn't started
+        // (nowMin naturally < 1440, so we stop nagging at local midnight)
+
+        if (nowMs < snoozedUntil(dk, it.id)) continue;
+        if (nowMs - lastNudge(dk, it.id) < NUDGE_MS) continue;
+
         const endMin = Math.min(startMin + (it.window_min || 0), 24 * 60);
-
-        if (
-          nowMin >= startMin &&
-          nowMin < endMin &&
-          !wasNotified(dk, it.id, "start")
-        ) {
-          void showNotif(
-            `${it.label} — it's time`,
-            startBody(it.at_time),
-            `r-${it.id}`,
-          );
-          markNotified(dk, it.id, "start");
-        }
-
-        if (nowMin >= endMin && !wasNotified(dk, it.id, "end")) {
-          void showNotif(
-            `Did you: ${it.label}?`,
-            "Open Roznamcha to log it.",
-            `r-${it.id}`,
-          );
-          markNotified(dk, it.id, "end");
-        }
+        const kind = nowMin < endMin ? "start" : "ask";
+        void showRoutineNotif(it, dk, kind);
+        setLastNudge(dk, it.id, nowMs);
       }
     };
 
     tick();
-    const id = window.setInterval(tick, 20000);
+    const id = window.setInterval(tick, TICK_MS);
     const onVis = () => {
       if (document.visibilityState === "visible") tick();
     };

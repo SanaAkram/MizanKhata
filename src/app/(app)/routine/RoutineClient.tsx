@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addDays, dateKey, parseDateKey, startOfWeek } from "@/lib/date";
@@ -23,7 +23,14 @@ import {
   type Occurrence,
 } from "@/lib/routine/schedule";
 import { useRoutineTicker } from "@/lib/routine/useRoutineTicker";
-import { notifPermission, requestNotif } from "@/lib/routine/notify";
+import {
+  clearReminderState,
+  notifPermission,
+  requestNotif,
+  setSnooze,
+  snoozedUntil,
+  SNOOZE_MS,
+} from "@/lib/routine/notify";
 import type {
   RoutineItem,
   RoutineLog,
@@ -121,6 +128,7 @@ export default function RoutineClient({
   async function mark(dk: string, itemId: string, status: RoutineStatus) {
     const id = logId(dk, itemId);
     const nowIso = new Date().toISOString();
+    clearReminderState(dk, itemId);
     setLogs((prev) => [
       ...prev.filter((l) => l.id !== id),
       {
@@ -153,6 +161,11 @@ export default function RoutineClient({
     }
   }
 
+  function snoozeItem(dk: string, itemId: string) {
+    setSnooze(dk, itemId, Date.now() + SNOOZE_MS);
+    setPick(null);
+  }
+
   async function seed() {
     setSeeding(true);
     try {
@@ -163,6 +176,49 @@ export default function RoutineClient({
       setSeeding(false);
     }
   }
+
+  // Route Done / Snooze / Skip taps from a notification back into the app.
+  const actionRef = useRef<(a: string, id: string, dk: string) => void>(
+    () => {},
+  );
+  useEffect(() => {
+    actionRef.current = (action, itemId, dk) => {
+      if (!itemId) return;
+      const day = dk || todayKey;
+      if (action === "done") void mark(day, itemId, "done");
+      else if (action === "skip") void mark(day, itemId, "skipped");
+      else if (action === "snooze") snoozeItem(day, itemId);
+      // "open" / anything else: app is already focused, nothing to do
+    };
+  });
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+      return;
+    }
+    const onMsg = (e: MessageEvent) => {
+      const d = e.data;
+      if (d && d.type === "routine-action") {
+        actionRef.current(
+          String(d.action || ""),
+          String(d.itemId || ""),
+          String(d.dateKey || ""),
+        );
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMsg);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", onMsg);
+  }, []);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const ra = sp.get("ra");
+    if (!ra) return;
+    actionRef.current(ra, sp.get("ri") || "", sp.get("rd") || "");
+    router.replace("/routine");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedLogs = useMemo(
     () => logsByDate.get(selectedKey) ?? [],
@@ -179,6 +235,11 @@ export default function RoutineClient({
     () => buildOccurrences(items, todayLogs, todayKey, now),
     [items, todayLogs, todayKey, now],
   );
+  const catchUp = isToday
+    ? catchUpQueue(todayOccs).filter(
+        (o) => snoozedUntil(todayKey, o.item.id) < now.getTime(),
+      )
+    : [];
 
   const weekAdh = useMemo(() => {
     const m = new Map<string, { done: number; total: number }>();
@@ -207,7 +268,8 @@ export default function RoutineClient({
             Turn on reminders
           </span>
           <span className="mt-0.5 block text-xs text-muted">
-            A nudge when each item is due, and a check-in once its time passes.
+            A nudge when each item is due, then a check-in that keeps reminding
+            until you mark it done.
           </span>
         </button>
       ) : null}
@@ -225,9 +287,10 @@ export default function RoutineClient({
         <DueNowCard
           active={activeOccurrence(todayOccs)}
           next={nextUpcoming(todayOccs)}
-          catchUp={catchUpQueue(todayOccs)}
+          catchUp={catchUp}
           now={now}
           onMark={(id, s) => void mark(todayKey, id, s)}
+          onSnooze={(id) => snoozeItem(todayKey, id)}
         />
       ) : null}
 
@@ -249,6 +312,7 @@ export default function RoutineClient({
             occ={pick}
             onMark={(s) => void mark(selectedKey, pick.item.id, s)}
             onUndo={() => void undo(selectedKey, pick.item.id)}
+            onSnooze={() => snoozeItem(selectedKey, pick.item.id)}
           />
         ) : null}
       </Sheet>
@@ -287,10 +351,12 @@ function PickActions({
   occ,
   onMark,
   onUndo,
+  onSnooze,
 }: {
   occ: Occurrence;
   onMark: (s: RoutineStatus) => void;
   onUndo: () => void;
+  onSnooze: () => void;
 }) {
   const statusLabel: Record<RoutineStatus, string> = {
     pending: "Not logged yet",
@@ -298,6 +364,8 @@ function PickActions({
     missed: "Marked missed",
     skipped: "Skipped",
   };
+  const lockDone =
+    occ.item.category === "prayer" && occ.phase === "upcoming";
 
   return (
     <div className="flex flex-col gap-3">
@@ -306,10 +374,16 @@ function PickActions({
         <span className="mx-1">·</span>
         {statusLabel[occ.status]}
       </p>
+      {lockDone ? (
+        <p className="text-xs text-muted">
+          A prayer can be logged once its time begins.
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => onMark("done")}
-          className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper"
+          disabled={lockDone}
+          className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-40"
         >
           Done
         </button>
@@ -333,6 +407,12 @@ function PickActions({
           Clear
         </button>
       </div>
+      <button
+        onClick={onSnooze}
+        className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-muted"
+      >
+        Snooze 15m
+      </button>
     </div>
   );
 }

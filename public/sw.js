@@ -1,6 +1,7 @@
-/* Roznamcha service worker — intentionally minimal.
-   No fetch caching yet; it exists so notification clicks focus the app and
-   so real Web Push can be added later without changing registration. */
+/* Roznamcha service worker — minimal.
+   No fetch caching. It exists to (a) let routine reminders carry action
+   buttons and (b) route Done / Snooze / Skip taps back into the app.
+   Real background Web Push can be layered on later without changing this. */
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -9,32 +10,54 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("notificationclick", (event) => {
+  const action = event.action || "open";
+  const data = event.notification.data || {};
   event.notification.close();
+
   event.waitUntil(
     (async () => {
+      const msg = {
+        type: "routine-action",
+        action: action,
+        itemId: data.itemId || "",
+        dateKey: data.dateKey || "",
+      };
+
       const clients = await self.clients.matchAll({
         type: "window",
         includeUncontrolled: true,
       });
-      for (const client of clients) {
-        if (client.url.includes("/routine") && "focus" in client) {
-          return client.focus();
+
+      let target =
+        clients.find((c) => c.url.includes("/routine")) || clients[0];
+
+      if (target) {
+        try {
+          target.postMessage(msg);
+        } catch {
+          /* ignore */
         }
-      }
-      for (const client of clients) {
-        if ("focus" in client) {
-          if ("navigate" in client) {
+        if ("focus" in target) {
+          if (!target.url.includes("/routine") && "navigate" in target) {
             try {
-              await client.navigate("/routine");
+              await target.navigate("/routine");
             } catch {
               /* ignore */
             }
           }
-          return client.focus();
+          return target.focus();
         }
       }
+
       if (self.clients.openWindow) {
-        return self.clients.openWindow("/routine");
+        const q =
+          "?ra=" +
+          encodeURIComponent(action) +
+          "&ri=" +
+          encodeURIComponent(data.itemId || "") +
+          "&rd=" +
+          encodeURIComponent(data.dateKey || "");
+        return self.clients.openWindow("/routine" + q);
       }
       return undefined;
     })(),
