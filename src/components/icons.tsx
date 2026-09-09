@@ -85,6 +85,24 @@ export function LedgerIcon({ className = "h-6 w-6" }: IconProps) {
   );
 }
 
+export function ShopIcon({ className = "h-6 w-6" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 9.5 5.2 4.5A1 1 0 0 1 6.2 3.75h11.6a1 1 0 0 1 1 .75L20 9.5" />
+      <path d="M3.5 9.5h17v2a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-2-2.4Z" />
+      <path d="M5 13.8V20h14v-6.2" />
+    </svg>
+  );
+}
+
 export function CashIcon({ className = "h-6 w-6" }: IconProps) {
   return (
     <svg

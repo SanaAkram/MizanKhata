@@ -6,14 +6,14 @@ import {
   ClockIcon,
   CalendarIcon,
   LedgerIcon,
-  CashIcon,
+  ShopIcon,
 } from "@/components/icons";
 
 const TABS = [
   { href: "/work", label: "Work", Icon: ClockIcon },
   { href: "/routine", label: "Routine", Icon: CalendarIcon },
   { href: "/ledger", label: "Ledger", Icon: LedgerIcon },
-  { href: "/cashbook", label: "Cash", Icon: CashIcon },
+  { href: "/shop", label: "Shop", Icon: ShopIcon },
 ] as const;
 
 export default function BottomNav() {

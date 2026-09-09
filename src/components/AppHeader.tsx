@@ -9,6 +9,10 @@ const TITLES: Record<string, string> = {
   "/routine": "Routine",
   "/ledger": "Ledger",
   "/cashbook": "Cash Book",
+  "/shop": "Shop",
+  "/shop/pos": "Sell",
+  "/shop/stock": "Stock",
+  "/shop/bills": "Bills",
   "/settings": "Settings",
 };
 
@@ -17,6 +21,7 @@ const PREFIXES: Array<[string, string]> = [
   ["/work", "Work"],
   ["/ledger", "Ledger"],
   ["/cashbook", "Cash Book"],
+  ["/shop", "Shop"],
 ];
 
 export default function AppHeader() {
