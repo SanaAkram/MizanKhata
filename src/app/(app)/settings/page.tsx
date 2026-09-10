@@ -5,6 +5,7 @@ import { getProfile } from "@/lib/auth/profile";
 import SignOutButton from "./SignOutButton";
 import LanguagePicker from "./LanguagePicker";
 import ProfileSection from "./ProfileSection";
+import AccountSecurity from "./AccountSecurity";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -27,6 +28,8 @@ export default async function SettingsPage() {
       </section>
 
       <ProfileSection profile={profile} />
+
+      <AccountSecurity email={user?.email ?? ""} />
 
       <LanguagePicker />
 

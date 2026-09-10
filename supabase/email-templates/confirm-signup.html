@@ -1,0 +1,69 @@
+<!--
+  Supabase → Authentication → Email Templates.
+  Paste this HTML into "Confirm signup".
+  For "Reset Password" and "Magic Link", reuse this and change the two
+  lines marked  <!-- HEADLINE -->  and  <!-- SUBLINE -->.
+  Do NOT remove {{ .Token }} — that's the code the app asks for.
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+       style="background:#eeebe3;margin:0;padding:24px 0;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0"
+             style="width:480px;max-width:100%;background:#ffffff;border:1px solid #e4dfd2;border-radius:16px;overflow:hidden;">
+
+        <!-- brand band -->
+        <tr>
+          <td style="background:#2f4a34;padding:22px 28px;">
+            <span style="color:#fbf9f4;font-size:20px;font-weight:700;letter-spacing:0.2px;">MizanKhata</span>
+            <span style="color:#b8892b;font-size:12px;font-weight:600;display:block;margin-top:2px;">
+              Shop ledger &middot; cash book &middot; daily routine
+            </span>
+          </td>
+        </tr>
+
+        <!-- body -->
+        <tr>
+          <td style="padding:32px 28px 8px 28px;color:#23291f;">
+            <!-- HEADLINE -->
+            <p style="margin:0 0 6px 0;font-size:18px;font-weight:700;">Confirm your email</p>
+            <!-- SUBLINE -->
+            <p style="margin:0 0 24px 0;font-size:14px;color:#6b7266;line-height:1.5;">
+              Enter this code in MizanKhata to finish creating your account.
+            </p>
+
+            <div style="background:#fbf9f4;border:1px solid #e4dfd2;border-radius:12px;
+                        padding:18px;text-align:center;">
+              <div style="font-size:11px;font-weight:600;color:#6b7266;text-transform:uppercase;letter-spacing:1px;">
+                Verification code
+              </div>
+              <div style="font-size:34px;font-weight:800;color:#2f4a34;letter-spacing:8px;margin-top:6px;">
+                {{ .Token }}
+              </div>
+            </div>
+
+            <p style="margin:20px 0 0 0;font-size:13px;color:#6b7266;line-height:1.6;">
+              This code expires in <strong>15 minutes</strong>. If you didn&rsquo;t
+              request it, you can safely ignore this email &mdash; your account
+              stays unchanged.
+            </p>
+          </td>
+        </tr>
+
+        <!-- footer -->
+        <tr>
+          <td style="padding:22px 28px 26px 28px;">
+            <hr style="border:none;border-top:1px solid #e4dfd2;margin:0 0 14px 0;" />
+            <p style="margin:0;font-size:12px;color:#9a9a8c;">
+              MizanKhata &middot; mizankhata.app
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:16px 0 0 0;font-size:11px;color:#9a9a8c;">
+        You received this because someone entered {{ .Email }} on MizanKhata.
+      </p>
+    </td>
+  </tr>
+</table>

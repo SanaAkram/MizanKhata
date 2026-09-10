@@ -3,9 +3,12 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   authenticate,
+  requestResetAction,
   resendOtpAction,
+  setNewPasswordAction,
   signUpAction,
   verifyOtpAction,
+  verifyResetAction,
   type AuthState,
 } from "./actions";
 import { checkPassword } from "@/lib/validate";
@@ -15,7 +18,7 @@ const inputCls =
 const labelCls = "flex flex-col gap-1.5 text-sm font-medium text-muted";
 
 export default function LoginForm({ next }: { next: string }) {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
 
   const [signinState, signinAction, signinPending] = useActionState<
     AuthState,
@@ -41,6 +44,10 @@ export default function LoginForm({ next }: { next: string }) {
         initialMessage={signupState.message ?? signinState.error}
       />
     );
+  }
+
+  if (mode === "reset") {
+    return <ResetView next={next} onBack={() => setMode("signin")} />;
   }
 
   const state = mode === "signup" ? signupState : signinState;
@@ -72,7 +79,16 @@ export default function LoginForm({ next }: { next: string }) {
         <PasswordField />
       ) : (
         <label className={labelCls}>
-          Password
+          <span className="flex items-center justify-between">
+            Password
+            <button
+              type="button"
+              onClick={() => setMode("reset")}
+              className="text-xs font-normal text-forest underline underline-offset-2"
+            >
+              Forgot password?
+            </button>
+          </span>
           <input
             name="password"
             type="password"
@@ -176,14 +192,14 @@ function SignupFields() {
   );
 }
 
-function PasswordField() {
+function PasswordField({ label = "Password" }: { label?: string }) {
   const [pw, setPw] = useState("");
   const chk = useMemo(() => checkPassword(pw), [pw]);
   const bar = ["bg-danger", "bg-danger", "bg-gold", "bg-ok", "bg-ok"][chk.score];
 
   return (
     <label className={labelCls}>
-      Password
+      {label}
       <input
         name="password"
         type="password"
@@ -266,7 +282,7 @@ function VerifyView({
       <div>
         <h2 className="text-lg font-semibold text-ink">Check your email</h2>
         <p className="mt-1 text-sm text-muted">
-          Enter the 6-digit code sent to <b>{email}</b>.
+          Enter the code sent to <b>{email}</b>.
         </p>
       </div>
 
@@ -277,9 +293,9 @@ function VerifyView({
           name="token"
           inputMode="numeric"
           autoComplete="one-time-code"
-          maxLength={6}
+          maxLength={10}
           required
-          placeholder="000000"
+          placeholder="Code from email"
           className={`${inputCls} text-center text-2xl tracking-[0.4em]`}
         />
 
@@ -313,6 +329,157 @@ function VerifyView({
           {resendPending ? "Sending…" : "Send a new code"}
         </button>
       </form>
+    </div>
+  );
+}
+
+function Msg({ err, ok }: { err?: string; ok?: string }) {
+  if (err)
+    return (
+      <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+        {err}
+      </p>
+    );
+  if (ok)
+    return (
+      <p className="rounded-lg bg-ok/10 px-3 py-2 text-sm text-ok">{ok}</p>
+    );
+  return null;
+}
+
+function Submit({
+  pending,
+  children,
+}: {
+  pending: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="mt-1 rounded-xl bg-forest px-4 py-3.5 text-base font-semibold text-paper active:scale-[0.99] disabled:opacity-60"
+    >
+      {pending ? "Please wait…" : children}
+    </button>
+  );
+}
+
+function ResetView({ next, onBack }: { next: string; onBack: () => void }) {
+  const [reqState, reqAction, reqPending] = useActionState<AuthState, FormData>(
+    requestResetAction,
+    {},
+  );
+  const [verState, verAction, verPending] = useActionState<AuthState, FormData>(
+    verifyResetAction,
+    {},
+  );
+  const [pwState, pwAction, pwPending] = useActionState<AuthState, FormData>(
+    setNewPasswordAction,
+    {},
+  );
+  const [round, setRound] = useState(0);
+
+  const step: "email" | "code" | "newpw" =
+    verState.step === "reset-newpw"
+      ? "newpw"
+      : reqState.step === "reset-code" || verState.step === "reset-code"
+        ? "code"
+        : "email";
+  const email = verState.email || reqState.email || "";
+  const err = reqState.error || verState.error || pwState.error;
+  const ok = reqState.message || verState.message || pwState.message;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-lg font-semibold text-ink">Reset your password</h2>
+        <p className="mt-1 text-sm text-muted">
+          {step === "email"
+            ? "Enter your email — we'll email you a code."
+            : step === "code"
+              ? `Enter the code sent to ${email}.`
+              : "Choose a new password."}
+        </p>
+      </div>
+
+      {step === "email" ? (
+        <form action={reqAction} className="flex flex-col gap-3">
+          <label className={labelCls}>
+            Email
+            <input
+              name="email"
+              type="email"
+              required
+              inputMode="email"
+              autoComplete="email"
+              className={inputCls}
+              placeholder="you@example.com"
+            />
+          </label>
+          <Msg err={err} />
+          <Submit pending={reqPending}>Send code</Submit>
+        </form>
+      ) : null}
+
+      {step === "code" ? (
+        <>
+          <form action={verAction} className="flex flex-col gap-3">
+            <input type="hidden" name="email" value={email} />
+            <input
+              name="token"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={10}
+              required
+              placeholder="Code from email"
+              className={`${inputCls} text-center text-2xl tracking-[0.4em]`}
+            />
+            <Countdown key={round} seconds={15 * 60} />
+            <Msg err={err} ok={err ? undefined : ok} />
+            <Submit pending={verPending}>Verify code</Submit>
+          </form>
+          <form action={reqAction} onSubmit={() => setRound((r) => r + 1)}>
+            <input type="hidden" name="email" value={email} />
+            <button
+              type="submit"
+              disabled={reqPending}
+              className="text-sm text-muted underline underline-offset-4 disabled:opacity-60"
+            >
+              {reqPending ? "Sending…" : "Send a new code"}
+            </button>
+          </form>
+        </>
+      ) : null}
+
+      {step === "newpw" ? (
+        <form action={pwAction} className="flex flex-col gap-3">
+          <input type="hidden" name="email" value={email} />
+          <input type="hidden" name="next" value={next} />
+          <PasswordField label="New password" />
+          <label className={labelCls}>
+            Confirm new password
+            <input
+              name="confirm"
+              type="password"
+              required
+              autoComplete="new-password"
+              className={inputCls}
+              placeholder="••••••••"
+            />
+          </label>
+          <Msg err={err} />
+          <Submit pending={pwPending}>Save new password</Submit>
+        </form>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-sm text-muted underline underline-offset-4"
+      >
+        Back to sign in
+      </button>
     </div>
   );
 }
