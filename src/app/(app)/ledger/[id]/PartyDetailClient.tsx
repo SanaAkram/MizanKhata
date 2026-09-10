@@ -342,14 +342,14 @@ export default function PartyDetailClient({
           </p>
         ) : layout === "columns" ? (
           <div className="overflow-hidden rounded-xl border border-line">
-            <div className="grid grid-cols-[1fr_auto_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
+            <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
               <span className="px-3 py-2 text-muted">
                 {t("party.entries", "Entries")}
               </span>
-              <span className="min-w-[4.5rem] bg-danger/10 px-2 py-2 text-right text-danger">
+              <span className="bg-danger/10 px-2 py-2 text-right text-danger">
                 {gaveTxt}
               </span>
-              <span className="min-w-[4.5rem] bg-ok/10 px-2 py-2 text-right text-ok">
+              <span className="bg-ok/10 px-2 py-2 text-right text-ok">
                 {gotTxt}
               </span>
             </div>
@@ -359,14 +359,14 @@ export default function PartyDetailClient({
                 <button
                   key={r.id}
                   onClick={() => setDetail(r)}
-                  className="grid w-full grid-cols-[1fr_auto_auto] items-stretch border-b border-line text-left last:border-b-0 active:bg-line/30"
+                  className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line text-left last:border-b-0 active:bg-line/30"
                 >
                   <span className="min-w-0 px-3 py-2.5">
                     <span className="block text-[11px] text-muted">
                       {fmtEntryDate(r.date)}
                     </span>
                     {r.note ? (
-                      <span className="mt-0.5 block whitespace-pre-line text-xs text-ink">
+                      <span className="mt-0.5 block break-words whitespace-pre-line text-xs text-ink">
                         {r.note}
                       </span>
                     ) : (
@@ -378,10 +378,10 @@ export default function PartyDetailClient({
                       {t("party.balance", "bal")} {fmtRs(Math.abs(r.running))}
                     </span>
                   </span>
-                  <span className="numeric flex min-w-[4.5rem] items-center justify-end bg-danger/10 px-2 text-sm font-semibold text-danger">
+                  <span className="numeric break-all bg-danger/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-danger">
                     {credit ? fmtRs(r.amount) : ""}
                   </span>
-                  <span className="numeric flex min-w-[4.5rem] items-center justify-end bg-ok/10 px-2 text-sm font-semibold text-ok">
+                  <span className="numeric break-all bg-ok/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-ok">
                     {credit ? "" : fmtRs(r.amount)}
                   </span>
                 </button>
