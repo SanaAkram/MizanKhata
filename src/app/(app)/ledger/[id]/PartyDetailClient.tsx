@@ -23,6 +23,7 @@ import {
   recordPurchase,
   type Product,
 } from "@/lib/khata/shop-db";
+import { addOrder } from "@/lib/khata/orders";
 import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
@@ -89,6 +90,8 @@ export default function PartyDetailClient({
   const [menu, setMenu] = useState(false);
   const [armDel, setArmDel] = useState(false);
   const [madeBill, setMadeBill] = useState<string | null>(null);
+  const [ordering, setOrdering] = useState(false);
+  const [orderDone, setOrderDone] = useState(false);
   const layout = useEntryLayout();
 
   const rows = useMemo(() => {
@@ -236,6 +239,33 @@ export default function PartyDetailClient({
     router.refresh();
   }
 
+  async function saveOrder(
+    lines: ItemLine[],
+    amount: number,
+    note: string,
+    dateIso: string,
+  ) {
+    if (lines.length === 0) return;
+    const qtyText = lines.map((l) => `${l.qty} ${l.name}`).join("\n");
+    await addOrder(supabase, businessId, {
+      id: newId("ord_"),
+      direction: "in", // the customer ordered this from us
+      partyType: "customer",
+      partyId: party.id,
+      partyName: party.name,
+      title: lines
+        .map((l) => `${l.qty} ${l.name}`)
+        .join(", ")
+        .slice(0, 80),
+      details: note ? `${qtyText}\n\n${note}` : qtyText,
+      amount,
+      dueDate: dateIso.slice(0, 10),
+    });
+    setOrdering(false);
+    setOrderDone(true);
+    router.refresh();
+  }
+
   // Plain-text bill for the entry sheet's Share button (the printable one
   // lives at /print/bill/<bill_id>).
   function billTextFor(row: Row): string {
@@ -323,6 +353,15 @@ export default function PartyDetailClient({
           {paymentLabel}
         </button>
       </div>
+
+      {isCust ? (
+        <button
+          onClick={() => setOrdering(true)}
+          className="rounded-xl border border-dashed border-forest/40 bg-forest/5 px-4 py-2.5 text-sm font-semibold text-forest active:scale-[0.99]"
+        >
+          {t("party.newOrder", "+ New order")}
+        </button>
+      ) : null}
 
       <input
         value={q}
@@ -529,6 +568,45 @@ export default function PartyDetailClient({
           </a>
           <button
             onClick={() => setMadeBill(null)}
+            className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted"
+          >
+            {t("c.done", "Done")}
+          </button>
+        </div>
+      </Sheet>
+
+      {/* new order */}
+      <Sheet
+        open={ordering}
+        title={t("party.newOrder", "New order")}
+        onClose={() => setOrdering(false)}
+      >
+        {ordering ? (
+          <OrderForm products={products} onSubmit={saveOrder} />
+        ) : null}
+      </Sheet>
+
+      {/* order saved */}
+      <Sheet
+        open={orderDone}
+        title={t("party.orderSaved", "Order saved")}
+        onClose={() => setOrderDone(false)}
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted">
+            {t(
+              "party.orderSavedHint",
+              "It's in the Order Book. Open it there to share the list (product + quantity, no prices) with a supplier.",
+            )}
+          </p>
+          <Link
+            href="/orders"
+            className="rounded-xl bg-forest px-4 py-3 text-center text-sm font-semibold text-paper"
+          >
+            {t("party.openOrders", "Open Order Book")}
+          </Link>
+          <button
+            onClick={() => setOrderDone(false)}
             className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted"
           >
             {t("c.done", "Done")}
@@ -844,6 +922,128 @@ function EntryForm({
         open={picker}
         products={products}
         rateFrom={rateFrom}
+        onClose={() => setPicker(false)}
+        onDone={addLines}
+      />
+    </div>
+  );
+}
+
+function OrderForm({
+  products,
+  onSubmit,
+}: {
+  products: Product[];
+  onSubmit: (
+    lines: ItemLine[],
+    amount: number,
+    note: string,
+    dateIso: string,
+  ) => void;
+}) {
+  const t = useT();
+  const now = new Date();
+  const [lines, setLines] = useState<ItemLine[]>([]);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [date, setDate] = useState(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate(),
+    ).padStart(2, "0")}`,
+  );
+  const [picker, setPicker] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const cls =
+    "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
+
+  function addLines(picked: ItemLine[]) {
+    if (picked.length === 0) return;
+    const next = [...lines, ...picked];
+    setLines(next);
+    setAmount(String(linesTotal(next)));
+    setPicker(false);
+  }
+
+  const amt = Math.round((parseFloat(amount) || 0) * 100) / 100;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <button
+        onClick={() => setPicker(true)}
+        className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
+      >
+        {t("party.addItem", "+ Add item from stock")}
+      </button>
+
+      {lines.length > 0 ? (
+        <div className="rounded-lg border border-forest/25 bg-forest/5 px-3 py-2 text-xs">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="font-semibold text-forest">
+              {t("party.itemsCount", "{n} item(s)", { n: lines.length })}
+            </span>
+            <button
+              onClick={() => {
+                setLines([]);
+                setAmount("");
+              }}
+              className="font-semibold text-muted underline underline-offset-2"
+            >
+              {t("party.clearItems", "Clear")}
+            </button>
+          </div>
+          <ul className="flex flex-col gap-0.5 text-ink">
+            {lines.map((l, i) => (
+              <li key={i} className="flex justify-between">
+                <span>
+                  {l.qty} {l.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+        {t("c.amount", "Amount")}
+        <CalcField value={amount} onChange={setAmount} placeholder="0" />
+      </label>
+
+      <div className="flex gap-2">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className={`${cls} flex-1`}
+        />
+      </div>
+
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder={t("c.notePh", "Details / comments")}
+        rows={3}
+        className={`${cls} resize-none`}
+      />
+
+      <button
+        onClick={() => {
+          if (lines.length === 0 || busy) return;
+          setBusy(true);
+          const iso = new Date(`${date}T12:00:00`).toISOString();
+          onSubmit(lines, amt, note.trim(), iso);
+        }}
+        disabled={lines.length === 0 || busy}
+        className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
+      >
+        {busy ? t("c.saving", "Saving…") : t("c.save", "Save")}
+      </button>
+
+      <ItemLinePicker
+        open={picker}
+        products={products}
+        rateFrom="sale"
+        hideRate
         onClose={() => setPicker(false)}
         onDone={addLines}
       />

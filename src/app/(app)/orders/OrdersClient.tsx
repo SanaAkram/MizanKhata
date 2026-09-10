@@ -20,6 +20,7 @@ import {
   type OrderDirection,
 } from "@/lib/khata/orders";
 import type { Product } from "@/lib/khata/shop-db";
+import { receiptImage, shareImage } from "@/lib/khata/receipt-image";
 import Sheet from "@/components/Sheet";
 import ItemLinePicker, {
   linesToText,
@@ -43,11 +44,13 @@ const BUCKET_ORDER: OrderBucket[] = [
 
 export default function OrdersClient({
   businessId,
+  businessName,
   orders,
   parties,
   products,
 }: {
   businessId: string;
+  businessName: string;
   orders: Order[];
   parties: PartyOpt[];
   products: Product[];
@@ -60,6 +63,7 @@ export default function OrdersClient({
   const [detail, setDetail] = useState<Order | null>(null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
 
   const open = useMemo(
     () => orders.filter((o) => o.status === "open"),
@@ -95,6 +99,42 @@ export default function OrdersClient({
       toast("Could not update the order.", "error");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function shareAsPhoto(o: Order) {
+    setImgBusy(true);
+    try {
+      // details = "qty name" lines, optionally "\n\n<note>"
+      const [itemsBlock, ...rest] = (o.details ?? "").split("\n\n");
+      const rows = (itemsBlock || o.title)
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((left) => ({ left }));
+      const blob = await receiptImage({
+        shopName: businessName || "MizanKhata",
+        heading: t("ord.orderSlip", "ORDER"),
+        party:
+          o.party_name ||
+          (o.direction === "in"
+            ? t("ord.aCustomer", "a customer")
+            : t("ord.aSupplier", "a supplier")),
+        dateText: o.due_date
+          ? `${t("ord.due", "Due")} ${o.due_date}`
+          : undefined,
+        rows,
+        note: rest.join("\n\n") || null,
+      });
+      await shareImage(
+        blob,
+        `order-${(o.title || "list").replace(/[^a-z0-9]+/gi, "-").slice(0, 24)}.png`,
+        t("ord.orderSlip", "ORDER"),
+      );
+    } catch {
+      toast("Could not make the image.", "error");
+    } finally {
+      setImgBusy(false);
     }
   }
 
@@ -326,6 +366,16 @@ export default function OrdersClient({
                 {t("ord.reopen", "Re-open")}
               </button>
             )}
+
+            <button
+              onClick={() => void shareAsPhoto(detail)}
+              disabled={imgBusy}
+              className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-sm font-semibold text-forest disabled:opacity-50"
+            >
+              {imgBusy
+                ? t("c.loading", "…")
+                : t("ord.sharePhoto", "Share as photo (no prices)")}
+            </button>
 
             <div className="grid grid-cols-2 gap-2">
               <button

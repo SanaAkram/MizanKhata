@@ -29,12 +29,15 @@ export default function ItemLinePicker({
   onClose,
   onDone,
   rateFrom = "sale",
+  hideRate = false,
 }: {
   open: boolean;
   products: Product[];
   onClose: () => void;
   onDone: (lines: ItemLine[]) => void;
   rateFrom?: "sale" | "purchase";
+  /** Hide the per-line rate input (rate still comes from stock) — for orders. */
+  hideRate?: boolean;
 }) {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<Record<string, ItemLine>>({});
@@ -107,18 +110,25 @@ export default function ItemLinePicker({
                       className="w-16 rounded border border-line bg-paper px-2 py-1 text-sm"
                       placeholder="Qty"
                     />
-                    <span className="text-xs text-muted">×</span>
-                    <input
-                      inputMode="decimal"
-                      value={line.rate}
-                      onChange={(e) =>
-                        patch(p.id, "rate", Number(e.target.value) || 0)
-                      }
-                      className="w-20 rounded border border-line bg-paper px-2 py-1 text-sm"
-                      placeholder="Rate"
-                    />
+                    <span className="text-xs text-muted">{p.unit}</span>
+                    {hideRate ? null : (
+                      <>
+                        <span className="text-xs text-muted">×</span>
+                        <input
+                          inputMode="decimal"
+                          value={line.rate}
+                          onChange={(e) =>
+                            patch(p.id, "rate", Number(e.target.value) || 0)
+                          }
+                          className="w-20 rounded border border-line bg-paper px-2 py-1 text-sm"
+                          placeholder="Rate"
+                        />
+                      </>
+                    )}
                     <span className="numeric ml-auto text-xs font-semibold text-forest">
-                      {fmtRs(line.qty * line.rate)}
+                      {hideRate
+                        ? `${line.qty} ${p.unit}`
+                        : fmtRs(line.qty * line.rate)}
                     </span>
                   </div>
                 ) : null}

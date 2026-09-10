@@ -25,6 +25,7 @@ import {
   type DateRange,
 } from "@/lib/date-range";
 import { billText, shareBill, speakBill } from "@/lib/khata/bill-share";
+import { receiptImage, shareImage } from "@/lib/khata/receipt-image";
 import { BILL_CREDIT } from "@/lib/brand";
 
 type Numbered = Sale & { no: number };
@@ -146,6 +147,74 @@ export default function BillsClient({
       items.filter((i) => i.sale_id === s.id),
       cust ? { prevBalance: pb, newBalance: nb } : undefined,
     );
+  }
+
+  async function saveBillImage(s: Numbered) {
+    setBusy(true);
+    try {
+      const its = items.filter((i) => i.sale_id === s.id);
+      const cust = s.customer_id
+        ? customers.find((c) => c.id === s.customer_id)
+        : null;
+      const nb = cust
+        ? khataTx
+            .filter((tx) => tx.customer_id === cust.id)
+            .reduce(
+              (sum, tx) => sum + (tx.type === "credit" ? 1 : -1) * tx.amount,
+              0,
+            )
+        : 0;
+      const pb = nb - Number(s.credit_amount || 0);
+      const totals: { label: string; value: string; bold?: boolean }[] = [];
+      if (Number(s.discount) > 0)
+        totals.push({
+          label: t("pos.discount", "Discount"),
+          value: `− ${fmtRs(Number(s.discount))}`,
+        });
+      if (Number(s.tax) > 0)
+        totals.push({
+          label: t("bills.tax", "Tax"),
+          value: `+ ${fmtRs(Number(s.tax))}`,
+        });
+      totals.push({
+        label: t("bills.total", "Total"),
+        value: fmtRs(Number(s.total)),
+        bold: !cust,
+      });
+      if (cust) {
+        totals.push({
+          label: t("bills.previousAmount", "Previous amount"),
+          value: fmtRs(Math.abs(pb)),
+        });
+        totals.push({
+          label: t("bills.grandTotalDue", "Grand total"),
+          value: fmtRs(pb + Number(s.total)),
+          bold: true,
+        });
+      }
+      const blob = await receiptImage({
+        shopName: business?.name || "MizanKhata",
+        shopSub: business?.phone || undefined,
+        heading: t("bills.billNo", "Bill #{n}", { n: s.no }),
+        party:
+          s.customer_name ||
+          cust?.name ||
+          t("bills.walkinFull", "Walk-in / cash customer"),
+        dateText: fmtEntryDate(s.time),
+        rows: its.map((it) => ({
+          left: `${Math.round(Number(it.qty))} × ${it.name}`,
+          right: fmtRs(Number(it.price) * Number(it.qty)),
+        })),
+        totals,
+        note: s.note,
+        brand,
+      });
+      await shareImage(blob, `bill-${s.no}.png`, `Bill #${s.no}`);
+    } catch {
+      toast("Could not make the image.", "error");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function removeBill(s: Numbered) {
@@ -543,6 +612,13 @@ export default function BillsClient({
               >
                 {t("bills.sms", "SMS")}
               </a>
+              <button
+                onClick={() => void saveBillImage(open)}
+                disabled={busy}
+                className="col-span-2 rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-forest disabled:opacity-50"
+              >
+                {t("bills.saveImage", "Save / share as image")}
+              </button>
             </div>
 
             <div className="mt-1 grid grid-cols-2 gap-2">

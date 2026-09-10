@@ -46,9 +46,9 @@ const DICT: Record<string, Entry> = {
   "c.total": { en: "Total", ur: "کل", roman: "Kul" },
   "c.cash": { en: "cash", ur: "نقد", roman: "Naqad" },
   "c.bank": { en: "bank", ur: "بینک", roman: "bank" },
-  "c.customer": { en: "Customer", ur: "گاہک", roman: "Gahak" },
+  "c.customer": { en: "Customer", ur: "گاہک", roman: "Customer" },
   "c.supplier": { en: "Supplier", ur: "سپلائر", roman: "Supplier" },
-  "c.customers": { en: "Customers", ur: "گاہک", roman: "Gahak" },
+  "c.customers": { en: "Customers", ur: "گاہک", roman: "Customers" },
   "c.suppliers": { en: "Suppliers", ur: "سپلائرز", roman: "Suppliers" },
   "c.rate": { en: "Rate", ur: "ریٹ", roman: "Rate" },
   "c.noMatches": { en: "No matches.", ur: "کچھ نہیں ملا۔", roman: "Kuch nahi mila." },
@@ -58,8 +58,8 @@ const DICT: Record<string, Entry> = {
   "title./work": { en: "Work", ur: "کام", roman: "Kaam" },
   "title./routine": { en: "Routine", ur: "روٹین", roman: "Mamool" },
   "title./ledger": { en: "Ledger", ur: "کھاتہ", roman: "Khata" },
-  "title./cashbook": { en: "Cash Book", ur: "نقد بہی", roman: "Naqad Bahi" },
-  "title./orders": { en: "Order Book", ur: "آرڈر بک", roman: "Order Bahi" },
+  "title./cashbook": { en: "Cash Book", ur: "نقد بہی", roman: "Cash Book" },
+  "title./orders": { en: "Order Book", ur: "آرڈر بک", roman: "Order Book" },
   "title./shop": { en: "Shop", ur: "دکان", roman: "Dukaan" },
   "title./shop/pos": { en: "Sell", ur: "فروخت", roman: "Bikri" },
   "title./shop/stock": { en: "Stock", ur: "اسٹاک", roman: "Stock" },
@@ -117,7 +117,7 @@ const DICT: Record<string, Entry> = {
   "ledger.netPosition": {
     en: "Net position",
     ur: "مجموعی حیثیت",
-    roman: "Majmoyi haisiyat",
+    roman: "Net position",
   },
   "ledger.customersOweYou": {
     en: "Customers owe you",
@@ -134,9 +134,9 @@ const DICT: Record<string, Entry> = {
     ur: "نقد و بینک",
     roman: "Cash o bank",
   },
-  "ledger.net": { en: "Net", ur: "خالص", roman: "Khalis" },
+  "ledger.net": { en: "Net", ur: "خالص", roman: "Net" },
   "ledger.all": { en: "All", ur: "سب", roman: "Sab" },
-  "ledger.customers": { en: "Customers", ur: "گاہک", roman: "Gahak" },
+  "ledger.customers": { en: "Customers", ur: "گاہک", roman: "Customers" },
   "ledger.suppliers": { en: "Suppliers", ur: "سپلائرز", roman: "Suppliers" },
   "ledger.settled": { en: "Settled", ur: "برابر", roman: "Barabar" },
   "ledger.searchParties": {
@@ -249,6 +249,23 @@ const DICT: Record<string, Entry> = {
   },
   "party.fromBill": { en: "from a bill", ur: "بل سے", roman: "bill se" },
   "party.billReady": { en: "Bill ready", ur: "بل تیار", roman: "Bill tayyar" },
+  "party.newOrder": { en: "+ New order", ur: "+ نیا آرڈر", roman: "+ Naya order" },
+  "party.orderSaved": {
+    en: "Order saved",
+    ur: "آرڈر محفوظ",
+    roman: "Order save hogaya",
+  },
+  "party.orderSavedHint": {
+    en: "It's in the Order Book. Open it there to share the list (product + quantity, no prices) with a supplier.",
+    ur: "آرڈر بک میں ہے۔ وہاں سے سپلائر کو فہرست (چیز + تعداد، بغیر قیمت) بھیجیں۔",
+    roman:
+      "Order Book mein hai. Wahan se supplier ko list (cheez + tadaad, bina price) bhejein.",
+  },
+  "party.openOrders": {
+    en: "Open Order Book",
+    ur: "آرڈر بک کھولیں",
+    roman: "Order Book kholein",
+  },
   "party.billReadyHint": {
     en: "The bill is saved and stock is updated. Open it to print, save as PDF or share.",
     ur: "بل محفوظ ہوگیا اور اسٹاک اپڈیٹ ہوگیا۔ پرنٹ، پی ڈی ایف یا شیئر کرنے کے لیے کھولیں۔",
@@ -507,6 +524,11 @@ const DICT: Record<string, Entry> = {
     roman: "Bol kar sunayein",
   },
   "bills.sms": { en: "SMS", ur: "ایس ایم ایس", roman: "SMS" },
+  "bills.saveImage": {
+    en: "Save / share as image",
+    ur: "تصویر کے طور پر محفوظ / شیئر کریں",
+    roman: "Image ke tor par save / share karein",
+  },
   "bills.editBill": {
     en: "Edit bill",
     ur: "بل ترمیم کریں",
@@ -763,6 +785,12 @@ const DICT: Record<string, Entry> = {
     roman: "{n} items · {amt}",
   },
   "ord.dueDate": { en: "Deliver by", ur: "اِس تاریخ تک", roman: "Is tareekh tak" },
+  "ord.orderSlip": { en: "ORDER", ur: "آرڈر", roman: "ORDER" },
+  "ord.sharePhoto": {
+    en: "Share as photo (no prices)",
+    ur: "تصویر کے طور پر بھیجیں (بغیر قیمت)",
+    roman: "Photo ke tor par bhejein (bina price)",
+  },
   "ord.amountOpt": {
     en: "Value (optional)",
     ur: "رقم (اختیاری)",

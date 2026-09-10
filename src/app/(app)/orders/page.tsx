@@ -35,6 +35,7 @@ export default async function OrdersPage() {
   return (
     <OrdersClient
       businessId={bid}
+      businessName={active?.name ?? ""}
       orders={orders}
       parties={parties}
       products={products}
