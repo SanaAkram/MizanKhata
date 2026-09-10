@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -34,6 +34,8 @@ import ItemLinePicker, {
   linesTotal,
   type ItemLine,
 } from "@/components/ItemLinePicker";
+
+const LEDGER_LAYOUT_KEY = "mizankhata:ledger-layout";
 
 type Row = {
   id: string;
@@ -81,6 +83,25 @@ export default function PartyDetailClient({
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [menu, setMenu] = useState(false);
   const [armDel, setArmDel] = useState(false);
+  const [layout, setLayout] = useState<"columns" | "list">("columns");
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(LEDGER_LAYOUT_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (v === "list" || v === "columns") setLayout(v);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  function pickLayout(v: "columns" | "list") {
+    setLayout(v);
+    try {
+      localStorage.setItem(LEDGER_LAYOUT_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  }
 
   const rows = useMemo(() => {
     const asc = [...txs].sort(
@@ -103,19 +124,16 @@ export default function PartyDetailClient({
   );
   const periodLife = partyLifetime(ranged);
 
-  // "You gave" = value/money that left me; "You got" = value/money that came in.
-  //  customer credit  = I gave goods on credit  → gave
-  //  customer payment = they paid me            → got
-  //  supplier credit  = I received goods        → got
-  //  supplier payment = I paid them             → gave
+  // Digikhata model: "You gave" = a credit entry (balance goes up), "You got"
+  // = a payment (balance goes down). Same for customer and supplier.
   const gaveTxt = t("party.youGave", "You gave");
   const gotTxt = t("party.youGot", "You got");
-  const creditLabel = isCust ? gaveTxt : gotTxt;
-  const paymentLabel = isCust ? gotTxt : gaveTxt;
-  const gaveTotal = isCust ? life.credit : life.payment;
-  const gotTotal = isCust ? life.payment : life.credit;
-  const periodGave = isCust ? periodLife.credit : periodLife.payment;
-  const periodGot = isCust ? periodLife.payment : periodLife.credit;
+  const creditLabel = gaveTxt;
+  const paymentLabel = gotTxt;
+  const gaveTotal = life.credit;
+  const gotTotal = life.payment;
+  const periodGave = periodLife.credit;
+  const periodGot = periodLife.payment;
 
   const waText =
     balance > 0
@@ -295,6 +313,24 @@ export default function PartyDetailClient({
         </div>
       ) : null}
 
+      {/* layout toggle */}
+      <div className="flex items-center justify-end gap-1 text-[11px] font-semibold text-muted">
+        <span>{t("party.view", "View")}</span>
+        {(["columns", "list"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => pickLayout(v)}
+            className={`rounded-md px-2 py-1 ${
+              layout === v ? "bg-forest text-paper" : "border border-line"
+            }`}
+          >
+            {v === "columns"
+              ? t("party.viewCols", "Two columns")
+              : t("party.viewList", "List")}
+          </button>
+        ))}
+      </div>
+
       <section>
         {shown.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
@@ -304,18 +340,59 @@ export default function PartyDetailClient({
                 ? t("range.noneInRange", "Nothing in this date range.")
                 : t("c.noMatches", "No matches.")}
           </p>
+        ) : layout === "columns" ? (
+          <div className="overflow-hidden rounded-xl border border-line">
+            <div className="grid grid-cols-[1fr_auto_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
+              <span className="px-3 py-2 text-muted">
+                {t("party.entries", "Entries")}
+              </span>
+              <span className="min-w-[4.5rem] bg-danger/10 px-2 py-2 text-right text-danger">
+                {gaveTxt}
+              </span>
+              <span className="min-w-[4.5rem] bg-ok/10 px-2 py-2 text-right text-ok">
+                {gotTxt}
+              </span>
+            </div>
+            {shown.map((r) => {
+              const credit = r.type === "credit";
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => setDetail(r)}
+                  className="grid w-full grid-cols-[1fr_auto_auto] items-stretch border-b border-line text-left last:border-b-0 active:bg-line/30"
+                >
+                  <span className="min-w-0 px-3 py-2.5">
+                    <span className="block text-[11px] text-muted">
+                      {fmtEntryDate(r.date)}
+                    </span>
+                    {r.note ? (
+                      <span className="mt-0.5 block whitespace-pre-line text-xs text-ink">
+                        {r.note}
+                      </span>
+                    ) : (
+                      <span className="mt-0.5 block text-xs text-muted">
+                        {credit ? creditLabel : paymentLabel}
+                      </span>
+                    )}
+                    <span className="numeric mt-1 inline-block rounded bg-line/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                      {t("party.balance", "bal")} {fmtRs(Math.abs(r.running))}
+                    </span>
+                  </span>
+                  <span className="numeric flex min-w-[4.5rem] items-center justify-end bg-danger/10 px-2 text-sm font-semibold text-danger">
+                    {credit ? fmtRs(r.amount) : ""}
+                  </span>
+                  <span className="numeric flex min-w-[4.5rem] items-center justify-end bg-ok/10 px-2 text-sm font-semibold text-ok">
+                    {credit ? "" : fmtRs(r.amount)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         ) : (
           <ul className="flex flex-col gap-2">
             {shown.map((r) => {
               const credit = r.type === "credit";
-              // payment = actual cash movement: customer pays me = in (green),
-              // I pay a supplier = out (red). Credit entries move no cash.
-              const tone = credit
-                ? "text-ink"
-                : isCust
-                  ? "text-ok"
-                  : "text-danger";
-              const sign = credit ? "" : isCust ? "+ " : "− ";
+              const tone = credit ? "text-danger" : "text-ok";
               return (
                 <li key={r.id}>
                   <button
@@ -334,12 +411,14 @@ export default function PartyDetailClient({
                           </p>
                         )}
                         <p className="mt-0.5 text-[11px] text-muted">
-                          {fmtEntryDate(r.date)}
+                          {fmtEntryDate(r.date)} ·{" "}
+                          <span className={tone}>
+                            {credit ? creditLabel : paymentLabel}
+                          </span>
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
                         <p className={`numeric text-sm font-semibold ${tone}`}>
-                          {sign}
                           {fmtRs(r.amount)}
                         </p>
                         <p className="numeric text-[11px] text-muted">
@@ -382,14 +461,9 @@ export default function PartyDetailClient({
           <div className="flex flex-col gap-3">
             <p
               className={`numeric text-2xl font-semibold ${
-                detail.type === "credit"
-                  ? "text-ink"
-                  : isCust
-                    ? "text-ok"
-                    : "text-danger"
+                detail.type === "credit" ? "text-danger" : "text-ok"
               }`}
             >
-              {detail.type === "credit" ? "" : isCust ? "+ " : "− "}
               {fmtRs(detail.amount)}
             </p>
             <p className="text-xs text-muted">

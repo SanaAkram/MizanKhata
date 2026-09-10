@@ -14,22 +14,69 @@ import { newId } from "@/lib/ids";
 import { fmtClock, fmtDuration, fmtTimeOfDay } from "@/lib/format";
 import { dateKey } from "@/lib/date";
 import { useT } from "@/lib/i18n";
+import { fetchLogsForDate, upsertLog } from "@/lib/routine/db";
 import { PlayIcon, StopIcon } from "@/components/icons";
 
 const RUNNING_KEY = "mizankhata:running";
 
+export type WorkMarker = { id: string; label: string };
+
 type Props = {
   initialSessions: WorkSession[];
   todayKey: string;
+  workItems: WorkMarker[];
 };
 
-export default function WorkClient({ initialSessions, todayKey }: Props) {
+export default function WorkClient({
+  initialSessions,
+  todayKey,
+  workItems,
+}: Props) {
   const supabase = useMemo(() => createClient(), []);
   const t = useT();
   const [sessions, setSessions] = useState<WorkSession[]>(initialSessions);
   const [running, setRunning] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [expanded, setExpanded] = useState<string | null>(null);
+  // id -> time-of-day label for work markers already logged done today
+  const [workDone, setWorkDone] = useState<Record<string, string>>({});
+
+  const opener = workItems[0] ?? null;
+  const closer = workItems.length > 1 ? workItems[workItems.length - 1] : null;
+
+  // Load today's routine logs so the shop open/close line reflects reality
+  // (e.g. it was marked from the Routine screen, or on an earlier visit).
+  useEffect(() => {
+    if (workItems.length === 0) return;
+    let alive = true;
+    fetchLogsForDate(supabase, todayKey)
+      .then((logs) => {
+        if (!alive) return;
+        const map: Record<string, string> = {};
+        for (const l of logs) {
+          if (l.status !== "done") continue;
+          if (!workItems.some((w) => w.id === l.item_id)) continue;
+          map[l.item_id] = l.responded_at
+            ? fmtTimeOfDay(new Date(l.responded_at))
+            : "✓";
+        }
+        setWorkDone(map);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [supabase, todayKey, workItems]);
+
+  async function logWork(item: WorkMarker | null) {
+    if (!item || workDone[item.id]) return;
+    setWorkDone((m) => ({ ...m, [item.id]: fmtTimeOfDay(new Date()) }));
+    try {
+      await upsertLog(supabase, todayKey, item.id, "done");
+    } catch {
+      /* the Routine screen reconciles on its next load */
+    }
+  }
 
   // Restore a running timer from a previous visit (post-mount, so no SSR
   // hydration mismatch on the persisted value).
@@ -64,6 +111,8 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
     } catch {
       /* ignore */
     }
+    // Starting the timer = the working day has begun.
+    void logWork(opener);
   }
 
   async function stop() {
@@ -78,6 +127,10 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
       /* ignore */
     }
     if (durationMs < 1000) return; // accidental tap
+
+    // Stopping a real session = the working day is done. Only when there are
+    // two markers (open + close); a single marker is logged on start alone.
+    void logWork(closer);
 
     const id = newId("ws_");
     const startIso = new Date(startMs).toISOString();
@@ -180,6 +233,24 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
             </>
           )}
         </button>
+
+        {workItems.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 border-t border-line pt-3 text-xs">
+            {(closer ? [opener, closer] : [opener]).map((it) =>
+              it ? (
+                <span
+                  key={it.id}
+                  className={
+                    workDone[it.id] ? "font-semibold text-forest" : "text-muted"
+                  }
+                >
+                  {it.label}:{" "}
+                  {workDone[it.id] ?? t("work.notYet", "not yet")}
+                </span>
+              ) : null,
+            )}
+          </div>
+        ) : null}
       </section>
 
       {/* Totals */}

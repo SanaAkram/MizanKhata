@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchSessionsBetween, type WorkSession } from "@/lib/work/db";
+import { fetchItems } from "@/lib/routine/db";
+import { workMarkers } from "@/lib/routine/schedule";
 import { addDays, dateKey, startOfWeek } from "@/lib/date";
-import WorkClient from "./WorkClient";
+import WorkClient, { type WorkMarker } from "./WorkClient";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,19 @@ export default async function WorkPage() {
     initialSessions = [];
   }
 
+  let workItems: WorkMarker[] = [];
+  try {
+    const items = await fetchItems(supabase);
+    workItems = workMarkers(items).map((i) => ({ id: i.id, label: i.label }));
+  } catch {
+    workItems = [];
+  }
+
   return (
-    <WorkClient initialSessions={initialSessions} todayKey={dateKey(now)} />
+    <WorkClient
+      initialSessions={initialSessions}
+      todayKey={dateKey(now)}
+      workItems={workItems}
+    />
   );
 }

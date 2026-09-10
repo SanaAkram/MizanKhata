@@ -38,6 +38,8 @@ import type { Database } from "@/lib/database.types";
 type Row = Database["public"]["Tables"]["shop_routine_items"]["Insert"] & {
   window_min: number;
   days: number[];
+  // local-only: "timer" means no fixed time — logged by the Work timer
+  timeMode: "fixed" | "timer";
 };
 
 const DOW = ["S", "M", "T", "W", "T", "F", "S"];
@@ -61,6 +63,7 @@ function toRow(
     days: i.days ?? [0, 1, 2, 3, 4, 5, 6],
     sort: i.sort,
     enabled: i.enabled,
+    timeMode: i.kind !== "interval" && !i.at_time ? "timer" : "fixed",
   };
 }
 
@@ -82,7 +85,10 @@ export default function RoutineSettingsClient({
   }
 
   function addRow() {
-    setRows((r) => [...r, blankItem((r.length + 1) * 10) as Row]);
+    setRows((r) => [
+      ...r,
+      { ...(blankItem((r.length + 1) * 10) as Row), timeMode: "fixed" },
+    ]);
   }
 
   function removeRow(idx: number) {
@@ -109,7 +115,9 @@ export default function RoutineSettingsClient({
   }
 
   function loadStarter() {
-    setRows(defaultItems().map((d) => d as Row));
+    setRows(
+      defaultItems().map((d) => ({ ...(d as Row), timeMode: "fixed" as const })),
+    );
   }
 
   async function save() {
@@ -120,12 +128,13 @@ export default function RoutineSettingsClient({
       for (const row of rows) {
         order += 10;
         const isInt = row.kind === "interval";
+        const timerSynced = !isInt && row.timeMode === "timer";
         await upsertItem(supabase, {
           id: row.id!,
           label: row.label.trim() || "Untitled",
           category: row.category,
           kind: isInt ? "interval" : "scheduled",
-          at_time: isInt ? null : row.at_time || "09:00",
+          at_time: isInt || timerSynced ? null : row.at_time || "09:00",
           window_min: isInt ? 0 : Math.max(5, Number(row.window_min) || 60),
           interval_min: isInt
             ? Math.max(15, Number(row.interval_min) || 120)
@@ -200,7 +209,7 @@ export default function RoutineSettingsClient({
                       : "text-muted"
                   }`}
                 >
-                  {k === "scheduled" ? "Fixed time" : "Repeating"}
+                  {k === "scheduled" ? "Once a day" : "Repeating"}
                 </button>
               ))}
             </div>
@@ -267,27 +276,54 @@ export default function RoutineSettingsClient({
                 </label>
               </div>
             ) : (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <input
-                  type="time"
-                  value={row.at_time ?? "09:00"}
-                  onChange={(e) => patch(idx, { at_time: e.target.value })}
-                  className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
-                />
-                <label className="flex items-center gap-1 text-xs text-muted">
-                  <input
-                    type="number"
-                    min={5}
-                    step={5}
-                    value={row.window_min}
-                    onChange={(e) =>
-                      patch(idx, { window_min: Number(e.target.value) })
-                    }
-                    className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
-                  />
-                  min window
-                </label>
-              </div>
+              <>
+                {row.category === "work" || row.timeMode === "timer" ? (
+                  <div className="mt-2 flex gap-1 rounded-lg border border-line p-1">
+                    {(["fixed", "timer"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => patch(idx, { timeMode: m })}
+                        className={`flex-1 rounded-md py-1.5 text-xs font-semibold ${
+                          (row.timeMode ?? "fixed") === m
+                            ? "bg-forest text-paper"
+                            : "text-muted"
+                        }`}
+                      >
+                        {m === "fixed" ? "At a set time" : "With work timer"}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {(row.timeMode ?? "fixed") === "timer" ? (
+                  <p className="mt-2 text-xs text-muted">
+                    Logged when you press Start on the Work timer (and the last
+                    work item on Stop). No fixed time, no reminder.
+                  </p>
+                ) : (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      type="time"
+                      value={row.at_time ?? "09:00"}
+                      onChange={(e) => patch(idx, { at_time: e.target.value })}
+                      className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                    />
+                    <label className="flex items-center gap-1 text-xs text-muted">
+                      <input
+                        type="number"
+                        min={5}
+                        step={5}
+                        value={row.window_min}
+                        onChange={(e) =>
+                          patch(idx, { window_min: Number(e.target.value) })
+                        }
+                        className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest"
+                      />
+                      min window
+                    </label>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="mt-2 flex flex-wrap items-center gap-2">

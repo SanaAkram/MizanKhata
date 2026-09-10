@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "reference/**",
     ".claude/**",
     "supabase/**",
+    // Vendored/minified static assets (e.g. the pdf.js worker for Digikhata import):
+    "public/**",
   ]),
 ]);
 

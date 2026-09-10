@@ -177,6 +177,19 @@ export function buildOccurrences(
     .sort((a, b) => a.startMin - b.startMin || a.item.sort - b.item.sort);
 }
 
+/**
+ * Enabled work items that mark the working day (shop open / close), in day
+ * order. Both fixed-time and timer-synced (no at_time) work items qualify:
+ * the first is the "opening" marker, the last the "closing" marker.
+ */
+export function workMarkers(items: RoutineItem[]): RoutineItem[] {
+  return items
+    .filter(
+      (it) => it.enabled && it.category === "work" && it.kind !== "interval",
+    )
+    .sort((a, b) => a.sort - b.sort);
+}
+
 /** The occurrence whose window is open right now and still unanswered. */
 export function activeOccurrence(occs: Occurrence[]): Occurrence | null {
   return (

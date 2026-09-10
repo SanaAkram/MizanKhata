@@ -215,6 +215,14 @@ const DICT: Record<string, Entry> = {
     roman: "Abhi koi entry nahi.",
   },
   "party.entry": { en: "Entry", ur: "اندراج", roman: "Entry" },
+  "party.entries": { en: "Entries", ur: "اندراجات", roman: "Entries" },
+  "party.view": { en: "View", ur: "دکھاؤ", roman: "View" },
+  "party.viewCols": {
+    en: "Two columns",
+    ur: "دو خانے",
+    roman: "Do khane",
+  },
+  "party.viewList": { en: "List", ur: "فہرست", roman: "List" },
   "party.fromBill": { en: "from a bill", ur: "بل سے", roman: "bill se" },
   "party.shareWa": {
     en: "Share on WhatsApp",
@@ -757,6 +765,7 @@ const DICT: Record<string, Entry> = {
     ur: "شروع کرتے وقت شروع دبائیں۔",
     roman: "Shuru karte waqt Shuru dabayein.",
   },
+  "work.notYet": { en: "not yet", ur: "ابھی نہیں", roman: "abhi nahi" },
   "work.today": { en: "Today", ur: "آج", roman: "Aaj" },
   "work.thisWeek": { en: "This week", ur: "اِس ہفتے", roman: "Is hafte" },
   "work.monSun": { en: "Mon–Sun", ur: "پیر–اتوار", roman: "Mon–Sun" },
