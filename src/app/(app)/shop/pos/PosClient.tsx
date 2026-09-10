@@ -82,6 +82,14 @@ export default function PosClient({ businessId, products, parties }: Props) {
     );
   }
 
+  // Override the sale price for this bill only (not saved back to the product).
+  function setPrice(id: string, price: number) {
+    const clean = Math.max(0, Math.round((price || 0) * 100) / 100);
+    setCart((c) =>
+      c.map((l) => (l.productId === id ? { ...l, price: clean } : l)),
+    );
+  }
+
   const shown = products.filter(
     (p) => !q || p.name.toLowerCase().includes(q.toLowerCase()),
   );
@@ -168,32 +176,45 @@ export default function PosClient({ businessId, products, parties }: Props) {
 
       {cart.length > 0 ? (
         <div className="sticky bottom-0 z-30 -mx-5 mt-auto border-t border-line bg-paper px-5 pb-2 pt-3">
-          <div className="max-h-40 overflow-y-auto">
+          <div className="max-h-44 overflow-y-auto">
             {cart.map((l) => (
               <div
                 key={l.productId}
-                className="flex items-center justify-between py-1 text-sm"
+                className="flex flex-col gap-1 border-b border-line/60 py-1.5 text-sm last:border-b-0"
               >
-                <span className="min-w-0 truncate text-ink">{l.name}</span>
-                <span className="flex shrink-0 items-center gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-ink">{l.name}</span>
+                  <span className="numeric shrink-0 font-semibold text-forest">
+                    {fmtRs(l.price * l.qty)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted">
+                  <span className="shrink-0">{t("c.rate", "Rate")}</span>
+                  <CartNum
+                    key={`p${l.price}`}
+                    value={l.price}
+                    decimals
+                    onCommit={(n) => setPrice(l.productId, n)}
+                  />
+                  <span className="shrink-0 px-0.5">×</span>
                   <button
                     onClick={() => bump(l.productId, -1)}
-                    className="h-7 w-7 rounded-md border border-line text-muted"
+                    className="h-7 w-7 shrink-0 rounded-md border border-line text-muted"
                   >
                     −
                   </button>
-                  <CartQty
-                    key={l.qty}
-                    qty={l.qty}
+                  <CartNum
+                    key={`q${l.qty}`}
+                    value={l.qty}
                     onCommit={(n) => setQty(l.productId, n)}
                   />
                   <button
                     onClick={() => bump(l.productId, 1)}
-                    className="h-7 w-7 rounded-md border border-line text-muted"
+                    className="h-7 w-7 shrink-0 rounded-md border border-line text-muted"
                   >
                     +
                   </button>
-                </span>
+                </div>
               </div>
             ))}
           </div>
@@ -217,32 +238,39 @@ export default function PosClient({ businessId, products, parties }: Props) {
   );
 }
 
-/** Typeable quantity box for a cart line. Remounted (via key={qty}) whenever
- *  the +/- buttons change the amount, so it always starts from the real qty. */
-function CartQty({
-  qty,
+/** Typeable number box for a cart line (quantity or rate). Remounted (via a
+ *  key tied to the value) when +/- or another edit changes it, so it always
+ *  starts from the real value. `decimals` allows a rate like 57.5. */
+function CartNum({
+  value,
+  decimals = false,
   onCommit,
 }: {
-  qty: number;
+  value: number;
+  decimals?: boolean;
   onCommit: (n: number) => void;
 }) {
-  const [text, setText] = useState(String(qty));
+  const [text, setText] = useState(String(value));
   function commit() {
-    const n = Math.max(0, Math.floor(Number(text) || 0));
-    onCommit(n);
+    const raw = Number(text) || 0;
+    onCommit(decimals ? Math.max(0, raw) : Math.max(0, Math.floor(raw)));
   }
   return (
     <input
       value={text}
-      onChange={(e) => setText(e.target.value.replace(/[^\d]/g, ""))}
+      onChange={(e) =>
+        setText(
+          e.target.value.replace(decimals ? /[^\d.]/g : /[^\d]/g, ""),
+        )
+      }
       onFocus={(e) => e.target.select()}
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
-      inputMode="numeric"
-      aria-label="Quantity"
-      className="numeric w-14 rounded-md border border-line bg-card py-1 text-center text-sm outline-none focus:border-forest"
+      inputMode={decimals ? "decimal" : "numeric"}
+      aria-label={decimals ? "Rate" : "Quantity"}
+      className="numeric w-16 shrink-0 rounded-md border border-line bg-card py-1 text-center text-sm text-ink outline-none focus:border-forest"
     />
   );
 }

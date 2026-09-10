@@ -50,6 +50,7 @@ const DICT: Record<string, Entry> = {
   "c.supplier": { en: "Supplier", ur: "سپلائر", roman: "Supplier" },
   "c.customers": { en: "Customers", ur: "گاہک", roman: "Customers" },
   "c.suppliers": { en: "Suppliers", ur: "سپلائرز", roman: "Suppliers" },
+  "c.rate": { en: "Rate", ur: "ریٹ", roman: "Rate" },
   "c.noMatches": { en: "No matches.", ur: "کچھ نہیں ملا۔", roman: "Kuch nahi mila." },
   "c.back": { en: "Back", ur: "واپس", roman: "Wapas" },
 
