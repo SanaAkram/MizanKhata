@@ -14,6 +14,7 @@ import {
 } from "@/lib/khata/business";
 import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
+import LayoutToggle from "@/components/LayoutToggle";
 
 export default function ShopSettingsClient({
   list,
@@ -361,6 +362,26 @@ export default function ShopSettingsClient({
         >
           {busy ? t("c.saving", "Saving…") : t("c.save", "Save")}
         </button>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          {t("shopset.display", "Display")}
+        </h2>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-card px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">
+              {t("layout.default", "Default view for lists")}
+            </p>
+            <p className="text-xs text-muted">
+              {t(
+                "layout.defaultHint",
+                "How the ledger, Cash Book and reports show entries.",
+              )}
+            </p>
+          </div>
+          <LayoutToggle showLabel={false} className="shrink-0" />
+        </div>
       </section>
 
       <section>

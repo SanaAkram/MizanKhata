@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { newId } from "@/lib/ids";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
+import { useEntryLayout } from "@/lib/entry-layout";
+import LayoutToggle from "@/components/LayoutToggle";
 import {
   addCash,
   addPartyTx,
@@ -34,8 +36,6 @@ import ItemLinePicker, {
   linesTotal,
   type ItemLine,
 } from "@/components/ItemLinePicker";
-
-const LEDGER_LAYOUT_KEY = "mizankhata:ledger-layout";
 
 type Row = {
   id: string;
@@ -83,25 +83,7 @@ export default function PartyDetailClient({
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [menu, setMenu] = useState(false);
   const [armDel, setArmDel] = useState(false);
-  const [layout, setLayout] = useState<"columns" | "list">("columns");
-
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem(LEDGER_LAYOUT_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (v === "list" || v === "columns") setLayout(v);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-  function pickLayout(v: "columns" | "list") {
-    setLayout(v);
-    try {
-      localStorage.setItem(LEDGER_LAYOUT_KEY, v);
-    } catch {
-      /* ignore */
-    }
-  }
+  const layout = useEntryLayout();
 
   const rows = useMemo(() => {
     const asc = [...txs].sort(
@@ -313,23 +295,7 @@ export default function PartyDetailClient({
         </div>
       ) : null}
 
-      {/* layout toggle */}
-      <div className="flex items-center justify-end gap-1 text-[11px] font-semibold text-muted">
-        <span>{t("party.view", "View")}</span>
-        {(["columns", "list"] as const).map((v) => (
-          <button
-            key={v}
-            onClick={() => pickLayout(v)}
-            className={`rounded-md px-2 py-1 ${
-              layout === v ? "bg-forest text-paper" : "border border-line"
-            }`}
-          >
-            {v === "columns"
-              ? t("party.viewCols", "Two columns")
-              : t("party.viewList", "List")}
-          </button>
-        ))}
-      </div>
+      <LayoutToggle className="justify-end" />
 
       <section>
         {shown.length === 0 ? (
@@ -508,6 +474,13 @@ export default function PartyDetailClient({
                 {t("party.shareWa", "Share on WhatsApp")}
               </a>
             ) : null}
+
+            <div className="flex items-center justify-between border-t border-line pt-3">
+              <span className="text-xs text-muted">
+                {t("layout.default", "Default view for lists")}
+              </span>
+              <LayoutToggle showLabel={false} />
+            </div>
           </div>
         ) : null}
       </Sheet>

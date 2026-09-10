@@ -10,6 +10,8 @@ import { addCash, cashInHand, deleteCash, type Cash } from "@/lib/khata/db";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 import DateRangeFilter from "@/components/DateRangeFilter";
+import LayoutToggle from "@/components/LayoutToggle";
+import { useEntryLayout } from "@/lib/entry-layout";
 import { useT } from "@/lib/i18n";
 import {
   ALL_TIME,
@@ -33,6 +35,7 @@ export default function CashbookClient({
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const t = useT();
+  const layout = useEntryLayout();
   const [adding, setAdding] = useState(false);
   const [detail, setDetail] = useState<Cash | null>(null);
   const [tab, setTab] = useState<"all" | "cash" | "bank">("all");
@@ -139,15 +142,66 @@ export default function CashbookClient({
       ) : null}
 
       <section>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-          {t("cash.entries", "Entries")}
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {t("cash.entries", "Entries")}
+          </h2>
+          <LayoutToggle />
+        </div>
         {rows.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
             {isActive(range)
               ? t("range.noneInRange", "Nothing in this date range.")
               : t("cash.noEntries", "No cash entries yet — tap + to add one.")}
           </p>
+        ) : layout === "columns" ? (
+          <div className="overflow-hidden rounded-xl border border-line">
+            <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
+              <span className="px-3 py-2 text-muted">
+                {t("cash.entries", "Entries")}
+              </span>
+              <span className="bg-danger/10 px-2 py-2 text-right text-danger">
+                {t("cash.out", "Cash out")}
+              </span>
+              <span className="bg-ok/10 px-2 py-2 text-right text-ok">
+                {t("cash.in", "Cash in")}
+              </span>
+            </div>
+            {rows.map((e) => {
+              const isIn = e.type === "in";
+              return (
+                <button
+                  key={e.id}
+                  onClick={() => setDetail(e)}
+                  className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line text-left last:border-b-0 active:bg-line/30"
+                >
+                  <span className="min-w-0 px-3 py-2.5">
+                    <span className="block text-[11px] text-muted">
+                      {fmtEntryDate(e.date)}
+                    </span>
+                    <span className="mt-0.5 block break-words text-xs text-ink">
+                      {e.note ||
+                        (isIn
+                          ? t("cash.in", "Cash in")
+                          : t("cash.out", "Cash out"))}
+                      {e.party_name ? (
+                        <span className="text-muted"> — {e.party_name}</span>
+                      ) : null}
+                    </span>
+                    <span className="numeric mt-1 inline-block rounded bg-line/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                      {t(`c.${e.method ?? "cash"}`, e.method ?? "cash")}
+                    </span>
+                  </span>
+                  <span className="numeric break-all bg-danger/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-danger">
+                    {isIn ? "" : fmtRs(e.amount)}
+                  </span>
+                  <span className="numeric break-all bg-ok/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-ok">
+                    {isIn ? fmtRs(e.amount) : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         ) : (
           <ul className="flex flex-col gap-2">
             {rows.map((e) => (

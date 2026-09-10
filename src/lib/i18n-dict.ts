@@ -223,6 +223,23 @@ const DICT: Record<string, Entry> = {
     roman: "Do khane",
   },
   "party.viewList": { en: "List", ur: "فہرست", roman: "List" },
+  "layout.view": { en: "View", ur: "دکھاؤ", roman: "View" },
+  "layout.columns": {
+    en: "Two columns",
+    ur: "دو خانے",
+    roman: "Do khane",
+  },
+  "layout.list": { en: "List", ur: "فہرست", roman: "List" },
+  "layout.default": {
+    en: "Default view for lists",
+    ur: "فہرستوں کا پہلے سے طے شدہ انداز",
+    roman: "Behtareen andaz",
+  },
+  "layout.defaultHint": {
+    en: "How the ledger, Cash Book and reports show entries.",
+    ur: "کھاتہ، کیش بک اور رپورٹس اندراج کیسے دکھائیں۔",
+    roman: "Khata, Cash Book aur reports entries kaise dikhayein.",
+  },
   "party.fromBill": { en: "from a bill", ur: "بل سے", roman: "bill se" },
   "party.shareWa": {
     en: "Share on WhatsApp",
@@ -996,6 +1013,7 @@ const DICT: Record<string, Entry> = {
     roman: "Dukaan ka pata",
   },
   "shopset.data": { en: "Data", ur: "ڈیٹا", roman: "Data" },
+  "shopset.display": { en: "Display", ur: "نمائش", roman: "Display" },
   "shopset.importDigikhata": {
     en: "Import from Digikhata",
     ur: "ڈیجی کھاتہ سے درآمد کریں",
