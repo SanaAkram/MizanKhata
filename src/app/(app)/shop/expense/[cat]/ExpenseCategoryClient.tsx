@@ -8,7 +8,6 @@ import { fmtEntryDate, fmtRs } from "@/lib/format";
 import { deleteCash, type Cash } from "@/lib/khata/db";
 import { expenseLabel } from "@/lib/khata/expense";
 import { useEntryLayout } from "@/lib/entry-layout";
-import LayoutToggle from "@/components/LayoutToggle";
 import Sheet from "@/components/Sheet";
 import DateRangeFilter from "@/components/DateRangeFilter";
 import { useT } from "@/lib/i18n";
@@ -80,12 +79,9 @@ export default function ExpenseCategoryClient({
 
       <DateRangeFilter onChange={setRange} />
 
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t("exp.entries", "Entries")}
-        </h2>
-        <LayoutToggle />
-      </div>
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+        {t("exp.entries", "Entries")}
+      </h2>
 
       {shown.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">

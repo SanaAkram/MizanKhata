@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { newId } from "@/lib/ids";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
 import { useEntryLayout } from "@/lib/entry-layout";
-import LayoutToggle from "@/components/LayoutToggle";
 import {
   addCash,
   addPartyTx,
@@ -321,8 +320,6 @@ export default function PartyDetailClient({
         </div>
       ) : null}
 
-      <LayoutToggle className="justify-end" />
-
       <section>
         {shown.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
@@ -508,13 +505,6 @@ export default function PartyDetailClient({
                 {t("party.shareWa", "Share on WhatsApp")}
               </a>
             ) : null}
-
-            <div className="flex items-center justify-between border-t border-line pt-3">
-              <span className="text-xs text-muted">
-                {t("layout.default", "Default view for lists")}
-              </span>
-              <LayoutToggle showLabel={false} />
-            </div>
           </div>
         ) : null}
       </Sheet>

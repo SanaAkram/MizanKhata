@@ -10,7 +10,6 @@ import { addCash, cashInHand, deleteCash, type Cash } from "@/lib/khata/db";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 import DateRangeFilter from "@/components/DateRangeFilter";
-import LayoutToggle from "@/components/LayoutToggle";
 import { useEntryLayout } from "@/lib/entry-layout";
 import { useT } from "@/lib/i18n";
 import {
@@ -142,12 +141,9 @@ export default function CashbookClient({
       ) : null}
 
       <section>
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {t("cash.entries", "Entries")}
-          </h2>
-          <LayoutToggle />
-        </div>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          {t("cash.entries", "Entries")}
+        </h2>
         {rows.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
             {isActive(range)
