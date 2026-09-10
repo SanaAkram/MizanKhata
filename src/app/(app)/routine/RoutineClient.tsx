@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addDays, dateKey, parseDateKey, startOfWeek } from "@/lib/date";
 import { fmt12h, fmtInterval, fmtTimeOfDay } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { defaultItems } from "@/lib/routine/defaults";
 import {
   bumpCount,
@@ -58,6 +59,7 @@ export default function RoutineClient({
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const items = initialItems;
 
   const [logs, setLogs] = useState<RoutineLog[]>(initialLogs);
@@ -304,11 +306,13 @@ export default function RoutineClient({
           className="rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-left"
         >
           <span className="text-sm font-semibold text-ink">
-            Turn on reminders
+            {t("routine.turnOn", "Turn on reminders")}
           </span>
           <span className="mt-0.5 block text-xs text-muted">
-            A nudge when each item is due, then a check-in that keeps reminding
-            until you mark it done.
+            {t(
+              "routine.turnOnHint",
+              "A nudge when each item is due, then a check-in that keeps reminding until you mark it done.",
+            )}
           </span>
         </button>
       ) : null}
@@ -336,7 +340,9 @@ export default function RoutineClient({
       {intervals.length > 0 ? (
         <section className="rounded-2xl border border-line bg-card p-4">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-            {isToday ? "Today" : "Repeating"}
+            {isToday
+              ? t("routine.today", "Today")
+              : t("routine.repeating", "Repeating")}
           </h2>
           <ul className="flex flex-col gap-3">
             {intervals.map((ip) => {
@@ -352,19 +358,23 @@ export default function RoutineClient({
                         {ip.item.label}
                         {ip.done ? (
                           <span className="ml-2 text-xs font-semibold text-ok">
-                            done
+                            {t("routine.doneShort", "done")}
                           </span>
                         ) : null}
                       </p>
                       <p className="text-xs text-muted">
                         {ip.target > 0
-                          ? `${ip.count} / ${ip.target} ${ip.unit}`
+                          ? t("routine.countOf", "{c} / {t} {u}", {
+                              c: ip.count,
+                              t: ip.target,
+                              u: ip.unit,
+                            })
                           : `${ip.count} ${ip.unit}`}
                         {ip.item.interval_min
                           ? ` · ${fmtInterval(ip.item.interval_min)}`
                           : ""}
                         {isToday && ip.activeNow && ip.nextDueMin != null && !ip.done
-                          ? ` · next in ${ip.nextDueMin}m`
+                          ? ` · ${t("routine.nextIn", "next in {m}m", { m: ip.nextDueMin })}`
                           : ""}
                       </p>
                     </div>
@@ -435,21 +445,26 @@ function FirstRun({
   onSeed: () => void;
   seeding: boolean;
 }) {
+  const t = useT();
   return (
     <div className="rounded-2xl border border-line bg-card p-6 text-center">
       <h2 className="numeric text-xl font-semibold text-forest">
-        Set up your routine
+        {t("routine.setup", "Set up your routine")}
       </h2>
       <p className="mx-auto mt-2 max-w-xs text-sm text-muted">
-        Start with the five prayers plus open/close shop, a morning walk and
-        sleep. You can change every time and add your own afterwards.
+        {t(
+          "routine.setupHint",
+          "Start with the five prayers plus open/close shop, a morning walk and sleep. You can change every time and add your own afterwards.",
+        )}
       </p>
       <button
         onClick={onSeed}
         disabled={seeding}
         className="mt-5 w-full rounded-xl bg-forest px-4 py-3.5 text-sm font-semibold text-paper active:scale-[0.99] disabled:opacity-60"
       >
-        {seeding ? "Creating…" : "Add starter routine"}
+        {seeding
+          ? t("c.saving", "Creating…")
+          : t("routine.addStarter", "Add starter routine")}
       </button>
     </div>
   );
@@ -466,11 +481,12 @@ function PickActions({
   onUndo: () => void;
   onSnooze: () => void;
 }) {
+  const t = useT();
   const statusLabel: Record<RoutineStatus, string> = {
-    pending: "Not logged yet",
-    done: "Marked done",
-    missed: "Marked missed",
-    skipped: "Skipped",
+    pending: t("routine.notLogged", "Not logged yet"),
+    done: t("routine.markedDone", "Marked done"),
+    missed: t("routine.markedMissed", "Marked missed"),
+    skipped: t("routine.markedSkipped", "Skipped"),
   };
   const lockDone =
     occ.item.category === "prayer" && occ.phase === "upcoming";
@@ -478,13 +494,19 @@ function PickActions({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted">
-        {fmt12h(occ.item.at_time)} · window until {fmtTimeOfDay(occ.end)}
+        {fmt12h(occ.item.at_time)} ·{" "}
+        {t("routine.windowUntil", "window until {t}", {
+          t: fmtTimeOfDay(occ.end),
+        })}
         <span className="mx-1">·</span>
         {statusLabel[occ.status]}
       </p>
       {lockDone ? (
         <p className="text-xs text-muted">
-          A prayer can be logged once its time begins.
+          {t(
+            "routine.prayerLock",
+            "A prayer can be logged once its time begins.",
+          )}
         </p>
       ) : null}
       <div className="grid grid-cols-2 gap-2">
@@ -493,33 +515,33 @@ function PickActions({
           disabled={lockDone}
           className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-40"
         >
-          Done
+          {t("routine.markDone", "Done")}
         </button>
         <button
           onClick={() => onMark("missed")}
           className="rounded-xl border border-line bg-card px-4 py-3 text-sm font-semibold text-danger"
         >
-          Missed
+          {t("routine.missed", "Missed")}
         </button>
         <button
           onClick={() => onMark("skipped")}
           className="rounded-xl border border-line bg-card px-4 py-3 text-sm font-semibold text-muted"
         >
-          Skip
+          {t("routine.skip", "Skip")}
         </button>
         <button
           onClick={onUndo}
           disabled={occ.status === "pending" && !occ.logged}
           className="rounded-xl border border-line bg-card px-4 py-3 text-sm font-semibold text-muted disabled:opacity-40"
         >
-          Clear
+          {t("routine.clear", "Clear")}
         </button>
       </div>
       <button
         onClick={onSnooze}
         className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-muted"
       >
-        Snooze 15m
+        {t("routine.snooze15", "Snooze 15m")}
       </button>
     </div>
   );

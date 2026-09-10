@@ -13,6 +13,7 @@ import {
 import { newId } from "@/lib/ids";
 import { fmtClock, fmtDuration, fmtTimeOfDay } from "@/lib/format";
 import { dateKey } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 import { PlayIcon, StopIcon } from "@/components/icons";
 
 const RUNNING_KEY = "mizankhata:running";
@@ -24,6 +25,7 @@ type Props = {
 
 export default function WorkClient({ initialSessions, todayKey }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const t = useT();
   const [sessions, setSessions] = useState<WorkSession[]>(initialSessions);
   const [running, setRunning] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
@@ -141,7 +143,7 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
       {/* Timer */}
       <section className="rounded-2xl border border-line bg-card p-6 text-center">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {running != null ? "Working" : "Timer"}
+          {running != null ? t("work.working", "Working") : t("work.timer", "Timer")}
         </p>
         <p
           className={`numeric mt-2 text-5xl font-semibold tabular-nums ${
@@ -152,10 +154,14 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
         </p>
         {running != null ? (
           <p className="mt-1 text-xs text-muted">
-            since {fmtTimeOfDay(new Date(running))}
+            {t("work.since", "since {t}", {
+              t: fmtTimeOfDay(new Date(running)),
+            })}
           </p>
         ) : (
-          <p className="mt-1 text-xs text-muted">Tap start when you begin.</p>
+          <p className="mt-1 text-xs text-muted">
+            {t("work.tapStart", "Tap start when you begin.")}
+          </p>
         )}
 
         <button
@@ -166,11 +172,11 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
         >
           {running != null ? (
             <>
-              <StopIcon className="h-5 w-5" /> Stop
+              <StopIcon className="h-5 w-5" /> {t("work.stop", "Stop")}
             </>
           ) : (
             <>
-              <PlayIcon className="h-5 w-5" /> Start
+              <PlayIcon className="h-5 w-5" /> {t("work.start", "Start")}
             </>
           )}
         </button>
@@ -180,35 +186,37 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
       <section className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Today
+            {t("work.today", "Today")}
           </p>
           <p className="numeric mt-1 text-2xl font-semibold text-ink">
             {fmtDuration(todayMs)}
           </p>
           <p className="mt-0.5 text-xs text-muted">
             {todaySessions.length}{" "}
-            {todaySessions.length === 1 ? "session" : "sessions"}
+            {todaySessions.length === 1
+              ? t("work.session", "session")
+              : t("work.sessions", "sessions")}
           </p>
         </div>
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            This week
+            {t("work.thisWeek", "This week")}
           </p>
           <p className="numeric mt-1 text-2xl font-semibold text-ink">
             {fmtDuration(weekMs)}
           </p>
-          <p className="mt-0.5 text-xs text-muted">Mon–Sun</p>
+          <p className="mt-0.5 text-xs text-muted">{t("work.monSun", "Mon–Sun")}</p>
         </div>
       </section>
 
       {/* Today's sessions */}
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-          Today&apos;s sessions
+          {t("work.todaysSessions", "Today's sessions")}
         </h2>
         {todaySessions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-            No sessions logged today yet.
+            {t("work.noSessions", "No sessions logged today yet.")}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -243,7 +251,10 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
                     <div className="border-t border-line px-4 py-3">
                       <textarea
                         defaultValue={s.note ?? ""}
-                        placeholder="Note (what did you work on?)"
+                        placeholder={t(
+                          "work.notePh",
+                          "Note (what did you work on?)",
+                        )}
                         rows={2}
                         onBlur={(e) => saveNote(s.id, e.target.value)}
                         className="w-full resize-none rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-forest"
@@ -252,7 +263,7 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
                         onClick={() => removeSession(s.id)}
                         className="mt-2 text-xs font-semibold text-danger"
                       >
-                        Delete session
+                        {t("work.deleteSession", "Delete session")}
                       </button>
                     </div>
                   ) : null}
@@ -267,7 +278,7 @@ export default function WorkClient({ initialSessions, todayKey }: Props) {
       {earlierByDay.length > 0 ? (
         <section>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-            Earlier this week
+            {t("work.earlierWeek", "Earlier this week")}
           </h2>
           <ul className="flex flex-col gap-1.5">
             {earlierByDay.map((d) => (

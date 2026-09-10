@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
+import { serverT } from "@/lib/i18n-server";
 import {
   customerBalance,
   fetchCustomers,
@@ -19,6 +20,7 @@ export default async function BillPrintPage({
   const { id } = await params;
   const db = await createClient();
   const { active } = await resolveBusiness(db);
+  const t = await serverT();
   const bid = active?.id ?? "";
   const [sales, items, customers, khataTx] = await Promise.all([
     fetchSales(db, bid).catch(() => []),
@@ -36,7 +38,9 @@ export default async function BillPrintPage({
 
   if (!sale) {
     return (
-      <main style={{ padding: 24, fontFamily: "system-ui" }}>Bill not found.</main>
+      <main style={{ padding: 24, fontFamily: "system-ui" }}>
+        {t("bills.notFound", "Bill not found.")}
+      </main>
     );
   }
 
@@ -95,17 +99,18 @@ export default async function BillPrintPage({
         }}
       >
         <div>
-          <div style={{ fontWeight: 700, color: brand }}>Bill to</div>
+          <div style={{ fontWeight: 700, color: brand }}>
+            {t("bills.billTo", "Bill to")}
+          </div>
           <div style={{ fontSize: 14, fontWeight: 700 }}>
-            {custName || "Walk-in / cash customer"}
+            {custName || t("bills.walkinFull", "Walk-in / cash customer")}
           </div>
           {customer?.phone ? <div>{customer.phone}</div> : null}
-          {!customer ? (
-            <div style={{ color: muted }}>Not linked to a ledger account</div>
-          ) : null}
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 700, color: brand }}>Bill #{idx + 1}</div>
+          <div style={{ fontWeight: 700, color: brand }}>
+            {t("bills.billNo", "Bill #{n}", { n: idx + 1 })}
+          </div>
           <div>{new Date(sale.time).toLocaleString()}</div>
         </div>
       </div>
@@ -113,10 +118,10 @@ export default async function BillPrintPage({
       <table style={{ width: "100%", fontSize: 13, marginTop: 10 }}>
         <thead>
           <tr style={{ color: muted, textAlign: "left" }}>
-            <th>Item</th>
-            <th style={{ textAlign: "right" }}>Qty</th>
-            <th style={{ textAlign: "right" }}>Rate</th>
-            <th style={{ textAlign: "right" }}>Amount</th>
+            <th>{t("bills.item", "Item")}</th>
+            <th style={{ textAlign: "right" }}>{t("bills.qty", "Qty")}</th>
+            <th style={{ textAlign: "right" }}>{t("bills.rate", "Rate")}</th>
+            <th style={{ textAlign: "right" }}>{t("bills.amount", "Amount")}</th>
           </tr>
         </thead>
         <tbody>
@@ -135,56 +140,98 @@ export default async function BillPrintPage({
 
       <div style={{ borderTop: "1px solid #ddd", marginTop: 8, paddingTop: 8 }}>
         {Number(sale.discount) > 0 ? (
-          <Row label="Discount" value={`− ${fmtRs(Number(sale.discount))}`} />
+          <Row
+            label={t("bills.discount", "Discount")}
+            value={`− ${fmtRs(Number(sale.discount))}`}
+          />
         ) : null}
         {Number(sale.tax) > 0 ? (
-          <Row label="Tax" value={`+ ${fmtRs(Number(sale.tax))}`} />
+          <Row
+            label={t("bills.tax", "Tax")}
+            value={`+ ${fmtRs(Number(sale.tax))}`}
+          />
         ) : null}
         <Row
-          label="Grand total"
+          label={t("bills.grandTotal", "Bill total")}
           value={fmtRs(Number(sale.total))}
           bold
           color={brand}
         />
-        <Row label="Paid now" value={fmtRs(paid)} />
+        <Row label={t("bills.paidNow", "Paid")} value={fmtRs(paid)} />
         {billCredit > 0 ? (
-          <Row label="Unpaid on this bill" value={fmtRs(billCredit)} bold />
+          <Row
+            label={t("bills.unpaidThis", "Remaining")}
+            value={fmtRs(billCredit)}
+            bold
+          />
         ) : (
-          <Row label="Status" value="Paid in full" color={brand} />
+          <Row
+            label={t("bills.status", "Status")}
+            value={t("bills.paidInFull", "All paid")}
+            color={brand}
+          />
         )}
       </div>
 
-      <div
-        style={{
-          marginTop: 10,
-          padding: 10,
-          border: `1px solid ${brand}33`,
-          borderRadius: 8,
-          fontSize: 12,
-          background: `${brand}0a`,
-        }}
-      >
-        {customer ? (
-          <>
-            <Row label="Previous balance" value={fmtRs(prevBal ?? 0)} />
-            {billCredit > 0 ? (
-              <Row label="This bill (unpaid)" value={`+ ${fmtRs(billCredit)}`} />
-            ) : null}
-            <Row
-              label={`Total due from ${customer.name}`}
-              value={fmtRs(newBal ?? 0)}
-              bold
-              color={brand}
-            />
-          </>
-        ) : (
-          <div style={{ color: muted }}>
-            Walk-in / cash sale — this bill is not recorded against any
-            customer&apos;s ledger. Open it in MizanKhata and use{" "}
-            <b>Edit bill</b> to attach a customer.
+      {customer ? (
+        <div
+          style={{
+            marginTop: 10,
+            padding: 10,
+            border: `1px solid ${brand}33`,
+            borderRadius: 8,
+            fontSize: 12,
+            background: `${brand}0a`,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              color: brand,
+              marginBottom: 4,
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+            }}
+          >
+            {t("bills.accountTitle", "Account")}
           </div>
-        )}
-      </div>
+          <Row
+            label={t("bills.prevBalance", "Old balance")}
+            value={fmtRs(prevBal ?? 0)}
+          />
+          {billCredit > 0 ? (
+            <Row
+              label={t("bills.thisBillUnpaid", "This bill")}
+              value={`+ ${fmtRs(billCredit)}`}
+            />
+          ) : null}
+          <Row
+            label={t("bills.totalDueFrom", "{name} to pay", {
+              name: customer.name,
+            })}
+            value={fmtRs(newBal ?? 0)}
+            bold
+            color={brand}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            marginTop: 10,
+            padding: 10,
+            border: "1px solid #ddd",
+            borderRadius: 8,
+            fontSize: 12,
+            color: muted,
+          }}
+        >
+          {t(
+            "bills.walkinNote",
+            "Cash sale — not added to anyone's account.",
+          )}
+        </div>
+      )}
 
       {sale.note ? (
         <p style={{ fontSize: 12, color: muted, marginTop: 10 }}>{sale.note}</p>
@@ -197,7 +244,7 @@ export default async function BillPrintPage({
           marginTop: 16,
         }}
       >
-        Thank you.
+        {t("bills.thankYou", "Thank you.")}
       </p>
     </main>
   );

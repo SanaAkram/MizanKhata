@@ -40,12 +40,29 @@ export default function Sheet({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative z-10 w-full max-w-[480px] rounded-t-3xl border border-line bg-paper p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
-        {title ? (
-          <h3 className="mb-3 text-base font-semibold text-ink">{title}</h3>
-        ) : null}
-        {children}
+      <div className="relative z-10 flex max-h-[88vh] w-full max-w-[480px] flex-col rounded-t-3xl border border-line bg-paper shadow-2xl">
+        <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-2">
+          <h3 className="text-base font-semibold text-ink">{title ?? ""}</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="-mr-1 shrink-0 rounded-lg p-1.5 text-muted active:bg-line"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1">
+          {children}
+        </div>
       </div>
     </div>
   );

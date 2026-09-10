@@ -192,13 +192,19 @@ export default function BillsClient({
   function badge(s: Sale) {
     const credit = Number(s.credit_amount) || 0;
     const cash = Number(s.paid_cash) || 0;
-    if (credit <= 0) return { text: "Cash", cls: "bg-ok/10 text-ok" };
+    if (credit <= 0)
+      return { text: t("bills.badge.cash", "Cash"), cls: "bg-ok/10 text-ok" };
     if (cash > 0)
       return {
-        text: `Partial · ${fmtRs(credit)} credit`,
+        text: t("bills.badge.partial", "Partial · {amt} credit", {
+          amt: fmtRs(credit),
+        }),
         cls: "bg-gold/10 text-gold",
       };
-    return { text: "On credit", cls: "bg-danger/10 text-danger" };
+    return {
+      text: t("bills.badge.credit", "On credit"),
+      cls: "bg-danger/10 text-danger",
+    };
   }
 
   const inputCls =
@@ -208,29 +214,34 @@ export default function BillsClient({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <Link href="/shop" className="text-sm text-muted">
-          ‹ Shop
+          ‹ {t("nav.shop", "Shop")}
         </Link>
         <Link
           href="/shop/pos"
           className="rounded-lg bg-forest px-3 py-1.5 text-xs font-semibold text-paper"
         >
-          + New bill
+          {t("bills.newBill", "+ New bill")}
         </Link>
       </div>
 
       <div className="rounded-2xl border border-line bg-card p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           {isActive(range)
-            ? `Sales · ${rangeLabel(range)}`
-            : `Total sale for ${monthLabel}`}
+            ? t("bills.salesFor", "Sales · {r}", { r: rangeLabel(range) })
+            : t("bills.totalSaleFor", "Total sale for {m}", { m: monthLabel })}
         </p>
         <p className="numeric mt-1 text-2xl font-semibold text-forest">
           {fmtRs(isActive(range) ? rangeTotal : monthTotal)}
         </p>
         {isActive(range) ? (
           <p className="mt-0.5 text-[11px] text-muted">
-            {ranged.length} {ranged.length === 1 ? "bill" : "bills"}
-            {rangeCredit > 0 ? ` · ${fmtRs(rangeCredit)} on credit` : ""}
+            {ranged.length}{" "}
+            {ranged.length === 1
+              ? t("range.entry", "bill")
+              : t("range.entries", "bills")}
+            {rangeCredit > 0
+              ? ` · ${fmtRs(rangeCredit)} ${t("bills.badge.credit", "on credit")}`
+              : ""}
           </p>
         ) : null}
       </div>
@@ -238,7 +249,9 @@ export default function BillsClient({
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={`Search ${numbered.length} bills`}
+        placeholder={t("bills.searchBills", "Search {n} bills", {
+          n: numbered.length,
+        })}
         className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm outline-none focus:border-forest"
       />
 
@@ -247,10 +260,10 @@ export default function BillsClient({
       {shown.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-muted">
           {numbered.length === 0
-            ? "No bills yet."
+            ? t("bills.noBills", "No bills yet.")
             : isActive(range)
               ? t("range.noneInRange", "Nothing in this date range.")
-              : "No matches."}
+              : t("c.noMatches", "No matches.")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -264,7 +277,7 @@ export default function BillsClient({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-ink">
-                      Bill #{s.no}
+                      {t("bills.billNo", "Bill #{n}", { n: s.no })}
                     </span>
                     <span className="numeric text-sm font-semibold text-forest">
                       {fmtRs(Number(s.total))}
@@ -275,7 +288,7 @@ export default function BillsClient({
                       {fmtEntryDate(s.time)} ·{" "}
                       {s.customer_name ||
                         customers.find((c) => c.id === s.customer_id)?.name ||
-                        "Walk-in"}
+                        t("bills.walkin", "Walk-in")}
                     </span>
                     <span
                       className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${b.cls}`}
@@ -292,19 +305,21 @@ export default function BillsClient({
 
       <Sheet
         open={open !== null}
-        title={open ? `Bill #${open.no}` : ""}
+        title={open ? t("bills.billNo", "Bill #{n}", { n: open.no }) : ""}
         onClose={() => setOpen(null)}
       >
         {open && editing ? (
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-              Customer
+              {t("c.customer", "Customer")}
               <select
                 value={edCustId}
                 onChange={(e) => setEdCustId(e.target.value)}
                 className={inputCls}
               >
-                <option value="">Walk-in (no ledger)</option>
+                <option value="">
+                  {t("bills.walkinNoLedger", "Walk-in (no ledger)")}
+                </option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -314,12 +329,12 @@ export default function BillsClient({
             </label>
 
             <div className="flex justify-between text-xs text-muted">
-              <span>Items subtotal</span>
+              <span>{t("bills.itemsSubtotal", "Items subtotal")}</span>
               <span className="numeric">{fmtRs(edSubtotal)}</span>
             </div>
 
             <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-              Discount
+              {t("pos.discount", "Discount")}
               <CalcField
                 value={edDiscount}
                 onChange={setEdDiscount}
@@ -327,19 +342,19 @@ export default function BillsClient({
               />
             </label>
             <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-              Tax / extra
+              {t("bills.taxExtra", "Tax / extra")}
               <CalcField value={edTax} onChange={setEdTax} placeholder="0" />
             </label>
 
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span>Grand total</span>
+              <span>{t("bills.grandTotal", "Bill total")}</span>
               <span className="numeric" style={{ color: brand }}>
                 {fmtRs(edTotal)}
               </span>
             </div>
 
             <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-              Paid now (cash)
+              {t("bills.paidNow", "Paid")} ({t("c.cash", "cash")})
               <CalcField
                 value={edPaid}
                 onChange={setEdPaid}
@@ -347,7 +362,9 @@ export default function BillsClient({
               />
             </label>
             <div className="flex justify-between text-xs">
-              <span className="text-muted">Goes on credit</span>
+              <span className="text-muted">
+                {t("bills.goesOnCredit", "Goes on credit")}
+              </span>
               <span
                 className="numeric font-semibold"
                 style={{ color: edCredit > 0 ? brand : undefined }}
@@ -357,19 +374,21 @@ export default function BillsClient({
             </div>
 
             <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-              Note
+              {t("c.note", "Note")}
               <textarea
                 value={edNote}
                 onChange={(e) => setEdNote(e.target.value)}
                 rows={2}
-                placeholder="Optional"
+                placeholder={t("c.optional", "Optional")}
                 className={`${inputCls} resize-none`}
               />
             </label>
 
             <p className="text-[11px] text-muted">
-              Items on the bill can&apos;t be changed here — delete the bill and
-              make a new one if the products are wrong.
+              {t(
+                "bills.itemsLocked",
+                "Items can't be changed here — delete the bill and make a new one if the products are wrong.",
+              )}
             </p>
 
             <div className="grid grid-cols-2 gap-2">
@@ -378,14 +397,14 @@ export default function BillsClient({
                 disabled={busy}
                 className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted disabled:opacity-50"
               >
-                Cancel
+                {t("c.cancel", "Cancel")}
               </button>
               <button
                 onClick={saveEdit}
                 disabled={busy}
                 className="rounded-xl bg-forest px-4 py-2.5 text-sm font-semibold text-paper disabled:opacity-50"
               >
-                {busy ? "Saving…" : "Save changes"}
+                {busy ? t("c.saving", "Saving…") : t("c.saveChanges", "Save changes")}
               </button>
             </div>
           </div>
@@ -414,16 +433,15 @@ export default function BillsClient({
             <div className="flex items-start justify-between border-y border-line py-2 text-xs">
               <div className="min-w-0">
                 <p className="font-semibold" style={{ color: brand }}>
-                  Bill to
+                  {t("bills.billTo", "Bill to")}
                 </p>
                 <p className="truncate text-sm font-semibold text-ink">
-                  {open.customer_name || openCust?.name || "Walk-in / cash customer"}
+                  {open.customer_name ||
+                    openCust?.name ||
+                    t("bills.walkinFull", "Walk-in / cash customer")}
                 </p>
                 {openCust?.phone ? (
                   <p className="text-muted">{openCust.phone}</p>
-                ) : null}
-                {!openCust ? (
-                  <p className="text-muted">Not linked to a ledger account</p>
                 ) : null}
               </div>
               <p className="shrink-0 text-right text-muted">
@@ -432,11 +450,15 @@ export default function BillsClient({
             </div>
 
             <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 pt-1 text-xs">
-              <span className="font-semibold text-muted">Item</span>
-              <span className="text-right font-semibold text-muted">
-                Qty×Rate
+              <span className="font-semibold text-muted">
+                {t("bills.item", "Item")}
               </span>
-              <span className="text-right font-semibold text-muted">Amount</span>
+              <span className="text-right font-semibold text-muted">
+                {t("bills.qtyRate", "Qty×Rate")}
+              </span>
+              <span className="text-right font-semibold text-muted">
+                {t("bills.amount", "Amount")}
+              </span>
               {openItems.map((it) => (
                 <div key={it.id} className="contents">
                   <span className="text-ink">{it.name}</span>
@@ -452,37 +474,37 @@ export default function BillsClient({
 
             {Number(open.discount) > 0 ? (
               <div className="flex justify-between text-xs text-muted">
-                <span>Discount</span>
+                <span>{t("pos.discount", "Discount")}</span>
                 <span className="numeric">− {fmtRs(Number(open.discount))}</span>
               </div>
             ) : null}
             {Number(open.tax) > 0 ? (
               <div className="flex justify-between text-xs text-muted">
-                <span>Tax</span>
+                <span>{t("bills.tax", "Tax")}</span>
                 <span className="numeric">+ {fmtRs(Number(open.tax))}</span>
               </div>
             ) : null}
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span>Grand total</span>
+              <span>{t("bills.grandTotal", "Bill total")}</span>
               <span className="numeric" style={{ color: brand }}>
                 {fmtRs(Number(open.total))}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs text-muted">
-              <span>Paid now</span>
+              <span>{t("bills.paidNow", "Paid")}</span>
               <span className="numeric">{fmtRs(Number(open.paid_cash))}</span>
             </div>
             {Number(open.credit_amount) > 0 ? (
               <div className="flex items-center justify-between text-xs font-semibold text-danger">
-                <span>Unpaid on this bill</span>
+                <span>{t("bills.unpaidThis", "Remaining")}</span>
                 <span className="numeric">
                   {fmtRs(Number(open.credit_amount))}
                 </span>
               </div>
             ) : (
               <div className="flex items-center justify-between text-xs font-semibold text-ok">
-                <span>Status</span>
-                <span>Paid in full</span>
+                <span>{t("bills.status", "Status")}</span>
+                <span>{t("bills.paidInFull", "All paid")}</span>
               </div>
             )}
 
@@ -492,20 +514,30 @@ export default function BillsClient({
             >
               {openCust ? (
                 <>
+                  <p
+                    className="mb-1 text-[10px] font-semibold uppercase tracking-wide"
+                    style={{ color: brand }}
+                  >
+                    {t("bills.accountTitle", "Account")}
+                  </p>
                   <div className="flex justify-between text-muted">
-                    <span>Previous balance</span>
+                    <span>{t("bills.prevBalance", "Old balance")}</span>
                     <span className="numeric">{fmtRs(prevBal)}</span>
                   </div>
                   {Number(open.credit_amount) > 0 ? (
                     <div className="flex justify-between text-muted">
-                      <span>This bill (unpaid)</span>
+                      <span>{t("bills.thisBillUnpaid", "This bill")}</span>
                       <span className="numeric">
                         + {fmtRs(Number(open.credit_amount))}
                       </span>
                     </div>
                   ) : null}
                   <div className="flex justify-between font-semibold">
-                    <span>Total due from {openCust.name}</span>
+                    <span>
+                      {t("bills.totalDueFrom", "{name} to pay", {
+                        name: openCust.name,
+                      })}
+                    </span>
                     <span className="numeric" style={{ color: brand }}>
                       {fmtRs(newBal)}
                     </span>
@@ -513,9 +545,10 @@ export default function BillsClient({
                 </>
               ) : (
                 <p className="text-muted">
-                  Walk-in / cash sale — not recorded on any customer&apos;s
-                  ledger. Use <span className="font-semibold">Edit bill</span> to
-                  attach a customer.
+                  {t(
+                    "bills.walkinNote",
+                    "Cash sale — not added to anyone's account. Use Edit to pick a customer.",
+                  )}
                 </p>
               )}
             </div>
@@ -533,7 +566,7 @@ export default function BillsClient({
                 rel="noopener noreferrer"
                 className="rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-forest"
               >
-                Print / PDF
+                {t("bills.printPdf", "Print / PDF")}
               </a>
               <button
                 onClick={() =>
@@ -541,13 +574,13 @@ export default function BillsClient({
                 }
                 className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-forest"
               >
-                Share
+                {t("bills.share", "Share")}
               </button>
               <button
                 onClick={() => speakBill(billMessage(open))}
                 className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted"
               >
-                Read aloud
+                {t("bills.readAloud", "Read aloud")}
               </button>
               <a
                 href={`sms:${
@@ -555,7 +588,7 @@ export default function BillsClient({
                 }?body=${encodeURIComponent(billMessage(open))}`}
                 className="rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-muted"
               >
-                SMS
+                {t("bills.sms", "SMS")}
               </a>
             </div>
 
@@ -564,7 +597,7 @@ export default function BillsClient({
                 onClick={() => setEditing(true)}
                 className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-2.5 text-sm font-semibold text-forest"
               >
-                Edit bill
+                {t("bills.editBill", "Edit bill")}
               </button>
               <button
                 onClick={() => {
@@ -578,7 +611,9 @@ export default function BillsClient({
                 disabled={busy}
                 className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-sm font-semibold text-danger disabled:opacity-50"
               >
-                {armDel ? "Tap again to delete" : "Delete bill"}
+                {armDel
+                  ? t("bills.deleteBillArm", "Tap again to delete")
+                  : t("bills.deleteBill", "Delete bill")}
               </button>
             </div>
           </div>

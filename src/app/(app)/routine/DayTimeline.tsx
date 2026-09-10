@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { minutesNow } from "@/lib/date";
 import { fmt12h } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import {
   CATEGORY_COLOR,
   type RoutineCategory,
@@ -44,6 +45,7 @@ export default function DayTimeline({
   now: Date;
   onPick: (occ: Occurrence) => void;
 }) {
+  const t = useT();
   const [loHour, hiHour] = bounds;
   const topMin = loHour * 60;
   const totalMin = (hiHour - loHour) * 60;
@@ -149,7 +151,7 @@ export default function DayTimeline({
 
         {occurrences.length === 0 ? (
           <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-sm text-muted">
-            Nothing scheduled this day.
+            {t("routine.nothingElse", "Nothing scheduled this day.")}
           </p>
         ) : null}
       </div>
