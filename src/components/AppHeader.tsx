@@ -3,34 +3,30 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GearIcon } from "@/components/icons";
+import { useT } from "@/lib/i18n";
 
-const TITLES: Record<string, string> = {
-  "/work": "Work",
-  "/routine": "Routine",
-  "/ledger": "Ledger",
-  "/cashbook": "Cash Book",
-  "/shop": "Shop",
-  "/shop/pos": "Sell",
-  "/shop/stock": "Stock",
-  "/shop/bills": "Bills",
-  "/shop/settings": "Shop details",
-  "/settings": "Settings",
-};
-
-const PREFIXES: Array<[string, string]> = [
-  ["/routine", "Routine"],
-  ["/work", "Work"],
-  ["/ledger", "Ledger"],
-  ["/cashbook", "Cash Book"],
-  ["/shop", "Shop"],
+const TITLE_PATHS = [
+  "/work",
+  "/routine",
+  "/ledger",
+  "/cashbook",
+  "/shop/pos",
+  "/shop/stock",
+  "/shop/bills",
+  "/shop/settings",
+  "/shop",
+  "/settings",
 ];
+
+const PREFIXES = ["/routine", "/work", "/ledger", "/cashbook", "/shop"];
 
 export default function AppHeader() {
   const pathname = usePathname();
-  const title =
-    TITLES[pathname] ??
-    PREFIXES.find(([p]) => pathname.startsWith(p))?.[1] ??
-    "MizanKhata";
+  const t = useT();
+  const exact = TITLE_PATHS.find((p) => pathname === p);
+  const prefix = PREFIXES.find((p) => pathname.startsWith(p));
+  const key = exact ?? prefix;
+  const title = key ? t(`title.${key}`, "MizanKhata") : "MizanKhata";
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper/95 px-5 py-3.5 backdrop-blur">
@@ -49,7 +45,7 @@ export default function AppHeader() {
         </Link>
       ) : (
         <Link href="/work" className="text-sm font-medium text-muted">
-          Done
+          {t("c.done", "Done")}
         </Link>
       )}
     </header>

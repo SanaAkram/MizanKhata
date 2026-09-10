@@ -18,6 +18,7 @@ import {
   type StockRow,
 } from "@/lib/khata/shop-db";
 import { UNITS } from "@/lib/khata/units";
+import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 import ItemLinePicker, {
@@ -48,6 +49,7 @@ export default function StockItemClient({
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
 
   const [addKind, setAddKind] = useState<"in" | "out" | null>(null);
   const [detail, setDetail] = useState<StockRow | null>(null);
@@ -124,7 +126,7 @@ export default function StockItemClient({
     <div className="flex flex-col gap-4 pb-24">
       <div className="flex items-center justify-between">
         <Link href="/shop/stock" className="text-sm text-muted">
-          ‹ Stock
+          ‹ {t("nav.shop", "Stock")}
         </Link>
         <button
           onClick={() => setMenu(true)}
@@ -140,13 +142,15 @@ export default function StockItemClient({
           {product.name}
         </h1>
         <p className="numeric mt-1 text-sm font-semibold text-forest">
-          {Math.round(Number(product.stock)).toLocaleString("en-US")}{" "}
-          {product.unit} in hand
+          {t("stock.inHandOf", "{n} {unit} in hand", {
+            n: Math.round(Number(product.stock)).toLocaleString("en-US"),
+            unit: product.unit,
+          })}
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-center">
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
-              Total in
+              {t("stock.totalIn", "Total in")}
             </p>
             <p className="numeric text-sm font-semibold text-ok">
               {Math.round(totalIn).toLocaleString("en-US")}
@@ -154,7 +158,7 @@ export default function StockItemClient({
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
-              Total out
+              {t("stock.totalOut", "Total out")}
             </p>
             <p className="numeric text-sm font-semibold text-danger">
               {Math.round(totalOut).toLocaleString("en-US")}
@@ -165,7 +169,7 @@ export default function StockItemClient({
 
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-          No stock movements yet.
+          {t("stock.noMoves", "No stock movements yet.")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -179,7 +183,9 @@ export default function StockItemClient({
                   <div className="min-w-0">
                     <p className="whitespace-pre-line text-xs text-ink">
                       {r.note ||
-                        (r.source === "purchase" ? "Purchase" : "Adjustment")}
+                        (r.source === "purchase"
+                          ? t("stock.purchase", "Purchase")
+                          : t("stock.adjustment", "Adjustment"))}
                       {r.rate != null ? ` · ${fmtRs(r.rate)}/${product.unit}` : ""}
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted">
@@ -213,19 +219,23 @@ export default function StockItemClient({
           onClick={() => setAddKind("in")}
           className="flex-1 rounded-xl bg-ok px-4 py-3 text-sm font-semibold text-paper"
         >
-          IN / Buy
+          {t("stock.inBuyBtn", "IN / Buy")}
         </button>
         <button
           onClick={() => setAddKind("out")}
           className="flex-1 rounded-xl bg-danger px-4 py-3 text-sm font-semibold text-paper"
         >
-          OUT / Sell
+          {t("stock.outSellBtn", "OUT / Sell")}
         </button>
       </div>
 
       <Sheet
         open={addKind !== null}
-        title={addKind === "in" ? "Stock IN" : "Stock OUT"}
+        title={
+          addKind === "in"
+            ? t("stock.stockIn", "Stock IN")
+            : t("stock.stockOut", "Stock OUT")
+        }
         onClose={() => setAddKind(null)}
       >
         {addKind ? (
@@ -248,7 +258,11 @@ export default function StockItemClient({
 
       <Sheet
         open={detail !== null}
-        title={detail?.kind === "in" ? "Stock IN" : "Stock OUT"}
+        title={
+          detail?.kind === "in"
+            ? t("stock.stockIn", "Stock IN")
+            : t("stock.stockOut", "Stock OUT")
+        }
         onClose={() => setDetail(null)}
       >
         {detail ? (
@@ -262,17 +276,17 @@ export default function StockItemClient({
               {Math.round(detail.qty)} {product.unit}
             </p>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-muted">Rate</span>
+              <span className="text-muted">{t("stock.rate", "Rate")}</span>
               <span className="numeric text-right">
                 {detail.rate != null ? fmtRs(detail.rate) : "—"}
               </span>
-              <span className="text-muted">Amount</span>
+              <span className="text-muted">{t("bills.amount", "Amount")}</span>
               <span className="numeric text-right">
                 {detail.rate != null
                   ? fmtRs(detail.rate * detail.qty)
                   : "—"}
               </span>
-              <span className="text-muted">Date</span>
+              <span className="text-muted">{t("stock.date", "Date")}</span>
               <span className="text-right">{fmtEntryDate(detail.date)}</span>
             </div>
             {detail.note ? (
@@ -285,14 +299,16 @@ export default function StockItemClient({
                 href={`/ledger/${detail.supplierId}?kind=supplier`}
                 className="text-sm font-semibold text-forest underline underline-offset-4"
               >
-                {supName(detail.supplierId) ?? "Supplier"} — ledger ›
+                {t("stock.ledgerLink", "{name} — ledger ›", {
+                  name: supName(detail.supplierId) ?? t("c.supplier", "Supplier"),
+                })}
               </Link>
             ) : null}
             <button
               onClick={() => void removeRow(detail)}
               className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-semibold text-danger"
             >
-              Delete entry
+              {t("stock.deleteEntry", "Delete entry")}
             </button>
           </div>
         ) : null}
@@ -307,7 +323,7 @@ export default function StockItemClient({
             }}
             className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper"
           >
-            Edit product
+            {t("stock.editProduct", "Edit product")}
           </button>
           <button
             onClick={() => {
@@ -320,14 +336,16 @@ export default function StockItemClient({
             }}
             className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-semibold text-danger"
           >
-            {armDel ? "Tap again to delete product" : "Delete product"}
+            {armDel
+              ? t("stock.deleteProductArm", "Tap again to delete product")
+              : t("stock.deleteProduct", "Delete product")}
           </button>
         </div>
       </Sheet>
 
       <Sheet
         open={editing}
-        title={`Edit ${product.name}`}
+        title={t("stock.editTitle", "Edit {name}", { name: product.name })}
         onClose={() => setEditing(false)}
       >
         <EditProduct
@@ -364,6 +382,7 @@ function MoveForm({
     dateIso: string,
   ) => void;
 }) {
+  const t = useT();
   const now = new Date();
   const [qty, setQty] = useState("");
   const [rate, setRate] = useState(defaultRate ? String(defaultRate) : "");
@@ -397,32 +416,38 @@ function MoveForm({
   return (
     <div className="flex flex-col gap-3">
       <label className="text-xs font-semibold text-muted">
-        Quantity ({unit})
+        {t("stock.qtyUnit", "Quantity ({unit})", { unit })}
         <CalcField
           autoFocus
           value={qty}
           onChange={setQty}
-          placeholder={`Quantity (${unit})`}
+          placeholder={t("stock.qtyUnit", "Quantity ({unit})", { unit })}
         />
       </label>
       <label className="text-xs font-semibold text-muted">
-        {kind === "in" ? "Purchase rate" : "Sale rate"}
+        {kind === "in"
+          ? t("stock.purchaseRate", "Purchase rate")
+          : t("stock.saleRate", "Sale rate")}
         <CalcField
           value={rate}
           onChange={setRate}
-          placeholder={kind === "in" ? "Purchase rate" : "Sale rate"}
+          placeholder={
+            kind === "in"
+              ? t("stock.purchaseRate", "Purchase rate")
+              : t("stock.saleRate", "Sale rate")
+          }
         />
       </label>
       <button
         onClick={() => setPicker(true)}
         className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
       >
-        + Add items from stock
+        {t("stock.addItems", "+ Add items from stock")}
       </button>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Details / comments"
+        placeholder={t("c.notePh", "Details / comments")}
         rows={3}
         className={`${inputCls} resize-none`}
       />
@@ -432,7 +457,7 @@ function MoveForm({
           onChange={(e) => setSupplierId(e.target.value)}
           className={inputCls}
         >
-          <option value="">Supplier (optional)</option>
+          <option value="">{t("stock.supplierOpt", "Supplier (optional)")}</option>
           {suppliers.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -456,7 +481,7 @@ function MoveForm({
       </div>
       {r != null && q > 0 ? (
         <p className="numeric text-sm text-muted">
-          Amount {fmtRs(r * q)}
+          {t("stock.amountOf", "Amount {v}", { v: fmtRs(r * q) })}
         </p>
       ) : null}
       <button
@@ -474,7 +499,7 @@ function MoveForm({
         disabled={q <= 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Save"}
+        {busy ? t("c.saving", "Saving…") : t("c.save", "Save")}
       </button>
       <ItemLinePicker
         open={picker}
@@ -496,6 +521,7 @@ function EditProduct({
   supabase: ReturnType<typeof createClient>;
   onDone: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState(product.name);
   const [unit, setUnit] = useState(product.unit || "pcs");
   const [price, setPrice] = useState(String(product.sale_price));
@@ -526,7 +552,7 @@ function EditProduct({
         <input
           value={stock}
           onChange={(e) => setStock(e.target.value)}
-          placeholder="Stock on hand"
+          placeholder={t("stock.stockOnHand", "Stock on hand")}
           inputMode="decimal"
           className={`${inputCls} w-1/2`}
         />
@@ -535,14 +561,14 @@ function EditProduct({
         <input
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          placeholder="Sale price"
+          placeholder={t("stock.salePrice", "Sale price")}
           inputMode="decimal"
           className={`${inputCls} w-1/2`}
         />
         <input
           value={purchase}
           onChange={(e) => setPurchase(e.target.value)}
-          placeholder="Purchase price"
+          placeholder={t("stock.purchasePrice", "Purchase price")}
           inputMode="decimal"
           className={`${inputCls} w-1/2`}
         />
@@ -550,7 +576,7 @@ function EditProduct({
       <input
         value={low}
         onChange={(e) => setLow(e.target.value)}
-        placeholder="Low-stock alert level"
+        placeholder={t("stock.lowAlertLevel", "Low-stock alert level")}
         inputMode="decimal"
         className={inputCls}
       />
@@ -575,7 +601,7 @@ function EditProduct({
         disabled={busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Save"}
+        {busy ? t("c.saving", "Saving…") : t("c.save", "Save")}
       </button>
     </div>
   );

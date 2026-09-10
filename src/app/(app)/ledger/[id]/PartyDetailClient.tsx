@@ -103,8 +103,12 @@ export default function PartyDetailClient({
   );
   const periodLife = partyLifetime(ranged);
 
-  const creditLabel = isCust ? "You gave (credit)" : "Purchase (on credit)";
-  const paymentLabel = isCust ? "You got (payment)" : "Payment made";
+  const creditLabel = isCust
+    ? t("party.creditCust", "You gave (credit)")
+    : t("party.creditSupp", "Purchase (on credit)");
+  const paymentLabel = isCust
+    ? t("party.payCust", "You got (payment)")
+    : t("party.paySupp", "Payment made");
 
   const waText =
     balance > 0
@@ -181,7 +185,7 @@ export default function PartyDetailClient({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <Link href="/ledger" className="text-sm text-muted">
-          ‹ Ledger
+          ‹ {t("title./ledger", "Ledger")}
         </Link>
         <button
           onClick={() => setMenu(true)}
@@ -208,7 +212,7 @@ export default function PartyDetailClient({
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
-              You gave
+              {t("party.youGave", "You gave")}
             </p>
             <p className="numeric text-sm font-semibold text-ink">
               {fmtRs(life.credit)}
@@ -216,7 +220,7 @@ export default function PartyDetailClient({
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
-              You got
+              {t("party.youGot", "You got")}
             </p>
             <p className="numeric text-sm font-semibold text-ink">
               {fmtRs(life.payment)}
@@ -224,7 +228,7 @@ export default function PartyDetailClient({
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
-              Balance
+              {t("party.balance", "Balance")}
             </p>
             <p className={`numeric text-sm font-semibold ${balTone}`}>
               {fmtRs(Math.abs(balance))}
@@ -251,7 +255,9 @@ export default function PartyDetailClient({
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={`Search ${rows.length} entries`}
+        placeholder={t("party.searchEntries", "Search {n} entries", {
+          n: rows.length,
+        })}
         className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm outline-none focus:border-forest"
       />
 
@@ -286,10 +292,10 @@ export default function PartyDetailClient({
         {shown.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
             {rows.length === 0
-              ? "No entries yet."
+              ? t("party.noEntries", "No entries yet.")
               : isActive(range)
                 ? t("range.noneInRange", "Nothing in this date range.")
-                : "No matches."}
+                : t("c.noMatches", "No matches.")}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -330,7 +336,7 @@ export default function PartyDetailClient({
                           {fmtRs(r.amount)}
                         </p>
                         <p className="numeric text-[11px] text-muted">
-                          bal {fmtRs(Math.abs(r.running))}
+                          {t("party.balance", "bal")} {fmtRs(Math.abs(r.running))}
                         </p>
                       </div>
                     </div>
@@ -352,7 +358,7 @@ export default function PartyDetailClient({
           <EntryForm
             products={products}
             showMethod={addType === "payment"}
-            submitLabel="Save"
+            submitLabel={t("c.save", "Save")}
             onSubmit={(a, n, d, m) => saveAdd(addType, a, n, d, m)}
           />
         ) : null}
@@ -361,7 +367,7 @@ export default function PartyDetailClient({
       {/* entry detail (read) */}
       <Sheet
         open={detail !== null}
-        title="Entry"
+        title={t("party.entry", "Entry")}
         onClose={() => setDetail(null)}
       >
         {detail ? (
@@ -381,7 +387,7 @@ export default function PartyDetailClient({
             <p className="text-xs text-muted">
               {detail.type === "credit" ? creditLabel : paymentLabel} ·{" "}
               {fmtEntryDate(detail.date)}
-              {detail.bill_id ? " · from a bill" : ""}
+              {detail.bill_id ? ` · ${t("party.fromBill", "from a bill")}` : ""}
             </p>
             {detail.note ? (
               <p className="whitespace-pre-line rounded-lg border border-line bg-paper p-3 text-sm text-ink">
@@ -396,13 +402,13 @@ export default function PartyDetailClient({
                 }}
                 className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper"
               >
-                Edit
+                {t("c.edit", "Edit")}
               </button>
               <button
                 onClick={() => void removeRow(detail)}
                 className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-semibold text-danger"
               >
-                Delete
+                {t("c.delete", "Delete")}
               </button>
             </div>
             {party.phone ? (
@@ -417,7 +423,7 @@ export default function PartyDetailClient({
                 rel="noopener noreferrer"
                 className="rounded-xl border border-ok/40 bg-ok/10 px-4 py-2.5 text-center text-sm font-semibold text-ok"
               >
-                Share on WhatsApp
+                {t("party.shareWa", "Share on WhatsApp")}
               </a>
             ) : null}
           </div>
@@ -427,14 +433,14 @@ export default function PartyDetailClient({
       {/* edit entry */}
       <Sheet
         open={editRow !== null}
-        title="Edit entry"
+        title={t("c.edit", "Edit entry")}
         onClose={() => setEditRow(null)}
       >
         {editRow ? (
           <EntryForm
             products={products}
             showMethod={false}
-            submitLabel="Save changes"
+            submitLabel={t("c.saveChanges", "Save changes")}
             initial={{
               amount: String(editRow.amount),
               note: editRow.note ?? "",
@@ -458,10 +464,12 @@ export default function PartyDetailClient({
           }}
           className="w-full rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-semibold text-danger"
         >
-          {armDel ? "Tap again to delete this party" : "Delete party"}
+          {armDel
+            ? t("party.deletePartyArm", "Tap again to delete this party")
+            : t("party.deleteParty", "Delete party")}
         </button>
         <p className="mt-2 text-center text-xs text-muted">
-          Deletes the party and all its entries.
+          {t("party.deletePartyHint", "Deletes the party and all its entries.")}
         </p>
       </Sheet>
     </div>
@@ -486,6 +494,7 @@ function EntryForm({
     method: "cash" | "bank",
   ) => void;
 }) {
+  const t = useT();
   const start = initial?.date ? new Date(initial.date) : new Date();
   const [amount, setAmount] = useState(initial?.amount ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
@@ -523,20 +532,20 @@ function EntryForm({
         autoFocus
         value={amount}
         onChange={setAmount}
-        placeholder="Amount"
+        placeholder={t("c.amount", "Amount")}
       />
 
       <button
         onClick={() => setPicker(true)}
         className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
       >
-        + Add item from stock
+        {t("party.addItem", "+ Add item from stock")}
       </button>
 
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Details / comments"
+        placeholder={t("c.notePh", "Details / comments")}
         rows={3}
         className={`${cls} resize-none`}
       />
@@ -559,7 +568,7 @@ function EntryForm({
       <input
         value={ref}
         onChange={(e) => setRef(e.target.value)}
-        placeholder="Bill no. (optional)"
+        placeholder={t("party.billNoOpt", "Bill no. (optional)")}
         className={cls}
       />
 
@@ -569,11 +578,11 @@ function EntryForm({
             <button
               key={m}
               onClick={() => setMethod(m)}
-              className={`flex-1 rounded-lg py-2 text-xs font-semibold capitalize ${
+              className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
                 method === m ? "bg-forest text-paper" : "text-muted"
               }`}
             >
-              {m}
+              {t(`c.${m}`, m)}
             </button>
           ))}
         </div>
@@ -590,7 +599,7 @@ function EntryForm({
         disabled={amt <= 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "Saving…" : submitLabel}
+        {busy ? t("c.saving", "Saving…") : submitLabel}
       </button>
 
       <ItemLinePicker

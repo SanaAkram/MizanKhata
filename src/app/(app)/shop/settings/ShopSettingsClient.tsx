@@ -12,6 +12,7 @@ import {
   setActiveBusinessCookie,
   type Business,
 } from "@/lib/khata/business";
+import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 
 export default function ShopSettingsClient({
@@ -23,6 +24,7 @@ export default function ShopSettingsClient({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const active = list.find((b) => b.id === activeId) ?? list[0] ?? null;
 
   const [name, setName] = useState(active?.name ?? "");
@@ -180,12 +182,12 @@ export default function ShopSettingsClient({
   return (
     <div className="flex flex-col gap-4">
       <Link href="/shop" className="text-sm text-muted">
-        ‹ Shop
+        ‹ {t("nav.shop", "Shop")}
       </Link>
 
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-          Business
+          {t("shopset.business", "Business")}
         </h2>
         <div className="flex flex-col gap-1.5">
           {list.map((b) => (
@@ -199,14 +201,16 @@ export default function ShopSettingsClient({
               }`}
             >
               <span>{b.name}</span>
-              {b.id === activeId ? <span className="text-xs">active</span> : null}
+              {b.id === activeId ? (
+                <span className="text-xs">{t("shopset.active", "active")}</span>
+              ) : null}
             </button>
           ))}
           <button
             onClick={() => setNewBizOpen(true)}
             className="rounded-xl border border-dashed border-line px-4 py-2.5 text-sm font-semibold text-muted"
           >
-            + New business
+            {t("shopset.newBusiness", "+ New business")}
           </button>
           {list.length > 1 ? (
             <button
@@ -222,8 +226,12 @@ export default function ShopSettingsClient({
               className="mt-1 rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-xs font-semibold text-danger disabled:opacity-50"
             >
               {armDelBiz
-                ? `Tap again — deletes “${active?.name}” and all its data`
-                : "Delete this business"}
+                ? t(
+                    "shopset.deleteBusinessArm",
+                    "Tap again — deletes “{name}” and all its data",
+                    { name: active?.name ?? "" },
+                  )
+                : t("shopset.deleteBusiness", "Delete this business")}
             </button>
           ) : null}
         </div>
@@ -231,14 +239,14 @@ export default function ShopSettingsClient({
 
       <Sheet
         open={newBizOpen}
-        title="New business"
+        title={t("shopset.newBusinessTitle", "New business")}
         onClose={() => setNewBizOpen(false)}
       >
         <div className="flex flex-col gap-3">
           <input
             value={newBizName}
             onChange={(e) => setNewBizName(e.target.value)}
-            placeholder="Business name"
+            placeholder={t("shopset.businessName", "Business name")}
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Enter") void addBusiness();
@@ -250,14 +258,16 @@ export default function ShopSettingsClient({
             disabled={!newBizName.trim() || creating}
             className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
           >
-            {creating ? "Creating…" : "Create business"}
+            {creating
+              ? t("c.saving", "Creating…")
+              : t("shopset.createBusiness", "Create business")}
           </button>
         </div>
       </Sheet>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Profile — shows on bills
+          {t("shopset.profile", "Profile — shows on bills")}
         </h2>
 
         <div className="flex items-center gap-3">
@@ -270,7 +280,9 @@ export default function ShopSettingsClient({
                 className="h-full w-full object-contain"
               />
             ) : (
-              <span className="text-xs text-muted">No logo</span>
+              <span className="text-xs text-muted">
+                {t("shopset.noLogo", "No logo")}
+              </span>
             )}
           </div>
           <button
@@ -278,7 +290,11 @@ export default function ShopSettingsClient({
             disabled={uploading}
             className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-forest disabled:opacity-50"
           >
-            {uploading ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}
+            {uploading
+              ? t("c.saving", "Uploading…")
+              : logoUrl
+                ? t("shopset.changeLogo", "Change logo")
+                : t("shopset.uploadLogo", "Upload logo")}
           </button>
           <input
             ref={fileRef}
@@ -294,7 +310,7 @@ export default function ShopSettingsClient({
         </div>
 
         <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-          Business name
+          {t("shopset.businessName", "Business name")}
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -303,7 +319,7 @@ export default function ShopSettingsClient({
           />
         </label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-          Phone
+          {t("shopset.phone", "Phone")}
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -313,11 +329,11 @@ export default function ShopSettingsClient({
           />
         </label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-          Address
+          {t("shopset.address", "Address")}
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Shop address"
+            placeholder={t("shopset.shopAddress", "Shop address")}
             rows={2}
             className={`${cls} resize-none`}
           />
@@ -327,7 +343,7 @@ export default function ShopSettingsClient({
           disabled={busy}
           className="mt-1 rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
         >
-          {busy ? "Saving…" : "Save"}
+          {busy ? t("c.saving", "Saving…") : t("c.save", "Save")}
         </button>
       </section>
     </div>

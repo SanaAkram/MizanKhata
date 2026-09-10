@@ -12,6 +12,7 @@ import {
   type SupplierTx,
 } from "@/lib/khata/db";
 import { fetchProducts, type Product } from "@/lib/khata/shop-db";
+import { serverT } from "@/lib/i18n-server";
 import PartyDetailClient from "./PartyDetailClient";
 
 export const dynamic = "force-dynamic";
@@ -56,14 +57,17 @@ export default async function PartyPage({
   const party = kind === "supplier" ? supplier : customer;
 
   if (!party) {
+    const t = await serverT();
     return (
       <div className="rounded-2xl border border-line bg-card p-6 text-center">
-        <p className="text-sm text-muted">Party not found.</p>
+        <p className="text-sm text-muted">
+          {t("party.notFound", "Party not found.")}
+        </p>
         <Link
           href="/ledger"
           className="mt-3 inline-block text-sm font-semibold text-forest underline underline-offset-4"
         >
-          Back to ledger
+          {t("party.backToLedger", "Back to ledger")}
         </Link>
       </div>
     );

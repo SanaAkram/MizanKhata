@@ -404,6 +404,17 @@ function ReminderSettings({
           {busy ? "…" : push === "on" ? "On" : "Turn on"}
         </button>
       </div>
+      {push === "no-key" ? (
+        <p className="mt-2 text-xs text-danger">
+          Background push isn&apos;t configured on the server yet
+          (NEXT_PUBLIC_VAPID_PUBLIC_KEY missing from this build).
+        </p>
+      ) : push === "unsupported" ? (
+        <p className="mt-2 text-xs text-danger">
+          This browser can&apos;t do background reminders. On iPhone, open
+          MizanKhata from the Home-Screen icon (not Safari).
+        </p>
+      ) : null}
       {msg ? <p className="mt-2 text-xs text-danger">{msg}</p> : null}
 
       <div className="mt-4">

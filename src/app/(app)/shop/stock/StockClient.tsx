@@ -17,6 +17,7 @@ import {
   type StockMove,
 } from "@/lib/khata/shop-db";
 import { UNITS } from "@/lib/khata/units";
+import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 
@@ -67,6 +68,7 @@ export default function StockClient({
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const [tab, setTab] = useState<"all" | "low">("all");
   const [q, setQ] = useState("");
   const [restocking, setRestocking] = useState(false);
@@ -96,13 +98,13 @@ export default function StockClient({
   return (
     <div className="flex flex-col gap-4">
       <Link href="/shop" className="text-sm text-muted">
-        ‹ Shop
+        ‹ {t("nav.shop", "Shop")}
       </Link>
 
       <section className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Stock value
+            {t("stock.totalValue", "Stock value")}
           </p>
           <p className="numeric mt-1 text-lg font-semibold text-ink">
             {fmtRs(totalValue)}
@@ -110,7 +112,7 @@ export default function StockClient({
         </div>
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Items
+            {t("stock.items", "Items")}
           </p>
           <p className="numeric mt-1 text-lg font-semibold text-ink">
             {products.length}
@@ -123,13 +125,13 @@ export default function StockClient({
           href="/shop/stock/reports?type=in"
           className="rounded-xl border border-ok/40 bg-ok/10 px-4 py-2.5 text-center text-sm font-semibold text-ok"
         >
-          Stock IN report
+          {t("stock.inReportBtn", "Stock IN report")}
         </Link>
         <Link
           href="/shop/stock/reports?type=out"
           className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-center text-sm font-semibold text-danger"
         >
-          Stock OUT report
+          {t("stock.outReportBtn", "Stock OUT report")}
         </Link>
       </div>
 
@@ -137,19 +139,21 @@ export default function StockClient({
         onClick={() => setRestocking(true)}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper"
       >
-        + Restock / add product
+        {t("stock.restockAdd", "+ Restock / add product")}
       </button>
 
       <div className="flex gap-1 rounded-xl border border-line bg-card p-1">
-        {(["all", "low"] as const).map((t) => (
+        {(["all", "low"] as const).map((tk) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tk}
+            onClick={() => setTab(tk)}
             className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-              tab === t ? "bg-forest text-paper" : "text-muted"
+              tab === tk ? "bg-forest text-paper" : "text-muted"
             }`}
           >
-            {t === "all" ? "All items" : "Low stock"}
+            {tk === "all"
+              ? t("stock.allItems", "All items")
+              : t("stock.lowStock", "Low stock")}
           </button>
         ))}
       </div>
@@ -157,13 +161,17 @@ export default function StockClient({
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={`Search ${products.length} items`}
+        placeholder={t("stock.searchItems", "Search {n} items", {
+          n: products.length,
+        })}
         className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm outline-none focus:border-forest"
       />
 
       {shown.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-          {tab === "low" ? "Nothing low on stock." : "No products."}
+          {tab === "low"
+            ? t("stock.nothingLow", "Nothing low on stock.")
+            : t("stock.noProducts", "No products.")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -182,7 +190,7 @@ export default function StockClient({
                       {p.name}
                       {low ? (
                         <span className="ml-2 rounded bg-danger/10 px-1.5 py-0.5 text-[10px] font-semibold text-danger">
-                          Low
+                          {t("stock.low", "Low")}
                         </span>
                       ) : null}
                     </span>
@@ -196,8 +204,14 @@ export default function StockClient({
                     </span>
                   </div>
                   <div className="mt-0.5 flex gap-3 text-[11px] text-muted">
-                    <span>Sale {fmtRs(Number(p.sale_price))}</span>
-                    <span>{cost > 0 ? `Cost ${fmtRs(cost)}` : "no cost"}</span>
+                    <span>
+                      {t("stock.sale", "Sale")} {fmtRs(Number(p.sale_price))}
+                    </span>
+                    <span>
+                      {cost > 0
+                        ? t("stock.cost", "Cost {v}", { v: fmtRs(cost) })
+                        : t("stock.noCost", "no cost")}
+                    </span>
                     {last ? (
                       <span>
                         {new Date(last).toLocaleDateString([], {
@@ -216,7 +230,7 @@ export default function StockClient({
 
       <Sheet
         open={restocking}
-        title="Restock"
+        title={t("stock.restock", "Restock")}
         onClose={() => setRestocking(false)}
       >
         <RestockForm
@@ -247,6 +261,7 @@ function RestockForm({
   supabase: ReturnType<typeof createClient>;
   onDone: () => void;
 }) {
+  const t = useT();
   const [productId, setProductId] = useState(products[0]?.id ?? "__new__");
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("pcs");
@@ -317,7 +332,7 @@ function RestockForm({
         onChange={(e) => setProductId(e.target.value)}
         className={inputCls}
       >
-        <option value="__new__">+ New product</option>
+        <option value="__new__">{t("stock.newProduct", "+ New product")}</option>
         {products.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
@@ -330,7 +345,7 @@ function RestockForm({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Product name"
+            placeholder={t("stock.productName", "Product name")}
             className={inputCls}
           />
           <div className="flex gap-2">
@@ -338,7 +353,7 @@ function RestockForm({
             <input
               value={salePrice}
               onChange={(e) => setSalePrice(e.target.value)}
-              placeholder="Sale price"
+              placeholder={t("stock.salePrice", "Sale price")}
               inputMode="decimal"
               className={`${inputCls} w-1/2`}
             />
@@ -347,14 +362,14 @@ function RestockForm({
             <input
               value={purchasePrice}
               onChange={(e) => setPurchasePrice(e.target.value)}
-              placeholder="Purchase price"
+              placeholder={t("stock.purchasePrice", "Purchase price")}
               inputMode="decimal"
               className={`${inputCls} w-1/2`}
             />
             <input
               value={lowStock}
               onChange={(e) => setLowStock(e.target.value)}
-              placeholder="Low-stock alert"
+              placeholder={t("stock.lowStockAlert", "Low-stock alert")}
               inputMode="decimal"
               className={`${inputCls} w-1/2`}
             />
@@ -363,32 +378,42 @@ function RestockForm({
       ) : null}
 
       <label className="text-xs font-semibold text-muted">
-        Quantity
-        <CalcField value={qty} onChange={setQty} placeholder="Quantity" />
+        {t("stock.qty", "Quantity")}
+        <CalcField
+          value={qty}
+          onChange={setQty}
+          placeholder={t("stock.qty", "Quantity")}
+        />
       </label>
       <label className="text-xs font-semibold text-muted">
-        Cost / unit
-        <CalcField value={cost} onChange={setCost} placeholder="Cost / unit" />
+        {t("stock.costPerUnit", "Cost / unit")}
+        <CalcField
+          value={cost}
+          onChange={setCost}
+          placeholder={t("stock.costPerUnit", "Cost / unit")}
+        />
       </label>
       <input
         value={ref}
         onChange={(e) => setRef(e.target.value)}
-        placeholder="Bill / ref no. (optional)"
+        placeholder={t("stock.billRefOpt", "Bill / ref no. (optional)")}
         className={inputCls}
       />
 
-      <p className="numeric text-sm text-muted">Batch total {fmtRs(batch)}</p>
+      <p className="numeric text-sm text-muted">
+        {t("stock.batchTotal", "Batch total {v}", { v: fmtRs(batch) })}
+      </p>
 
       <div className="flex gap-1 rounded-xl border border-line p-1">
         {(["cash", "credit", "partial"] as const).map((m) => (
           <button
             key={m}
             onClick={() => setPay(m)}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold capitalize ${
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
               pay === m ? "bg-forest text-paper" : "text-muted"
             }`}
           >
-            {m}
+            {t(`pos.mode.${m}`, m)}
           </button>
         ))}
       </div>
@@ -397,7 +422,7 @@ function RestockForm({
         <input
           value={cashNow}
           onChange={(e) => setCashNow(e.target.value)}
-          placeholder="Cash paid now"
+          placeholder={t("stock.cashPaidNow", "Cash paid now")}
           inputMode="decimal"
           className={inputCls}
         />
@@ -409,7 +434,9 @@ function RestockForm({
           onChange={(e) => setSupplierId(e.target.value)}
           className={inputCls}
         >
-          <option value="">Select supplier…</option>
+          <option value="">
+            {t("stock.selectSupplier", "Select supplier…")}
+          </option>
           {suppliers.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -423,7 +450,7 @@ function RestockForm({
         disabled={!canSubmit}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Save restock"}
+        {busy ? t("c.saving", "Saving…") : t("stock.saveRestock", "Save restock")}
       </button>
     </div>
   );

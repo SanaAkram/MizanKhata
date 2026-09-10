@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { fmtRs } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import {
   completeSale,
   type CartLine,
@@ -22,6 +23,7 @@ type Props = {
 export default function PosClient({ businessId, products, customers }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useT();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [q, setQ] = useState("");
   const [checkout, setCheckout] = useState(false);
@@ -100,18 +102,17 @@ export default function PosClient({ businessId, products, customers }: Props) {
 
       {products.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-muted">
-          No products yet. Add stock in{" "}
+          {t("pos.noProducts", "No products yet. Add stock first.")}{" "}
           <Link href="/shop/stock" className="font-semibold text-forest">
-            Stock
+            {t("nav.shop", "Stock")}
           </Link>
-          .
         </p>
       ) : (
         <>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search products"
+            placeholder={t("pos.searchProducts", "Search products")}
             className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm outline-none focus:border-forest"
           />
           <div className="grid grid-cols-2 gap-2">
@@ -132,7 +133,12 @@ export default function PosClient({ businessId, products, customers }: Props) {
                     {fmtRs(Number(p.sale_price))}/{p.unit}
                   </p>
                   <p className="text-[11px] text-muted">
-                    {out ? "Out of stock" : `${left} ${p.unit} left`}
+                    {out
+                      ? t("pos.outOfStock", "Out of stock")
+                      : t("pos.left", "{n} {unit} left", {
+                          n: left,
+                          unit: p.unit,
+                        })}
                   </p>
                 </button>
               );
@@ -172,14 +178,14 @@ export default function PosClient({ businessId, products, customers }: Props) {
             onClick={() => setCheckout(true)}
             className="mt-2 w-full rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper"
           >
-            Charge {fmtRs(total)}
+            {t("pos.charge", "Charge {amt}", { amt: fmtRs(total) })}
           </button>
         </div>
       ) : null}
 
       <Sheet
         open={checkout}
-        title={`Total ${fmtRs(total)}`}
+        title={t("c.total", "Total") + " " + fmtRs(total)}
         onClose={() => setCheckout(false)}
       >
         <CheckoutForm
@@ -209,6 +215,7 @@ function CheckoutForm({
     method: "cash" | "bank";
   }) => void;
 }) {
+  const t = useT();
   const [mode, setMode] = useState<"cash" | "credit" | "partial">("cash");
   const [pmethod, setPmethod] = useState<"cash" | "bank">("cash");
   const [customerId, setCustomerId] = useState("");
@@ -238,11 +245,11 @@ function CheckoutForm({
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1 rounded-lg border border-line bg-paper p-3 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted">Sub total</span>
+          <span className="text-muted">{t("pos.subTotal", "Sub total")}</span>
           <span className="numeric">{fmtRs(subTotal)}</span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted">Discount</span>
+          <span className="text-muted">{t("pos.discount", "Discount")}</span>
           <div className="w-40">
             <CalcField
               value={discount}
@@ -253,7 +260,7 @@ function CheckoutForm({
           </div>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted">Tax %</span>
+          <span className="text-muted">{t("pos.taxPct", "Tax %")}</span>
           <input
             value={taxPct}
             onChange={(e) => setTaxPct(e.target.value)}
@@ -263,7 +270,7 @@ function CheckoutForm({
           />
         </div>
         <div className="mt-1 flex justify-between border-t border-line pt-1 font-semibold">
-          <span>Total</span>
+          <span>{t("c.total", "Total")}</span>
           <span className="numeric">{fmtRs(total)}</span>
         </div>
       </div>
@@ -271,7 +278,7 @@ function CheckoutForm({
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Notes (optional)"
+        placeholder={t("pos.notesOpt", "Notes (optional)")}
         rows={2}
         className="resize-none rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-forest"
       />
@@ -281,11 +288,11 @@ function CheckoutForm({
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold capitalize ${
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
               mode === m ? "bg-forest text-paper" : "text-muted"
             }`}
           >
-            {m}
+            {t(`pos.mode.${m}`, m)}
           </button>
         ))}
       </div>
@@ -295,11 +302,11 @@ function CheckoutForm({
           <button
             key={m}
             onClick={() => setPmethod(m)}
-            className={`flex-1 rounded-lg py-1.5 text-xs font-semibold capitalize ${
+            className={`flex-1 rounded-lg py-1.5 text-xs font-semibold ${
               pmethod === m ? "bg-forest text-paper" : "text-muted"
             }`}
           >
-            {m}
+            {t(`c.${m}`, m)}
           </button>
         ))}
       </div>
@@ -308,7 +315,7 @@ function CheckoutForm({
         <input
           value={cashNow}
           onChange={(e) => setCashNow(e.target.value)}
-          placeholder="Cash received now"
+          placeholder={t("pos.cashNow", "Cash received now")}
           inputMode="decimal"
           className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
         />
@@ -320,7 +327,7 @@ function CheckoutForm({
           onChange={(e) => setCustomerId(e.target.value)}
           className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
         >
-          <option value="">Select customer…</option>
+          <option value="">{t("pos.selectCustomer", "Select customer…")}</option>
           {customers.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -331,7 +338,9 @@ function CheckoutForm({
 
       {needsCustomer ? (
         <p className="text-xs text-muted">
-          {fmtRs(creditAmount)} goes on the customer&apos;s ledger.
+          {t("pos.goesToLedger", "{amt} goes on the customer's ledger.", {
+            amt: fmtRs(creditAmount),
+          })}
         </p>
       ) : null}
 
@@ -352,7 +361,11 @@ function CheckoutForm({
         disabled={!canSubmit}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "Saving…" : `Complete sale · ${fmtRs(total)}`}
+        {busy
+          ? t("c.saving", "Saving…")
+          : t("pos.completeSale", "Complete sale · {amt}", {
+              amt: fmtRs(total),
+            })}
       </button>
     </div>
   );

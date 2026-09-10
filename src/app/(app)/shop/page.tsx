@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
+import { serverT } from "@/lib/i18n-server";
 import { fmtRs } from "@/lib/format";
 import {
   buildParties,
@@ -34,6 +35,7 @@ async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
 
 export default async function ShopDashboardPage() {
   const db = await createClient();
+  const t = await serverT();
   const { active } = await resolveBusiness(db);
   const bid = active?.id ?? "";
   const [
@@ -121,10 +123,18 @@ export default async function ShopDashboardPage() {
   const hasChart = months.some((m) => m.income > 0 || m.expense > 0);
 
   const cards = [
-    { href: "/shop/pos", label: "Sell", sub: "New bill · POS" },
-    { href: "/shop/stock", label: "Stock", sub: `${products.length} items` },
-    { href: "/shop/bills", label: "Bills", sub: `${sales.length} bills` },
-    { href: "/cashbook", label: "Cash Book", sub: fmtRs(cashHand) },
+    { href: "/shop/pos", label: t("title./shop/pos", "Sell"), sub: "POS" },
+    {
+      href: "/shop/stock",
+      label: t("nav.shop", "Stock"),
+      sub: `${products.length} ${t("stock.items", "items")}`,
+    },
+    {
+      href: "/shop/bills",
+      label: t("title./shop/bills", "Bills"),
+      sub: `${sales.length}`,
+    },
+    { href: "/cashbook", label: t("title./cashbook", "Cash Book"), sub: fmtRs(cashHand) },
   ];
 
   return (
@@ -134,21 +144,29 @@ export default async function ShopDashboardPage() {
           href="/shop/settings"
           className="text-xs font-semibold text-muted underline underline-offset-4"
         >
-          Shop details
+          {t("dash.shopDetails", "Shop details")}
         </Link>
       </div>
 
       <section className="rounded-2xl border border-line bg-card p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Net profit (lifetime)
+          {t("dash.netProfit", "Net profit (lifetime)")}
         </p>
         <p className="numeric mt-1 text-3xl font-semibold text-forest">
           {fmtRs(profit)}
         </p>
         <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
-          <Stat label="Sales" value={fmtRs(totalSales)} tone="ok" />
-          <Stat label="Purchases" value={fmtRs(totalPurchases)} tone="danger" />
-          <Stat label="Expenses" value={fmtRs(expenses)} tone="danger" />
+          <Stat label={t("dash.sales", "Sales")} value={fmtRs(totalSales)} tone="ok" />
+          <Stat
+            label={t("dash.purchases", "Purchases")}
+            value={fmtRs(totalPurchases)}
+            tone="danger"
+          />
+          <Stat
+            label={t("dash.expenses", "Expenses")}
+            value={fmtRs(expenses)}
+            tone="danger"
+          />
         </div>
         {hasChart ? (
           <div className="mt-4">
@@ -158,12 +176,26 @@ export default async function ShopDashboardPage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <MiniCard label="You'll get" value={fmtRs(receivables)} tone="ok" />
-        <MiniCard label="You'll give" value={fmtRs(payables)} tone="danger" />
-        <MiniCard label="Cash in hand" value={fmtRs(cashHand)} />
-        <MiniCard label="Bank balance" value={fmtRs(bankBal)} />
-        <MiniCard label="Stock value" value={fmtRs(stockVal)} />
-        <MiniCard label="Items in stock" value={String(inStock)} />
+        <MiniCard
+          label={t("ledger.youllGet", "You'll get")}
+          value={fmtRs(receivables)}
+          tone="ok"
+        />
+        <MiniCard
+          label={t("ledger.youllGive", "You'll give")}
+          value={fmtRs(payables)}
+          tone="danger"
+        />
+        <MiniCard label={t("cash.inHand", "Cash in hand")} value={fmtRs(cashHand)} />
+        <MiniCard label={t("cash.bankBal", "Bank balance")} value={fmtRs(bankBal)} />
+        <MiniCard
+          label={t("stock.totalValue", "Stock value")}
+          value={fmtRs(stockVal)}
+        />
+        <MiniCard
+          label={t("dash.itemsInStock", "Items in stock")}
+          value={String(inStock)}
+        />
       </section>
 
       <section className="grid grid-cols-2 gap-3">
@@ -182,7 +214,8 @@ export default async function ShopDashboardPage() {
       {recvByParty.length > 0 ? (
         <section className="rounded-2xl border border-line bg-card p-4">
           <h2 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted">
-            Receivables <span className="numeric">{fmtRs(receivables)}</span>
+            {t("dash.receivables", "Receivables")}{" "}
+            <span className="numeric">{fmtRs(receivables)}</span>
           </h2>
           <ShareBars items={recvByParty} tone="ok" />
         </section>
@@ -191,7 +224,8 @@ export default async function ShopDashboardPage() {
       {payByParty.length > 0 ? (
         <section className="rounded-2xl border border-line bg-card p-4">
           <h2 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted">
-            Payables <span className="numeric">{fmtRs(payables)}</span>
+            {t("dash.payables", "Payables")}{" "}
+            <span className="numeric">{fmtRs(payables)}</span>
           </h2>
           <ShareBars items={payByParty} tone="danger" />
         </section>
@@ -200,7 +234,7 @@ export default async function ShopDashboardPage() {
       {restock.length > 0 ? (
         <section className="rounded-2xl border border-line bg-card p-4">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-            Restock soon
+            {t("dash.restockSoon", "Restock soon")}
           </h2>
           <ul className="flex flex-col gap-1.5">
             {restock.map((p) => (
@@ -223,17 +257,17 @@ export default async function ShopDashboardPage() {
       {top.length > 0 ? (
         <section className="rounded-2xl border border-line bg-card p-4">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-            Top selling
+            {t("dash.topSelling", "Top selling")}
           </h2>
           <ul className="flex flex-col gap-1.5">
-            {top.map((t) => (
+            {top.map((ts) => (
               <li
-                key={t.name}
+                key={ts.name}
                 className="flex items-center justify-between text-sm"
               >
-                <span className="text-ink">{t.name}</span>
+                <span className="text-ink">{ts.name}</span>
                 <span className="numeric font-semibold text-forest">
-                  {Math.round(t.qty).toLocaleString("en-US")} {t.unit}
+                  {Math.round(ts.qty).toLocaleString("en-US")} {ts.unit}
                 </span>
               </li>
             ))}

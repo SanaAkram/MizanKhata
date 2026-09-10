@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Source_Serif_4, IBM_Plex_Sans } from "next/font/google";
+import { getLang } from "@/lib/i18n-server";
 import "./globals.css";
 
 const serif = Source_Serif_4({
@@ -32,11 +33,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const lang = await getLang();
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable} h-full`}>
+    <html
+      lang={lang === "en" ? "en" : "ur"}
+      dir={lang === "ur" ? "rtl" : "ltr"}
+      className={`${serif.variable} ${sans.variable} h-full`}
+    >
       <body className="min-h-full">{children}</body>
     </html>
   );

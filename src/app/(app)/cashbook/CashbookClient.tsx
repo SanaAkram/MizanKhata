@@ -75,7 +75,7 @@ export default function CashbookClient({
       <section className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-card p-4 text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Cash in hand
+            {t("cash.inHand", "Cash in hand")}
           </p>
           <p
             className={`numeric mt-1 text-2xl font-semibold ${
@@ -87,7 +87,7 @@ export default function CashbookClient({
         </div>
         <div className="rounded-2xl border border-line bg-card p-4 text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Bank balance
+            {t("cash.bankBal", "Bank balance")}
           </p>
           <p
             className={`numeric mt-1 text-2xl font-semibold ${
@@ -100,15 +100,15 @@ export default function CashbookClient({
       </section>
 
       <div className="flex gap-1 rounded-xl border border-line bg-card p-1">
-        {(["all", "cash", "bank"] as const).map((t) => (
+        {(["all", "cash", "bank"] as const).map((tk) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold capitalize ${
-              tab === t ? "bg-forest text-paper" : "text-muted"
+            key={tk}
+            onClick={() => setTab(tk)}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
+              tab === tk ? "bg-forest text-paper" : "text-muted"
             }`}
           >
-            {t}
+            {tk === "all" ? t("ledger.all", "All") : t(`c.${tk}`, tk)}
           </button>
         ))}
       </div>
@@ -140,13 +140,13 @@ export default function CashbookClient({
 
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-          Entries
+          {t("cash.entries", "Entries")}
         </h2>
         {rows.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
             {isActive(range)
               ? t("range.noneInRange", "Nothing in this date range.")
-              : "No cash entries yet — tap + to add one."}
+              : t("cash.noEntries", "No cash entries yet — tap + to add one.")}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -158,7 +158,10 @@ export default function CashbookClient({
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm text-ink">
-                      {e.note || (e.type === "in" ? "Cash in" : "Cash out")}
+                      {e.note ||
+                        (e.type === "in"
+                          ? t("cash.in", "Cash in")
+                          : t("cash.out", "Cash out"))}
                       {e.party_name ? (
                         <span className="text-muted"> — {e.party_name}</span>
                       ) : null}
@@ -183,13 +186,17 @@ export default function CashbookClient({
 
       <button
         onClick={() => setAdding(true)}
-        aria-label="Add cash entry"
+        aria-label={t("cash.addEntry", "Add cash entry")}
         className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-forest text-2xl font-light text-paper shadow-lg active:scale-95 sm:right-[max(1rem,calc(50%-15rem+1rem))]"
       >
         +
       </button>
 
-      <Sheet open={adding} title="Add cash entry" onClose={() => setAdding(false)}>
+      <Sheet
+        open={adding}
+        title={t("cash.addEntry", "Add cash entry")}
+        onClose={() => setAdding(false)}
+      >
         <AddCashForm
           businessId={businessId}
           parties={parties}
@@ -203,7 +210,11 @@ export default function CashbookClient({
 
       <Sheet
         open={detail !== null}
-        title={detail?.type === "in" ? "Cash in" : "Cash out"}
+        title={
+          detail?.type === "in"
+            ? t("cash.in", "Cash in")
+            : t("cash.out", "Cash out")
+        }
         onClose={() => setDetail(null)}
       >
         {detail ? (
@@ -225,7 +236,7 @@ export default function CashbookClient({
               onClick={() => remove(detail)}
               className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-sm font-semibold text-danger"
             >
-              Delete entry
+              {t("cash.deleteEntry", "Delete entry")}
             </button>
           </div>
         ) : null}
@@ -245,6 +256,7 @@ function AddCashForm({
   onDone: () => void;
   supabase: ReturnType<typeof createClient>;
 }) {
+  const t = useT();
   const [type, setType] = useState<"in" | "out">("in");
   const [method, setMethod] = useState<"cash" | "bank">("cash");
   const [category, setCategory] = useState("");
@@ -290,15 +302,15 @@ function AddCashForm({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1 rounded-xl border border-line p-1">
-        {(["in", "out"] as const).map((t) => (
+        {(["in", "out"] as const).map((tk) => (
           <button
-            key={t}
-            onClick={() => setType(t)}
+            key={tk}
+            onClick={() => setType(tk)}
             className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-              type === t ? "bg-forest text-paper" : "text-muted"
+              type === tk ? "bg-forest text-paper" : "text-muted"
             }`}
           >
-            {t === "in" ? "Cash in" : "Cash out"}
+            {tk === "in" ? t("cash.in", "Cash in") : t("cash.out", "Cash out")}
           </button>
         ))}
       </div>
@@ -307,7 +319,7 @@ function AddCashForm({
         autoFocus
         value={amount}
         onChange={setAmount}
-        placeholder="Amount"
+        placeholder={t("c.amount", "Amount")}
       />
       <div className="flex gap-2">
         <div className="flex flex-1 gap-1 rounded-xl border border-line p-1">
@@ -315,11 +327,11 @@ function AddCashForm({
             <button
               key={m}
               onClick={() => setMethod(m)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-semibold capitalize ${
+              className={`flex-1 rounded-lg py-1.5 text-xs font-semibold ${
                 method === m ? "bg-forest text-paper" : "text-muted"
               }`}
             >
-              {m}
+              {t(`c.${m}`, m)}
             </button>
           ))}
         </div>
@@ -327,12 +339,12 @@ function AddCashForm({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm capitalize outline-none focus:border-forest"
+            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-forest"
           >
-            <option value="">category…</option>
+            <option value="">{t("cash.category", "category…")}</option>
             {OUT_CATS.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {t(`cat.${c}`, c)}
               </option>
             ))}
           </select>
@@ -343,17 +355,21 @@ function AddCashForm({
         onChange={(e) => setPartyVal(e.target.value)}
         className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
       >
-        <option value="">No party — general</option>
+        <option value="">{t("cash.noParty", "No party — general")}</option>
         {parties.map((p) => (
           <option key={`${p.kind}:${p.id}`} value={`${p.kind}:${p.id}`}>
-            {p.name} ({p.kind})
+            {p.name} (
+            {p.kind === "customer"
+              ? t("c.customer", "customer")
+              : t("c.supplier", "supplier")}
+            )
           </option>
         ))}
       </select>
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Note (e.g. shop rent)"
+        placeholder={t("cash.notePh", "Note (e.g. shop rent)")}
         className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
       />
       <button
@@ -361,7 +377,7 @@ function AddCashForm({
         disabled={amt <= 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Save"}
+        {busy ? t("c.saving", "Saving…") : t("c.save", "Save")}
       </button>
     </div>
   );

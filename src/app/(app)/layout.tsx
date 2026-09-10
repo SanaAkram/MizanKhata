@@ -4,6 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import Toaster from "@/components/Toaster";
+import HtmlLang from "@/components/HtmlLang";
 
 export default async function AppLayout({
   children,
@@ -24,6 +25,7 @@ export default async function AppLayout({
       <BottomNav />
       <ServiceWorkerRegister />
       <Toaster />
+      <HtmlLang />
     </div>
   );
 }
