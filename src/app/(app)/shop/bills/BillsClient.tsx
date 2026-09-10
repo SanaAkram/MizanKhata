@@ -474,9 +474,17 @@ export default function BillsClient({
 
             {openCust ? (
               <>
-                <div className="flex items-center justify-between text-sm text-muted">
+                <div
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold ${
+                    prevBal > 0
+                      ? "border-ok/30 bg-ok/10 text-ok"
+                      : prevBal < 0
+                        ? "border-danger/30 bg-danger/10 text-danger"
+                        : "border-line bg-card text-muted"
+                  }`}
+                >
                   <span>{t("bills.previousAmount", "Previous amount")}</span>
-                  <span className="numeric">{fmtRs(prevBal)}</span>
+                  <span className="numeric">{fmtRs(Math.abs(prevBal))}</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-line pt-1.5 text-sm font-semibold">
                   <span>{t("bills.grandTotalDue", "Grand total")}</span>

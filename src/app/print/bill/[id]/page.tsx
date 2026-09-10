@@ -166,10 +166,38 @@ export default async function BillPrintPage({
         />
         {prevBal != null ? (
           <>
-            <Row
-              label={t("bills.previousAmount", "Previous amount")}
-              value={fmtRs(prevBal)}
-            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                fontSize: 13,
+                fontWeight: 700,
+                margin: "4px 0",
+                padding: "4px 8px",
+                borderRadius: 6,
+                border: `1px solid ${
+                  prevBal > 0 ? "#c8e0cd" : prevBal < 0 ? "#e6c6c2" : "#ddd"
+                }`,
+                background:
+                  prevBal > 0
+                    ? "#eef6ef"
+                    : prevBal < 0
+                      ? "#fbeeec"
+                      : "#f7f7f5",
+                color:
+                  prevBal > 0
+                    ? "#2f7a43"
+                    : prevBal < 0
+                      ? "#b23b32"
+                      : muted,
+              }}
+            >
+              <span>{t("bills.previousAmount", "Previous amount")}</span>
+              <span style={{ whiteSpace: "nowrap" }}>
+                {fmtRs(Math.abs(prevBal))}
+              </span>
+            </div>
             <Row
               label={t("bills.grandTotalDue", "Grand total")}
               value={fmtRs(grandTotal)}
