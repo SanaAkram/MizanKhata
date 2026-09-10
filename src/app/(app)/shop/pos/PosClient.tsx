@@ -14,13 +14,19 @@ import {
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 
+export type PartyOpt = {
+  id: string;
+  name: string;
+  kind: "customer" | "supplier";
+};
+
 type Props = {
   businessId: string;
   products: Product[];
-  customers: { id: string; name: string }[];
+  parties: PartyOpt[];
 };
 
-export default function PosClient({ businessId, products, customers }: Props) {
+export default function PosClient({ businessId, products, parties }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const t = useT();
@@ -83,19 +89,20 @@ export default function PosClient({ businessId, products, customers }: Props) {
   async function confirm(args: {
     paidCash: number;
     creditAmount: number;
-    customerId: string | null;
+    partyId: string | null;
     discount: number;
     tax: number;
     note: string | null;
     method: "cash" | "bank";
   }) {
-    const cust = customers.find((c) => c.id === args.customerId) ?? null;
+    const party = parties.find((p) => p.id === args.partyId) ?? null;
     await completeSale(supabase, businessId, {
       lines: cart,
       paidCash: args.paidCash,
       creditAmount: args.creditAmount,
-      customerId: args.customerId,
-      customerName: cust?.name ?? null,
+      customerId: args.partyId,
+      customerName: party?.name ?? null,
+      partyKind: party?.kind ?? "customer",
       discount: args.discount,
       tax: args.tax,
       note: args.note,
@@ -204,11 +211,7 @@ export default function PosClient({ businessId, products, customers }: Props) {
         title={t("c.total", "Total") + " " + fmtRs(total)}
         onClose={() => setCheckout(false)}
       >
-        <CheckoutForm
-          total={total}
-          customers={customers}
-          onConfirm={confirm}
-        />
+        <CheckoutForm total={total} parties={parties} onConfirm={confirm} />
       </Sheet>
     </div>
   );
@@ -246,15 +249,15 @@ function CartQty({
 
 function CheckoutForm({
   total: subTotal,
-  customers,
+  parties,
   onConfirm,
 }: {
   total: number;
-  customers: { id: string; name: string }[];
+  parties: PartyOpt[];
   onConfirm: (a: {
     paidCash: number;
     creditAmount: number;
-    customerId: string | null;
+    partyId: string | null;
     discount: number;
     tax: number;
     note: string | null;
@@ -262,10 +265,11 @@ function CheckoutForm({
   }) => void;
 }) {
   const t = useT();
-  const [mode, setMode] = useState<"cash" | "credit" | "partial">("cash");
+  const customers = parties.filter((p) => p.kind === "customer");
+  const suppliers = parties.filter((p) => p.kind === "supplier");
+  const [mode, setMode] = useState<"cash" | "credit">("cash");
   const [pmethod, setPmethod] = useState<"cash" | "bank">("cash");
   const [customerId, setCustomerId] = useState("");
-  const [cashNow, setCashNow] = useState("");
   const [discount, setDiscount] = useState("");
   const [taxPct, setTaxPct] = useState("");
   const [note, setNote] = useState("");
@@ -277,14 +281,9 @@ function CheckoutForm({
     100;
   const total = Math.round((subTotal - disc + tax) * 100) / 100;
 
-  const needsCustomer = mode !== "cash";
-  const paidCash =
-    mode === "cash"
-      ? total
-      : mode === "credit"
-        ? 0
-        : Math.min(Math.max(parseFloat(cashNow) || 0, 0), total);
-  const creditAmount = Math.round((total - paidCash) * 100) / 100;
+  const needsCustomer = mode === "credit";
+  const paidCash = mode === "cash" ? total : 0;
+  const creditAmount = mode === "cash" ? 0 : total;
   const canSubmit = total > 0 && (!needsCustomer || customerId) && !busy;
 
   return (
@@ -330,7 +329,7 @@ function CheckoutForm({
       />
 
       <div className="flex gap-1 rounded-xl border border-line p-1">
-        {(["cash", "credit", "partial"] as const).map((m) => (
+        {(["cash", "credit"] as const).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
@@ -343,28 +342,20 @@ function CheckoutForm({
         ))}
       </div>
 
-      <div className="flex gap-1 rounded-xl border border-line p-1">
-        {(["cash", "bank"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setPmethod(m)}
-            className={`flex-1 rounded-lg py-1.5 text-xs font-semibold ${
-              pmethod === m ? "bg-forest text-paper" : "text-muted"
-            }`}
-          >
-            {t(`c.${m}`, m)}
-          </button>
-        ))}
-      </div>
-
-      {mode === "partial" ? (
-        <input
-          value={cashNow}
-          onChange={(e) => setCashNow(e.target.value)}
-          placeholder={t("pos.cashNow", "Cash received now")}
-          inputMode="decimal"
-          className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
-        />
+      {mode === "cash" ? (
+        <div className="flex gap-1 rounded-xl border border-line p-1">
+          {(["cash", "bank"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setPmethod(m)}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-semibold ${
+                pmethod === m ? "bg-forest text-paper" : "text-muted"
+              }`}
+            >
+              {t(`c.${m}`, m)}
+            </button>
+          ))}
+        </div>
       ) : null}
 
       {needsCustomer ? (
@@ -373,18 +364,33 @@ function CheckoutForm({
           onChange={(e) => setCustomerId(e.target.value)}
           className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
         >
-          <option value="">{t("pos.selectCustomer", "Select customer…")}</option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
+          <option value="">
+            {t("pos.selectParty", "Select customer / supplier…")}
+          </option>
+          {customers.length > 0 ? (
+            <optgroup label={t("c.customers", "Customers")}>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
+          {suppliers.length > 0 ? (
+            <optgroup label={t("c.suppliers", "Suppliers")}>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
         </select>
       ) : null}
 
       {needsCustomer ? (
         <p className="text-xs text-muted">
-          {t("pos.goesToLedger", "{amt} goes on the customer's ledger.", {
+          {t("pos.goesToParty", "{amt} goes on their account.", {
             amt: fmtRs(creditAmount),
           })}
         </p>
@@ -397,7 +403,7 @@ function CheckoutForm({
           onConfirm({
             paidCash,
             creditAmount,
-            customerId: needsCustomer ? customerId : null,
+            partyId: needsCustomer ? customerId : null,
             discount: disc,
             tax,
             note: note.trim() || null,

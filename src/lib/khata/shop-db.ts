@@ -302,6 +302,8 @@ export async function completeSale(
     creditAmount: number;
     customerId: string | null;
     customerName: string | null;
+    /** Whether the party on this bill is a customer (default) or a supplier. */
+    partyKind?: "customer" | "supplier";
     discount?: number;
     tax?: number;
     note?: string | null;
@@ -309,6 +311,8 @@ export async function completeSale(
   },
 ): Promise<void> {
   const { lines, paidCash, creditAmount, customerId, customerName } = args;
+  const partyKind = args.partyKind ?? "customer";
+  const isSupplier = partyKind === "supplier" && !!customerId;
   const total =
     Math.round(
       (lines.reduce((s, l) => s + l.price * l.qty, 0) -
@@ -330,7 +334,9 @@ export async function completeSale(
     total,
     paid_cash: paidCash,
     credit_amount: creditAmount,
-    customer_id: customerId,
+    // A supplier bill keeps the name for the printout but isn't linked as a
+    // customer; its credit goes on the supplier ledger below.
+    customer_id: isSupplier ? null : customerId,
     customer_name: customerName,
     discount: args.discount ?? 0,
     tax: args.tax ?? 0,
@@ -377,7 +383,7 @@ export async function completeSale(
       note:
         `Sale${customerName ? ` — ${customerName}` : ""}` +
         (itemsText ? `\n${itemsText}` : ""),
-      party_type: customerId ? "customer" : null,
+      party_type: customerId ? partyKind : null,
       party_id: customerId,
       party_name: customerName,
       date: nowIso,
@@ -386,19 +392,35 @@ export async function completeSale(
     });
   }
   if (creditAmount > 0 && customerId) {
-    await db.from("shop_khata_tx").insert({
-      id: newId("kt_"),
-      business_id: businessId,
-      customer_id: customerId,
-      type: "credit",
-      amount: creditAmount,
-      note:
-        (itemsText || "Bill") +
-        (args.note ? `\n${args.note}` : "") +
-        (paidCash > 0 ? `\nPaid cash Rs ${paidCash}` : ""),
-      bill_id: saleId,
-      date: nowIso,
-    });
+    const creditNote =
+      (itemsText || "Bill") +
+      (args.note ? `\n${args.note}` : "") +
+      (paidCash > 0 ? `\nPaid cash Rs ${paidCash}` : "");
+    if (isSupplier) {
+      // Goods sold to a supplier on credit = they owe us that much, so it
+      // lowers what we owe them: a payment on the supplier ledger.
+      await db.from("shop_supplier_tx").insert({
+        id: newId("st_"),
+        business_id: businessId,
+        supplier_id: customerId,
+        type: "payment",
+        amount: creditAmount,
+        note: `Goods sold on credit\n${creditNote}`,
+        ref: saleId,
+        date: nowIso,
+      });
+    } else {
+      await db.from("shop_khata_tx").insert({
+        id: newId("kt_"),
+        business_id: businessId,
+        customer_id: customerId,
+        type: "credit",
+        amount: creditAmount,
+        note: creditNote,
+        bill_id: saleId,
+        date: nowIso,
+      });
+    }
   }
 }
 

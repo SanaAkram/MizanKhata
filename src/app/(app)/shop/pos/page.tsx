@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
-import { fetchCustomers } from "@/lib/khata/db";
+import { fetchCustomers, fetchSuppliers } from "@/lib/khata/db";
 import { fetchProducts, type Product } from "@/lib/khata/shop-db";
-import PosClient from "./PosClient";
+import PosClient, { type PartyOpt } from "./PosClient";
 
 export const dynamic = "force-dynamic";
 
@@ -12,19 +12,21 @@ export default async function PosPage() {
   const bid = active?.id ?? "";
 
   let products: Product[] = [];
-  let customers: { id: string; name: string }[] = [];
+  let parties: PartyOpt[] = [];
   try {
-    const [p, c] = await Promise.all([
+    const [p, c, s] = await Promise.all([
       fetchProducts(db, bid),
       fetchCustomers(db, bid),
+      fetchSuppliers(db, bid),
     ]);
     products = p;
-    customers = c.map((x) => ({ id: x.id, name: x.name }));
+    parties = [
+      ...c.map((x) => ({ id: x.id, name: x.name, kind: "customer" as const })),
+      ...s.map((x) => ({ id: x.id, name: x.name, kind: "supplier" as const })),
+    ];
   } catch {
     /* render empty */
   }
 
-  return (
-    <PosClient businessId={bid} products={products} customers={customers} />
-  );
+  return <PosClient businessId={bid} products={products} parties={parties} />;
 }

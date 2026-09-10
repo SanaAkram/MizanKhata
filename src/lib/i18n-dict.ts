@@ -48,6 +48,8 @@ const DICT: Record<string, Entry> = {
   "c.bank": { en: "bank", ur: "بینک", roman: "bank" },
   "c.customer": { en: "Customer", ur: "گاہک", roman: "Customer" },
   "c.supplier": { en: "Supplier", ur: "سپلائر", roman: "Supplier" },
+  "c.customers": { en: "Customers", ur: "گاہک", roman: "Customers" },
+  "c.suppliers": { en: "Suppliers", ur: "سپلائرز", roman: "Suppliers" },
   "c.noMatches": { en: "No matches.", ur: "کچھ نہیں ملا۔", roman: "Kuch nahi mila." },
   "c.back": { en: "Back", ur: "واپس", roman: "Wapas" },
 
@@ -347,23 +349,17 @@ const DICT: Record<string, Entry> = {
     ur: "نوٹ (اختیاری)",
     roman: "Notes (optional)",
   },
-  "pos.mode.cash": { en: "cash", ur: "نقد", roman: "cash" },
-  "pos.mode.credit": { en: "credit", ur: "اُدھار", roman: "udhaar" },
-  "pos.mode.partial": { en: "partial", ur: "جزوی", roman: "thora" },
-  "pos.cashNow": {
-    en: "Cash received now",
-    ur: "ابھی وصول شدہ نقد",
-    roman: "Abhi wasool cash",
+  "pos.mode.cash": { en: "Cash", ur: "نقد", roman: "Cash" },
+  "pos.mode.credit": { en: "Udhaar", ur: "اُدھار", roman: "Udhaar" },
+  "pos.selectParty": {
+    en: "Select customer / supplier…",
+    ur: "گاہک / سپلائر منتخب کریں…",
+    roman: "Customer / supplier select karein…",
   },
-  "pos.selectCustomer": {
-    en: "Select customer…",
-    ur: "گاہک منتخب کریں…",
-    roman: "Customer select karein…",
-  },
-  "pos.goesToLedger": {
-    en: "{amt} goes on the customer's ledger.",
-    ur: "{amt} گاہک کے کھاتے میں چڑھے گا۔",
-    roman: "{amt} customer ke khate mein chdhega.",
+  "pos.goesToParty": {
+    en: "{amt} goes on their account.",
+    ur: "{amt} اُن کے کھاتے میں چڑھے گا۔",
+    roman: "{amt} un ke khate mein chdhega.",
   },
   "pos.completeSale": {
     en: "Complete sale · {amt}",
