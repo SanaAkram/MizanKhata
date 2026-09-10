@@ -140,6 +140,11 @@ export default async function ShopDashboardPage() {
       label: t("title./shop/expense", "Expenses"),
       sub: fmtRs(expenses),
     },
+    {
+      href: "/shop/reports",
+      label: t("title./shop/reports", "Reports"),
+      sub: t("rep.pnl", "Profit & loss"),
+    },
   ];
 
   return (

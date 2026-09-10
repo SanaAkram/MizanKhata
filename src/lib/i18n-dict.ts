@@ -580,6 +580,40 @@ const DICT: Record<string, Entry> = {
   "exp.entry": { en: "entry", ur: "اندراج", roman: "entry" },
   "exp.entries": { en: "Entries", ur: "اندراجات", roman: "Entries" },
   "exp.allTime": { en: "All time", ur: "سارا وقت", roman: "Sara waqt" },
+
+  // ---- reports -----------------------------------------------------
+  "rep.allTime": { en: "All time", ur: "سارا وقت", roman: "Sara waqt" },
+  "rep.pnl": { en: "Profit & loss", ur: "نفع و نقصان", roman: "Nafa nuqsan" },
+  "rep.blocks": { en: "Blocks", ur: "خانے", roman: "Blocks" },
+  "rep.chart": { en: "Chart", ur: "چارٹ", roman: "Chart" },
+  "rep.cogs": {
+    en: "Cost of goods sold",
+    ur: "بکے مال کی لاگت",
+    roman: "Bike maal ki lagat",
+  },
+  "rep.grossProfit": { en: "Gross profit", ur: "مجموعی نفع", roman: "Gross nafa" },
+  "rep.netProfit": { en: "Net profit", ur: "خالص نفع", roman: "Khalis nafa" },
+  "rep.last6": {
+    en: "Last 6 months · sales vs money out",
+    ur: "پچھلے 6 ماہ · فروخت بمقابلہ خرچ",
+    roman: "Pichle 6 mahine · bikri vs kharch",
+  },
+  "rep.noChart": {
+    en: "Not enough data for a chart yet.",
+    ur: "چارٹ کے لیے ابھی کافی ڈیٹا نہیں۔",
+    roman: "Chart ke liye abhi kaafi data nahi.",
+  },
+  "rep.cashFlow": { en: "Cash flow", ur: "نقد کی آمد و رفت", roman: "Cash flow" },
+  "rep.expenseBreakdown": {
+    en: "Expenses by category",
+    ur: "قسم کے حساب سے اخراجات",
+    roman: "Category ke hisaab se kharchay",
+  },
+  "rep.openExpenses": {
+    en: "Open Expenses",
+    ur: "اخراجات کھولیں",
+    roman: "Expenses kholein",
+  },
   "dash.stockValue": {
     en: "Stock value",
     ur: "اسٹاک کی مالیت",
