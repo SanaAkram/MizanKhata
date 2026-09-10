@@ -39,6 +39,8 @@ import ItemLinePicker, {
   linesTotal,
   type ItemLine,
 } from "@/components/ItemLinePicker";
+import { shareBill } from "@/lib/khata/bill-share";
+import { BILL_CREDIT } from "@/lib/brand";
 
 type Row = {
   id: string;
@@ -231,6 +233,23 @@ export default function PartyDetailClient({
     router.refresh();
   }
 
+  // Plain-text bill for the entry sheet's Share button (the printable one
+  // lives at /print/bill/<bill_id>).
+  function billTextFor(row: Row): string {
+    return [
+      `${party.name} — ${creditLabel} ${fmtRs(row.amount)}`,
+      new Date(row.date).toLocaleDateString(),
+      "",
+      row.note ?? "",
+      "",
+      `${t("party.balance", "Balance")}: ${fmtRs(Math.abs(balance))}`,
+      "",
+      BILL_CREDIT,
+    ]
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n");
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -385,10 +404,10 @@ export default function PartyDetailClient({
                       {t("party.balance", "bal")} {fmtRs(Math.abs(r.running))}
                     </span>
                   </span>
-                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
+                  <span className="numeric block whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
                     {credit ? fmtRs(r.amount) : ""}
                   </span>
-                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
+                  <span className="numeric block whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
                     {credit ? "" : fmtRs(r.amount)}
                   </span>
                 </button>
@@ -497,6 +516,37 @@ export default function PartyDetailClient({
                 {detail.note}
               </p>
             ) : null}
+
+            {detail.bill_id || detail.type === "credit" ? (
+              <div
+                className={`grid gap-2 ${
+                  detail.bill_id ? "grid-cols-2" : "grid-cols-1"
+                }`}
+              >
+                {detail.bill_id ? (
+                  <a
+                    href={`/print/bill/${detail.bill_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-center text-sm font-semibold text-forest"
+                  >
+                    {t("bills.printPdf", "Print / PDF")}
+                  </a>
+                ) : null}
+                <button
+                  onClick={() =>
+                    void shareBill(
+                      billTextFor(detail),
+                      party.phone ?? undefined,
+                    )
+                  }
+                  className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-sm font-semibold text-forest"
+                >
+                  {t("bills.share", "Share")}
+                </button>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => {
@@ -514,7 +564,7 @@ export default function PartyDetailClient({
                 {t("c.delete", "Delete")}
               </button>
             </div>
-            {party.phone ? (
+            {!detail.bill_id && party.phone ? (
               <a
                 href={waLink(
                   party.phone,
@@ -543,6 +593,8 @@ export default function PartyDetailClient({
           <EntryForm
             products={products}
             showMethod={false}
+            allowItems
+            rateFrom={isCust ? "sale" : "purchase"}
             submitLabel={t("c.saveChanges", "Save changes")}
             initial={{
               amount: String(editRow.amount),

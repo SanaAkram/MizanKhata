@@ -188,10 +188,10 @@ export default function CashbookClient({
                       {t(`c.${e.method ?? "cash"}`, e.method ?? "cash")}
                     </span>
                   </span>
-                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
+                  <span className="numeric block whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
                     {isIn ? "" : fmtRs(e.amount)}
                   </span>
-                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
+                  <span className="numeric block whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
                     {isIn ? fmtRs(e.amount) : ""}
                   </span>
                 </button>

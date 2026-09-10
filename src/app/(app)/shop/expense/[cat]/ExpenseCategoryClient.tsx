@@ -114,7 +114,7 @@ export default function ExpenseCategoryClient({
                   {t(`c.${r.method ?? "cash"}`, r.method ?? "cash")}
                 </span>
               </span>
-              <span className="numeric flex items-center justify-end whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
+              <span className="numeric block whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
                 {fmtRs(r.amount)}
               </span>
             </button>
