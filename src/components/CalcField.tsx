@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalcIcon } from "@/components/icons";
 
 /** Evaluate a simple + - × ÷ ( ) expression. Returns null if invalid. */
@@ -139,12 +140,13 @@ export default function CalcField({
         </button>
       </div>
 
-      {open ? (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center">
-          <div
-            className="absolute inset-0 bg-forest-deep/40"
-            onClick={() => setOpen(false)}
-          />
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-[60] flex items-end justify-center">
+              <div
+                className="absolute inset-0 bg-forest-deep/40"
+                onClick={() => setOpen(false)}
+              />
           <div className="relative z-10 w-full max-w-[480px] rounded-t-3xl border border-line bg-paper p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl">
             <div className="mb-2 rounded-xl border border-line bg-card px-4 py-3 text-right">
               <div className="numeric truncate text-lg text-ink">
@@ -206,8 +208,10 @@ export default function CalcField({
               </button>
             </div>
           </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

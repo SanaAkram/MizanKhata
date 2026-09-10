@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ToastKind } from "@/lib/toast";
 
 type Item = { id: number; message: string; kind: ToastKind };
@@ -24,10 +25,10 @@ export default function Toaster() {
     return () => window.removeEventListener("mk:toast", onToast);
   }, []);
 
-  if (items.length === 0) return null;
+  if (items.length === 0 || typeof document === "undefined") return null;
 
-  return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[70] mx-auto flex max-w-[480px] flex-col items-center gap-2 px-5">
+  return createPortal(
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[70] mx-auto flex max-w-[480px] flex-col items-center gap-2 px-5">
       {items.map((it) => (
         <div
           key={it.id}
@@ -43,6 +44,7 @@ export default function Toaster() {
           {it.message}
         </div>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }

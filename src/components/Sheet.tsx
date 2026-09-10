@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export default function Sheet({
   open,
@@ -27,9 +28,11 @@ export default function Sheet({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portal to <body> so the fixed overlay is truly viewport-anchored and
+  // never trapped inside a scrolling container.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center"
       role="dialog"
@@ -40,8 +43,8 @@ export default function Sheet({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative z-10 flex max-h-[88vh] w-full max-w-[480px] flex-col rounded-t-3xl border border-line bg-paper shadow-2xl">
-        <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-2">
+      <div className="relative z-10 flex max-h-[88dvh] w-full max-w-[480px] flex-col rounded-t-3xl border border-line bg-paper shadow-2xl">
+        <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
           <h3 className="text-base font-semibold text-ink">{title ?? ""}</h3>
           <button
             onClick={onClose}
@@ -64,6 +67,7 @@ export default function Sheet({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

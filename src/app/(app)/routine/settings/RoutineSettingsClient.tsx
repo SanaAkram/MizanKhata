@@ -148,7 +148,7 @@ export default function RoutineSettingsClient({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-full flex-col gap-4">
       <Link href="/routine" className="text-sm text-muted">
         ‹ Back to routine
       </Link>
@@ -341,13 +341,15 @@ export default function RoutineSettingsClient({
         + Add item
       </button>
 
-      <button
-        onClick={save}
-        disabled={saving}
-        className="sticky bottom-24 rounded-xl bg-forest px-4 py-3.5 text-sm font-semibold text-paper shadow-lg active:scale-[0.99] disabled:opacity-60"
-      >
-        {saving ? "Saving…" : "Save routine"}
-      </button>
+      <div className="sticky bottom-0 z-20 -mx-5 mt-auto border-t border-line bg-paper px-5 pb-2 pt-3">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="w-full rounded-xl bg-forest px-4 py-3.5 text-sm font-semibold text-paper active:scale-[0.99] disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Save routine"}
+        </button>
+      </div>
     </div>
   );
 }

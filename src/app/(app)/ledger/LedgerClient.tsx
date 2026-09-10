@@ -127,7 +127,7 @@ export default function LedgerClient({
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-20">
+    <div className="flex min-h-full flex-col gap-4">
       <section className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
@@ -251,7 +251,7 @@ export default function LedgerClient({
 
       <button
         onClick={() => setAdding(true)}
-        className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-forest text-2xl font-light text-paper shadow-lg active:scale-95 sm:right-[max(1rem,calc(50%-15rem+1rem))]"
+        className="sticky bottom-4 z-30 mt-auto self-end h-14 w-14 rounded-full bg-forest text-2xl font-light text-paper shadow-lg active:scale-95"
         aria-label={t("ledger.addParty", "Add party")}
       >
         +
