@@ -1,6 +1,7 @@
 "use client";
 
 import { fmtRs } from "@/lib/format";
+import { BILL_CREDIT } from "@/lib/brand";
 import type { Sale, SaleItem } from "./shop-db";
 
 export function billText(
@@ -35,6 +36,8 @@ export function billText(
     parts.push(`Previous balance: ${fmtRs(balances.prevBalance)}`);
     parts.push(`Total balance now: ${fmtRs(balances.newBalance)}`);
   }
+  parts.push("");
+  parts.push(BILL_CREDIT);
   return parts.join("\n");
 }
 

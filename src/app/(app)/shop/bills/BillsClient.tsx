@@ -25,6 +25,7 @@ import {
   type DateRange,
 } from "@/lib/date-range";
 import { billText, shareBill, speakBill } from "@/lib/khata/bill-share";
+import { BILL_CREDIT } from "@/lib/brand";
 
 type Numbered = Sale & { no: number };
 type Cust = { id: string; name: string; phone: string | null };
@@ -424,9 +425,6 @@ export default function BillsClient({
               <p className="text-sm font-semibold" style={{ color: brand }}>
                 {business?.name ?? "My Shop"}
               </p>
-              {!premium ? (
-                <p className="text-[10px] text-muted">made with MizanKhata</p>
-              ) : null}
               {business?.phone ? (
                 <p className="text-[11px] text-muted">{business.phone}</p>
               ) : null}
@@ -563,6 +561,10 @@ export default function BillsClient({
                 {open.note}
               </p>
             ) : null}
+
+            <p className="pt-1 text-center text-[10px] text-muted">
+              {BILL_CREDIT}
+            </p>
 
             <div className="mt-1 grid grid-cols-2 gap-2">
               <a

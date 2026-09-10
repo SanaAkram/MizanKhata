@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
 import { isPremium } from "@/lib/auth/profile";
+import { BILL_CREDIT } from "@/lib/brand";
 import { serverT } from "@/lib/i18n-server";
 import {
   customerBalance,
@@ -83,11 +84,6 @@ export default async function BillPrintPage({
         <div style={{ fontSize: 20, fontWeight: 800, color: brand }}>
           {active?.name ?? "My Shop"}
         </div>
-        {!premium ? (
-          <div style={{ fontSize: 10, color: muted, letterSpacing: 0.3 }}>
-            made with MizanKhata
-          </div>
-        ) : null}
         {active?.phone ? (
           <div style={{ fontSize: 12, color: muted }}>{active.phone}</div>
         ) : null}
@@ -254,6 +250,17 @@ export default async function BillPrintPage({
         }}
       >
         {t("bills.thankYou", "Thank you.")}
+      </p>
+      <p
+        style={{
+          fontSize: 10,
+          color: muted,
+          textAlign: "center",
+          marginTop: 6,
+          letterSpacing: 0.2,
+        }}
+      >
+        {BILL_CREDIT}
       </p>
     </main>
   );

@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database.types";
 
 const AUTH_PATHS = ["/login", "/auth"];
+// Public marketing pages — reachable without signing in.
+const PUBLIC_PATHS = ["/"];
 
 /**
  * Refresh the Supabase auth session on every request and redirect
@@ -41,8 +43,9 @@ export async function updateSession(request: NextRequest) {
   const isAuthPath = AUTH_PATHS.some(
     (p) => path === p || path.startsWith(p + "/"),
   );
+  const isPublicPath = PUBLIC_PATHS.includes(path);
 
-  if (!user && !isAuthPath) {
+  if (!user && !isAuthPath && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);
