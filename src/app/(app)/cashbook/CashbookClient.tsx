@@ -152,14 +152,14 @@ export default function CashbookClient({
           </p>
         ) : layout === "columns" ? (
           <div className="overflow-hidden rounded-xl border border-line">
-            <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
               <span className="px-3 py-2 text-muted">
                 {t("cash.entries", "Entries")}
               </span>
-              <span className="bg-danger/10 px-2 py-2 text-right text-danger">
+              <span className="bg-danger/10 px-2.5 py-2 text-right text-danger">
                 {t("cash.out", "Cash out")}
               </span>
-              <span className="bg-ok/10 px-2 py-2 text-right text-ok">
+              <span className="bg-ok/10 px-2.5 py-2 text-right text-ok">
                 {t("cash.in", "Cash in")}
               </span>
             </div>
@@ -169,7 +169,7 @@ export default function CashbookClient({
                 <button
                   key={e.id}
                   onClick={() => setDetail(e)}
-                  className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line text-left last:border-b-0 active:bg-line/30"
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line text-left last:border-b-0 active:bg-line/30"
                 >
                   <span className="min-w-0 px-3 py-2.5">
                     <span className="block text-[11px] text-muted">
@@ -188,10 +188,10 @@ export default function CashbookClient({
                       {t(`c.${e.method ?? "cash"}`, e.method ?? "cash")}
                     </span>
                   </span>
-                  <span className="numeric break-all bg-danger/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-danger">
+                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
                     {isIn ? "" : fmtRs(e.amount)}
                   </span>
-                  <span className="numeric break-all bg-ok/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-ok">
+                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
                     {isIn ? fmtRs(e.amount) : ""}
                   </span>
                 </button>

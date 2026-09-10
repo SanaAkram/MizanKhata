@@ -546,6 +546,70 @@ export async function deleteSale(db: DB, saleId: string): Promise<void> {
 
 // ---- restock ----------------------------------------------------
 
+/**
+ * Record a multi-line purchase from a supplier, all on credit: one
+ * shop_purchases row + stock bump per line, and a single shop_supplier_tx
+ * credit for the whole lot (so it shows as one "You gave" entry). Mirrors
+ * completeSale on the customer side.
+ */
+export async function recordPurchase(
+  db: DB,
+  businessId: string,
+  args: {
+    supplierId: string;
+    supplierName: string | null;
+    lines: { productId: string; name: string; qty: number; price: number }[];
+    note?: string | null;
+    date?: string;
+  },
+): Promise<void> {
+  const nowIso = args.date ?? new Date().toISOString();
+  const total =
+    Math.round(
+      args.lines.reduce((s, l) => s + l.qty * l.price, 0) * 100,
+    ) / 100;
+  const itemsText = args.lines
+    .map((l) => `${l.qty} ${l.name} ${l.price}Rs`)
+    .join("\n");
+  const stId = newId("st_");
+
+  for (const l of args.lines) {
+    const r = await db.from("shop_purchases").insert({
+      id: newId("pu_"),
+      business_id: businessId,
+      product_id: l.productId,
+      qty: l.qty,
+      price: l.price,
+      ref: stId,
+      date: nowIso,
+    });
+    if (r.error) throw r.error;
+    const { data: prod } = await db
+      .from("shop_products")
+      .select("stock")
+      .eq("id", l.productId)
+      .single();
+    const next =
+      Math.round(((Number(prod?.stock) || 0) + l.qty) * 100) / 100;
+    await db
+      .from("shop_products")
+      .update({ stock: next })
+      .eq("id", l.productId);
+  }
+
+  const r2 = await db.from("shop_supplier_tx").insert({
+    id: stId,
+    business_id: businessId,
+    supplier_id: args.supplierId,
+    type: "credit",
+    amount: total,
+    note: itemsText + (args.note ? `\n${args.note}` : ""),
+    ref: stId,
+    date: nowIso,
+  });
+  if (r2.error) throw r2.error;
+}
+
 export async function restock(
   db: DB,
   businessId: string,

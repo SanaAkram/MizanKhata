@@ -259,14 +259,19 @@ const DICT: Record<string, Entry> = {
     roman: "+ Stock se cheez add karein",
   },
   "party.itemsMakeBill": {
-    en: "Adding items here creates a bill and takes them out of stock.",
-    ur: "یہاں چیزیں شامل کرنے سے بل بنتا ہے اور وہ اسٹاک سے نکل جاتی ہیں۔",
-    roman: "Yahan items add karne se bill banta hai aur wo stock se nikal jati hain.",
+    en: "These items become a bill and go out of stock.",
+    ur: "یہ چیزیں بل بن جائیں گی اور اسٹاک سے نکل جائیں گی۔",
+    roman: "Ye items bill ban jayengi aur stock se nikal jayengi.",
+  },
+  "party.itemsMakePurchase": {
+    en: "These items are recorded as a purchase and added to stock.",
+    ur: "یہ چیزیں خریداری کے طور پر درج ہوں گی اور اسٹاک میں شامل ہوں گی۔",
+    roman: "Ye items khareedari ke tor par darj hongi aur stock mein add hongi.",
   },
   "party.itemsCount": {
-    en: "{n} item(s) → bill",
-    ur: "{n} چیزیں → بل",
-    roman: "{n} items → bill",
+    en: "{n} item(s)",
+    ur: "{n} چیزیں",
+    roman: "{n} items",
   },
   "party.clearItems": { en: "Clear", ur: "ہٹائیں", roman: "Hatayein" },
   "party.billNoOpt": {

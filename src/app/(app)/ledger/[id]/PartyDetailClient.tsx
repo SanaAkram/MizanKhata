@@ -18,7 +18,11 @@ import {
   type PartyKind,
   type TxType,
 } from "@/lib/khata/db";
-import { completeSale, type Product } from "@/lib/khata/shop-db";
+import {
+  completeSale,
+  recordPurchase,
+  type Product,
+} from "@/lib/khata/shop-db";
 import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
@@ -133,26 +137,40 @@ export default function PartyDetailClient({
     method: "cash" | "bank",
     lines: ItemLine[],
   ) {
-    // "You gave" to a customer, built from stock items = a sale on credit.
-    // Make it a real bill (stock out + ledger credit), not just a note.
-    // completeSale writes its own itemised note, so don't pass the form's
-    // (which already has the same lines auto-appended).
-    if (type === "credit" && isCust && lines.length > 0) {
-      await completeSale(supabase, businessId, {
-        lines: lines.map((l) => ({
-          productId: l.productId,
-          name: l.name,
-          unit: l.unit,
-          price: l.rate,
-          qty: l.qty,
-        })),
-        paidCash: 0,
-        creditAmount: lines.reduce((s, l) => s + l.qty * l.rate, 0),
-        customerId: party.id,
-        customerName: party.name,
-        partyKind: "customer",
-        note: null,
-      });
+    // "You gave" built from stock items is always a real document, never a
+    // plain note: a customer sale on credit (numbered bill + stock out) or a
+    // supplier purchase on credit (stock in). Both write their own itemised
+    // note, so the form's auto-appended one is dropped.
+    if (type === "credit" && lines.length > 0) {
+      if (isCust) {
+        await completeSale(supabase, businessId, {
+          lines: lines.map((l) => ({
+            productId: l.productId,
+            name: l.name,
+            unit: l.unit,
+            price: l.rate,
+            qty: l.qty,
+          })),
+          paidCash: 0,
+          creditAmount: lines.reduce((s, l) => s + l.qty * l.rate, 0),
+          customerId: party.id,
+          customerName: party.name,
+          partyKind: "customer",
+          note: null,
+        });
+      } else {
+        await recordPurchase(supabase, businessId, {
+          supplierId: party.id,
+          supplierName: party.name,
+          lines: lines.map((l) => ({
+            productId: l.productId,
+            name: l.name,
+            qty: l.qty,
+            price: l.rate,
+          })),
+          date: dateIso,
+        });
+      }
       setAddType(null);
       router.refresh();
       return;
@@ -331,14 +349,14 @@ export default function PartyDetailClient({
           </p>
         ) : layout === "columns" ? (
           <div className="overflow-hidden rounded-xl border border-line">
-            <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
               <span className="px-3 py-2 text-muted">
                 {t("party.entries", "Entries")}
               </span>
-              <span className="bg-danger/10 px-2 py-2 text-right text-danger">
+              <span className="bg-danger/10 px-2.5 py-2 text-right text-danger">
                 {gaveTxt}
               </span>
-              <span className="bg-ok/10 px-2 py-2 text-right text-ok">
+              <span className="bg-ok/10 px-2.5 py-2 text-right text-ok">
                 {gotTxt}
               </span>
             </div>
@@ -348,7 +366,7 @@ export default function PartyDetailClient({
                 <button
                   key={r.id}
                   onClick={() => setDetail(r)}
-                  className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-line text-left last:border-b-0 active:bg-line/30"
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line text-left last:border-b-0 active:bg-line/30"
                 >
                   <span className="min-w-0 px-3 py-2.5">
                     <span className="block text-[11px] text-muted">
@@ -367,10 +385,10 @@ export default function PartyDetailClient({
                       {t("party.balance", "bal")} {fmtRs(Math.abs(r.running))}
                     </span>
                   </span>
-                  <span className="numeric break-all bg-danger/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-danger">
+                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
                     {credit ? fmtRs(r.amount) : ""}
                   </span>
-                  <span className="numeric break-all bg-ok/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-ok">
+                  <span className="numeric flex items-center justify-end whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
                     {credit ? "" : fmtRs(r.amount)}
                   </span>
                 </button>
@@ -433,13 +451,19 @@ export default function PartyDetailClient({
           <EntryForm
             products={products}
             showMethod={addType === "payment"}
+            allowItems={addType === "credit"}
             rateFrom={isCust ? "sale" : "purchase"}
             billNote={
-              addType === "credit" && isCust
-                ? t(
-                    "party.itemsMakeBill",
-                    "Adding items here creates a bill and takes them out of stock.",
-                  )
+              addType === "credit"
+                ? isCust
+                  ? t(
+                      "party.itemsMakeBill",
+                      "These items become a bill and go out of stock.",
+                    )
+                  : t(
+                      "party.itemsMakePurchase",
+                      "These items are recorded as a purchase and added to stock.",
+                    )
                 : undefined
             }
             submitLabel={t("c.save", "Save")}
@@ -558,6 +582,7 @@ export default function PartyDetailClient({
 function EntryForm({
   products,
   showMethod,
+  allowItems = false,
   submitLabel,
   rateFrom = "sale",
   billNote,
@@ -566,6 +591,7 @@ function EntryForm({
 }: {
   products: Product[];
   showMethod: boolean;
+  allowItems?: boolean;
   submitLabel: string;
   rateFrom?: "sale" | "purchase";
   billNote?: string;
@@ -593,7 +619,6 @@ function EntryForm({
       start.getMinutes(),
     ).padStart(2, "0")}`,
   );
-  const [ref, setRef] = useState("");
   const [method, setMethod] = useState<"cash" | "bank">("cash");
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -625,14 +650,16 @@ function EntryForm({
         placeholder={t("c.amount", "Amount")}
       />
 
-      <button
-        onClick={() => setPicker(true)}
-        className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
-      >
-        {t("party.addItem", "+ Add item from stock")}
-      </button>
+      {allowItems ? (
+        <button
+          onClick={() => setPicker(true)}
+          className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
+        >
+          {t("party.addItem", "+ Add item from stock")}
+        </button>
+      ) : null}
 
-      {lines.length > 0 ? (
+      {allowItems && lines.length > 0 ? (
         <div className="rounded-lg border border-forest/25 bg-forest/5 px-3 py-2 text-xs">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-forest">
@@ -676,13 +703,6 @@ function EntryForm({
         />
       </div>
 
-      <input
-        value={ref}
-        onChange={(e) => setRef(e.target.value)}
-        placeholder={t("party.billNoOpt", "Bill no. (optional)")}
-        className={cls}
-      />
-
       {showMethod ? (
         <div className="flex gap-1 rounded-xl border border-line p-1">
           {(["cash", "bank"] as const).map((m) => (
@@ -704,8 +724,7 @@ function EntryForm({
           if (amt <= 0 || busy) return;
           setBusy(true);
           const iso = new Date(`${date}T${time || "12:00"}:00`).toISOString();
-          const full = ref ? `${note}${note ? "\n" : ""}Bill: ${ref}` : note;
-          onSubmit(amt, full.trim(), iso, method, lines);
+          onSubmit(amt, note.trim(), iso, method, lines);
         }}
         disabled={amt <= 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"

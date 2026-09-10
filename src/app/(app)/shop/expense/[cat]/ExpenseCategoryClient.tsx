@@ -89,11 +89,11 @@ export default function ExpenseCategoryClient({
         </p>
       ) : layout === "columns" ? (
         <div className="overflow-hidden rounded-xl border border-line">
-          <div className="grid grid-cols-[minmax(0,1fr)_6rem] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
             <span className="px-3 py-2 text-muted">
               {t("exp.entries", "Entries")}
             </span>
-            <span className="bg-danger/10 px-2 py-2 text-right text-danger">
+            <span className="bg-danger/10 px-2.5 py-2 text-right text-danger">
               {t("cash.out", "Cash out")}
             </span>
           </div>
@@ -101,7 +101,7 @@ export default function ExpenseCategoryClient({
             <button
               key={r.id}
               onClick={() => setDetail(r)}
-              className="grid w-full grid-cols-[minmax(0,1fr)_6rem] border-b border-line text-left last:border-b-0 active:bg-line/30"
+              className="grid w-full grid-cols-[minmax(0,1fr)_auto] border-b border-line text-left last:border-b-0 active:bg-line/30"
             >
               <span className="min-w-0 px-3 py-2.5">
                 <span className="block text-[11px] text-muted">
@@ -114,7 +114,7 @@ export default function ExpenseCategoryClient({
                   {t(`c.${r.method ?? "cash"}`, r.method ?? "cash")}
                 </span>
               </span>
-              <span className="numeric break-all bg-danger/10 px-2 py-2.5 text-right text-sm font-semibold leading-tight text-danger">
+              <span className="numeric flex items-center justify-end whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
                 {fmtRs(r.amount)}
               </span>
             </button>
