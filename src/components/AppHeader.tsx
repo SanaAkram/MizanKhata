@@ -9,6 +9,7 @@ const TITLE_PATHS = [
   "/work",
   "/routine",
   "/ledger",
+  "/orders",
   "/cashbook",
   "/shop/pos",
   "/shop/stock",
@@ -20,7 +21,7 @@ const TITLE_PATHS = [
   "/settings",
 ];
 
-const PREFIXES = ["/routine", "/work", "/ledger", "/cashbook", "/shop"];
+const PREFIXES = ["/routine", "/work", "/ledger", "/orders", "/cashbook", "/shop"];
 
 export default function AppHeader() {
   const pathname = usePathname();

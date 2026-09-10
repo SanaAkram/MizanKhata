@@ -206,6 +206,57 @@ export type Database = {
           },
         ]
       }
+      shop_orders: {
+        Row: {
+          amount: number
+          business_id: string | null
+          created_at: string
+          delivered_at: string | null
+          details: string | null
+          direction: string
+          due_date: string | null
+          id: string
+          owner_id: string
+          party_id: string | null
+          party_name: string | null
+          party_type: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          amount?: number
+          business_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          details?: string | null
+          direction?: string
+          due_date?: string | null
+          id: string
+          owner_id?: string
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
+          status?: string
+          title?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          details?: string | null
+          direction?: string
+          due_date?: string | null
+          id?: string
+          owner_id?: string
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
       shop_products: {
         Row: {
           business_id: string | null

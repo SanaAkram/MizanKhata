@@ -7,6 +7,7 @@ import {
   CalendarIcon,
   LedgerIcon,
   ShopIcon,
+  OrdersIcon,
 } from "@/components/icons";
 import { useT } from "@/lib/i18n";
 
@@ -24,6 +25,13 @@ const TABS = [
     key: "nav.ledger",
     label: "Ledger",
     Icon: LedgerIcon,
+    biz: true,
+  },
+  {
+    href: "/orders",
+    key: "nav.orders",
+    label: "Orders",
+    Icon: OrdersIcon,
     biz: true,
   },
   { href: "/shop", key: "nav.shop", label: "Shop", Icon: ShopIcon, biz: true },
