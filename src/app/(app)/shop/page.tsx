@@ -135,6 +135,11 @@ export default async function ShopDashboardPage() {
       sub: `${sales.length}`,
     },
     { href: "/cashbook", label: t("title./cashbook", "Cash Book"), sub: fmtRs(cashHand) },
+    {
+      href: "/shop/expense",
+      label: t("title./shop/expense", "Expenses"),
+      sub: fmtRs(expenses),
+    },
   ];
 
   return (

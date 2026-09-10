@@ -62,6 +62,8 @@ const DICT: Record<string, Entry> = {
   "title./shop/pos": { en: "Sell", ur: "فروخت", roman: "Bikri" },
   "title./shop/stock": { en: "Stock", ur: "اسٹاک", roman: "Stock" },
   "title./shop/bills": { en: "Bills", ur: "بل", roman: "Bills" },
+  "title./shop/expense": { en: "Expenses", ur: "اخراجات", roman: "Kharchay" },
+  "title./shop/reports": { en: "Reports", ur: "رپورٹس", roman: "Reports" },
   "title./shop/settings": {
     en: "Shop details",
     ur: "دکان کی تفصیل",
@@ -540,6 +542,43 @@ const DICT: Record<string, Entry> = {
   "dash.sales": { en: "Sales", ur: "فروخت", roman: "Bikri" },
   "dash.purchases": { en: "Purchases", ur: "خریداری", roman: "Khareedari" },
   "dash.expenses": { en: "Expenses", ur: "اخراجات", roman: "Kharchay" },
+  "dash.reports": { en: "Reports", ur: "رپورٹس", roman: "Reports" },
+
+  // ---- expenses ------------------------------------------------------
+  "exp.totalFor": {
+    en: "Total spent in {m}",
+    ur: "{m} میں کل خرچ",
+    roman: "{m} mein kul kharch",
+  },
+  "exp.spentFor": { en: "Spent · {r}", ur: "خرچ · {r}", roman: "Kharch · {r}" },
+  "exp.byCategory": { en: "By category", ur: "قسم کے حساب سے", roman: "Qisam ke hisaab se" },
+  "exp.search": {
+    en: "Search categories",
+    ur: "اقسام تلاش کریں",
+    roman: "Categories talash karein",
+  },
+  "exp.none": {
+    en: "No expenses yet — tap + to add one.",
+    ur: "ابھی کوئی خرچ نہیں — + دبائیں۔",
+    roman: "Abhi koi kharch nahi — + dabayein.",
+  },
+  "exp.noneInCat": {
+    en: "No expenses in this category.",
+    ur: "اِس قسم میں کوئی خرچ نہیں۔",
+    roman: "Is category mein koi kharch nahi.",
+  },
+  "exp.add": { en: "Add expense", ur: "خرچ شامل کریں", roman: "Kharch add karein" },
+  "exp.category": { en: "Category", ur: "قسم", roman: "Category" },
+  "exp.newCategory": { en: "+ New category", ur: "+ نئی قسم", roman: "+ Nayi category" },
+  "exp.categoryName": { en: "Category name", ur: "قسم کا نام", roman: "Category ka naam" },
+  "exp.notePh": {
+    en: "Note (e.g. October shop rent)",
+    ur: "نوٹ (مثلاً اکتوبر کا کرایہ)",
+    roman: "Note (masalan October ka kiraya)",
+  },
+  "exp.entry": { en: "entry", ur: "اندراج", roman: "entry" },
+  "exp.entries": { en: "Entries", ur: "اندراجات", roman: "Entries" },
+  "exp.allTime": { en: "All time", ur: "سارا وقت", roman: "Sara waqt" },
   "dash.stockValue": {
     en: "Stock value",
     ur: "اسٹاک کی مالیت",
