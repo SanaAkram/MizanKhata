@@ -151,27 +151,26 @@ export default function CashbookClient({
               : t("cash.noEntries", "No cash entries yet — tap + to add one.")}
           </p>
         ) : layout === "columns" ? (
-          <div className="overflow-hidden rounded-xl border border-line">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
-              <span className="px-3 py-2 text-muted">
-                {t("cash.entries", "Entries")}
-              </span>
-              <span className="bg-danger/10 px-2.5 py-2 text-right text-danger">
-                {t("cash.out", "Cash out")}
-              </span>
-              <span className="bg-ok/10 px-2.5 py-2 text-right text-ok">
-                {t("cash.in", "Cash in")}
-              </span>
-            </div>
-            {rows.map((e) => {
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] overflow-hidden rounded-xl border border-line px-3">
+            <span className="border-b border-line py-2 pr-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              {t("cash.entries", "Entries")}
+            </span>
+            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
+              {t("cash.out", "Cash out")}
+            </span>
+            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-ok">
+              {t("cash.in", "Cash in")}
+            </span>
+            {rows.map((e, i) => {
               const isIn = e.type === "in";
+              const b = i === rows.length - 1 ? "" : "border-b border-line";
               return (
                 <button
                   key={e.id}
                   onClick={() => setDetail(e)}
-                  className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line text-left last:border-b-0 active:bg-line/30"
+                  className="contents text-left"
                 >
-                  <span className="min-w-0 px-3 py-2.5">
+                  <span className={`min-w-0 py-2.5 pr-2.5 ${b}`}>
                     <span className="block text-[11px] text-muted">
                       {fmtEntryDate(e.date)}
                     </span>
@@ -188,10 +187,14 @@ export default function CashbookClient({
                       {t(`c.${e.method ?? "cash"}`, e.method ?? "cash")}
                     </span>
                   </span>
-                  <span className="numeric block whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
+                  <span
+                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-sm font-semibold text-danger ${b}`}
+                  >
                     {isIn ? "" : fmtRs(e.amount)}
                   </span>
-                  <span className="numeric block whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
+                  <span
+                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-sm font-semibold text-ok ${b}`}
+                  >
                     {isIn ? fmtRs(e.amount) : ""}
                   </span>
                 </button>

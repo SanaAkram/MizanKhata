@@ -367,32 +367,38 @@ export default function PartyDetailClient({
                 : t("c.noMatches", "No matches.")}
           </p>
         ) : layout === "columns" ? (
-          <div className="overflow-hidden rounded-xl border border-line">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
-              <span className="px-3 py-2 text-muted">
-                {t("party.entries", "Entries")}
-              </span>
-              <span className="bg-danger/10 px-2.5 py-2 text-right text-danger">
-                {gaveTxt}
-              </span>
-              <span className="bg-ok/10 px-2.5 py-2 text-right text-ok">
-                {gotTxt}
-              </span>
-            </div>
-            {shown.map((r) => {
+          // One shared grid for the whole table so columns line up across every
+          // row. Each row is a display:contents button (one click target); the
+          // visible cells are its spans, which become the grid items.
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] overflow-hidden rounded-xl border border-line px-2.5">
+            <span className="border-b border-line py-2 pr-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              {t("party.entries", "Entries")}
+            </span>
+            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
+              {gaveTxt}
+            </span>
+            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-ok">
+              {gotTxt}
+            </span>
+            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-muted">
+              {t("party.balance", "Balance")}
+            </span>
+
+            {shown.map((r, i) => {
               const credit = r.type === "credit";
+              const b = i === shown.length - 1 ? "" : "border-b border-line";
               return (
                 <button
                   key={r.id}
                   onClick={() => setDetail(r)}
-                  className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] border-b border-line text-left last:border-b-0 active:bg-line/30"
+                  className="contents text-left"
                 >
-                  <span className="min-w-0 px-3 py-2.5">
+                  <span className={`min-w-0 py-2.5 pr-2.5 ${b}`}>
                     <span className="block text-[11px] text-muted">
                       {fmtEntryDate(r.date)}
                     </span>
                     {r.note ? (
-                      <span className="mt-0.5 block break-words whitespace-pre-line text-xs text-ink">
+                      <span className="mt-0.5 block break-words whitespace-pre-line text-xs leading-snug text-ink">
                         {r.note}
                       </span>
                     ) : (
@@ -400,15 +406,21 @@ export default function PartyDetailClient({
                         {credit ? creditLabel : paymentLabel}
                       </span>
                     )}
-                    <span className="numeric mt-1 inline-block rounded bg-line/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                      {t("party.balance", "bal")} {fmtRs(Math.abs(r.running))}
-                    </span>
                   </span>
-                  <span className="numeric block whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
+                  <span
+                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-[13px] font-semibold text-danger ${b}`}
+                  >
                     {credit ? fmtRs(r.amount) : ""}
                   </span>
-                  <span className="numeric block whitespace-nowrap bg-ok/10 px-2.5 py-2.5 text-right text-sm font-semibold text-ok">
+                  <span
+                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-[13px] font-semibold text-ok ${b}`}
+                  >
                     {credit ? "" : fmtRs(r.amount)}
+                  </span>
+                  <span
+                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-[11px] text-muted ${b}`}
+                  >
+                    {fmtRs(Math.abs(r.running))}
                   </span>
                 </button>
               );

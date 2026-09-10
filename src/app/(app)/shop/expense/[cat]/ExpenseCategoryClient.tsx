@@ -88,37 +88,40 @@ export default function ExpenseCategoryClient({
           {t("range.noneInRange", "Nothing in this date range.")}
         </p>
       ) : layout === "columns" ? (
-        <div className="overflow-hidden rounded-xl border border-line">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b border-line bg-card text-[10px] font-semibold uppercase tracking-wide">
-            <span className="px-3 py-2 text-muted">
-              {t("exp.entries", "Entries")}
-            </span>
-            <span className="bg-danger/10 px-2.5 py-2 text-right text-danger">
-              {t("cash.out", "Cash out")}
-            </span>
-          </div>
-          {shown.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setDetail(r)}
-              className="grid w-full grid-cols-[minmax(0,1fr)_auto] border-b border-line text-left last:border-b-0 active:bg-line/30"
-            >
-              <span className="min-w-0 px-3 py-2.5">
-                <span className="block text-[11px] text-muted">
-                  {fmtEntryDate(r.date)}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-xl border border-line px-3">
+          <span className="border-b border-line py-2 pr-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+            {t("exp.entries", "Entries")}
+          </span>
+          <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
+            {t("cash.out", "Cash out")}
+          </span>
+          {shown.map((r, i) => {
+            const b = i === shown.length - 1 ? "" : "border-b border-line";
+            return (
+              <button
+                key={r.id}
+                onClick={() => setDetail(r)}
+                className="contents text-left"
+              >
+                <span className={`min-w-0 py-2.5 pr-2.5 ${b}`}>
+                  <span className="block text-[11px] text-muted">
+                    {fmtEntryDate(r.date)}
+                  </span>
+                  <span className="mt-0.5 block break-words text-xs text-ink">
+                    {r.note || expenseLabel(category)}
+                  </span>
+                  <span className="numeric mt-1 inline-block rounded bg-line/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                    {t(`c.${r.method ?? "cash"}`, r.method ?? "cash")}
+                  </span>
                 </span>
-                <span className="mt-0.5 block break-words text-xs text-ink">
-                  {r.note || expenseLabel(category)}
+                <span
+                  className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-sm font-semibold text-danger ${b}`}
+                >
+                  {fmtRs(r.amount)}
                 </span>
-                <span className="numeric mt-1 inline-block rounded bg-line/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                  {t(`c.${r.method ?? "cash"}`, r.method ?? "cash")}
-                </span>
-              </span>
-              <span className="numeric block whitespace-nowrap bg-danger/10 px-2.5 py-2.5 text-right text-sm font-semibold text-danger">
-                {fmtRs(r.amount)}
-              </span>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
