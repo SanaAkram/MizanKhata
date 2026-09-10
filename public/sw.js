@@ -18,7 +18,11 @@ self.addEventListener("push", (event) => {
     d = {};
   }
   const title = d.title || "MizanKhata";
+  const isInterval = d.kind === "interval";
   const options = {
+    // iOS shows no action buttons, so tapping the body is the whole
+    // interaction: for an interval reminder that counts as +1 (see
+    // notificationclick).
     body: d.body || "",
     tag: d.tag || "mizankhata",
     renotify: true,
@@ -28,18 +32,18 @@ self.addEventListener("push", (event) => {
     data: {
       itemId: d.itemId || "",
       dateKey: d.dateKey || "",
+      kind: d.kind || "",
       url: d.url || "/routine",
     },
-    actions:
-      d.kind === "interval"
-        ? [
-            { action: "plus", title: "+1" },
-            { action: "snooze", title: "Snooze 15m" },
-          ]
-        : [
-            { action: "done", title: "Done" },
-            { action: "snooze", title: "Snooze 15m" },
-          ],
+    actions: isInterval
+      ? [
+          { action: "plus", title: "+1" },
+          { action: "snooze", title: "Snooze 15m" },
+        ]
+      : [
+          { action: "done", title: "Done" },
+          { action: "snooze", title: "Snooze 15m" },
+        ],
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
@@ -48,8 +52,11 @@ self.addEventListener("push", (event) => {
 self.addEventListener("pushsubscriptionchange", () => {});
 
 self.addEventListener("notificationclick", (event) => {
-  const action = event.action || "open";
   const data = event.notification.data || {};
+  // A plain tap on the body (no button, e.g. always on iOS): for an interval
+  // reminder that means "I did one" → +1; otherwise just open the app.
+  let action = event.action || "open";
+  if (action === "open" && data.kind === "interval") action = "plus";
   event.notification.close();
 
   event.waitUntil(

@@ -103,12 +103,19 @@ export default function PartyDetailClient({
   );
   const periodLife = partyLifetime(ranged);
 
-  const creditLabel = isCust
-    ? t("party.creditCust", "You gave (credit)")
-    : t("party.creditSupp", "Purchase (on credit)");
-  const paymentLabel = isCust
-    ? t("party.payCust", "You got (payment)")
-    : t("party.paySupp", "Payment made");
+  // "You gave" = value/money that left me; "You got" = value/money that came in.
+  //  customer credit  = I gave goods on credit  → gave
+  //  customer payment = they paid me            → got
+  //  supplier credit  = I received goods        → got
+  //  supplier payment = I paid them             → gave
+  const gaveTxt = t("party.youGave", "You gave");
+  const gotTxt = t("party.youGot", "You got");
+  const creditLabel = isCust ? gaveTxt : gotTxt;
+  const paymentLabel = isCust ? gotTxt : gaveTxt;
+  const gaveTotal = isCust ? life.credit : life.payment;
+  const gotTotal = isCust ? life.payment : life.credit;
+  const periodGave = isCust ? periodLife.credit : periodLife.payment;
+  const periodGot = isCust ? periodLife.payment : periodLife.credit;
 
   const waText =
     balance > 0
@@ -212,18 +219,18 @@ export default function PartyDetailClient({
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
-              {t("party.youGave", "You gave")}
+              {gaveTxt}
             </p>
             <p className="numeric text-sm font-semibold text-ink">
-              {fmtRs(life.credit)}
+              {fmtRs(gaveTotal)}
             </p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
-              {t("party.youGot", "You got")}
+              {gotTxt}
             </p>
             <p className="numeric text-sm font-semibold text-ink">
-              {fmtRs(life.payment)}
+              {fmtRs(gotTotal)}
             </p>
           </div>
           <div>
@@ -272,12 +279,12 @@ export default function PartyDetailClient({
               : t("range.entries", "entries")}
           </p>
           <div className="mt-1 flex justify-between text-muted">
-            <span>{creditLabel}</span>
-            <span className="numeric">{fmtRs(periodLife.credit)}</span>
+            <span>{gaveTxt}</span>
+            <span className="numeric">{fmtRs(periodGave)}</span>
           </div>
           <div className="flex justify-between text-muted">
-            <span>{paymentLabel}</span>
-            <span className="numeric">{fmtRs(periodLife.payment)}</span>
+            <span>{gotTxt}</span>
+            <span className="numeric">{fmtRs(periodGot)}</span>
           </div>
           <div className="mt-1 flex justify-between border-t border-line pt-1 font-semibold text-ink">
             <span>{t("range.netForPeriod", "Net for period")}</span>
@@ -358,6 +365,7 @@ export default function PartyDetailClient({
           <EntryForm
             products={products}
             showMethod={addType === "payment"}
+            rateFrom={isCust ? "sale" : "purchase"}
             submitLabel={t("c.save", "Save")}
             onSubmit={(a, n, d, m) => saveAdd(addType, a, n, d, m)}
           />
@@ -480,12 +488,14 @@ function EntryForm({
   products,
   showMethod,
   submitLabel,
+  rateFrom = "sale",
   initial,
   onSubmit,
 }: {
   products: Product[];
   showMethod: boolean;
   submitLabel: string;
+  rateFrom?: "sale" | "purchase";
   initial?: { amount: string; note: string; date: string };
   onSubmit: (
     amount: number,
@@ -605,7 +615,7 @@ function EntryForm({
       <ItemLinePicker
         open={picker}
         products={products}
-        rateFrom="sale"
+        rateFrom={rateFrom}
         onClose={() => setPicker(false)}
         onDone={addLines}
       />

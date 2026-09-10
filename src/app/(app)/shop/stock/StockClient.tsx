@@ -309,8 +309,12 @@ function RestockForm({
         });
       }
       const sup = suppliers.find((s) => s.id === supplierId);
+      const productName = isNew
+        ? name.trim()
+        : (products.find((p) => p.id === pid)?.name ?? null);
       await restock(supabase, businessId, {
         productId: pid,
+        productName,
         qty: q,
         price: c,
         ref: ref.trim() || null,

@@ -529,6 +529,7 @@ export async function restock(
   businessId: string,
   args: {
     productId: string;
+    productName?: string | null;
     qty: number;
     price: number;
     ref: string | null;
@@ -541,6 +542,11 @@ export async function restock(
   const { productId, qty, price, ref } = args;
   const nowIso = new Date().toISOString();
   const batchTotal = Math.round(qty * price * 100) / 100;
+  // e.g. "500 shelf 6\" 62Rs" — like the note on a credit sale, plus ref.
+  const itemText = args.productName
+    ? `${qty} ${args.productName} ${price}Rs`
+    : "Restock";
+  const noteText = itemText + (ref ? ` (${ref})` : "");
 
   let res = await db.from("shop_purchases").insert({
     id: newId("pu_"),
@@ -571,7 +577,7 @@ export async function restock(
       business_id: businessId,
       type: "out",
       amount: cashPaid,
-      note: "Restock" + (ref ? ` (${ref})` : ""),
+      note: noteText,
       party_type: args.supplierId ? "supplier" : null,
       party_id: args.supplierId ?? null,
       party_name: args.supplierName ?? null,
@@ -586,7 +592,7 @@ export async function restock(
       supplier_id: args.supplierId,
       type: "credit",
       amount: credit,
-      note: "Restock" + (ref ? ` (${ref})` : ""),
+      note: noteText,
       ref,
       date: nowIso,
     });
