@@ -88,6 +88,7 @@ export default function PartyDetailClient({
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [menu, setMenu] = useState(false);
   const [armDel, setArmDel] = useState(false);
+  const [madeBill, setMadeBill] = useState<string | null>(null);
   const layout = useEntryLayout();
 
   const rows = useMemo(() => {
@@ -145,7 +146,7 @@ export default function PartyDetailClient({
     // note, so the form's auto-appended one is dropped.
     if (type === "credit" && lines.length > 0) {
       if (isCust) {
-        await completeSale(supabase, businessId, {
+        const saleId = await completeSale(supabase, businessId, {
           lines: lines.map((l) => ({
             productId: l.productId,
             name: l.name,
@@ -160,8 +161,9 @@ export default function PartyDetailClient({
           partyKind: "customer",
           note: null,
         });
+        setMadeBill(`/print/bill/${saleId}`);
       } else {
-        await recordPurchase(supabase, businessId, {
+        const stId = await recordPurchase(supabase, businessId, {
           supplierId: party.id,
           supplierName: party.name,
           lines: lines.map((l) => ({
@@ -172,6 +174,7 @@ export default function PartyDetailClient({
           })),
           date: dateIso,
         });
+        setMadeBill(`/print/purchase/${stId}`);
       }
       setAddType(null);
       router.refresh();
@@ -503,6 +506,36 @@ export default function PartyDetailClient({
         ) : null}
       </Sheet>
 
+      {/* bill generated from a "You gave" entry */}
+      <Sheet
+        open={madeBill !== null}
+        title={t("party.billReady", "Bill ready")}
+        onClose={() => setMadeBill(null)}
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted">
+            {t(
+              "party.billReadyHint",
+              "The bill is saved and stock is updated. Open it to print, save as PDF or share.",
+            )}
+          </p>
+          <a
+            href={madeBill ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-xl bg-forest px-4 py-3 text-center text-sm font-semibold text-paper"
+          >
+            {t("bills.printPdf", "Print / PDF")}
+          </a>
+          <button
+            onClick={() => setMadeBill(null)}
+            className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted"
+          >
+            {t("c.done", "Done")}
+          </button>
+        </div>
+      </Sheet>
+
       {/* entry detail (read) */}
       <Sheet
         open={detail !== null}
@@ -510,6 +543,15 @@ export default function PartyDetailClient({
         onClose={() => setDetail(null)}
       >
         {detail ? (
+          (() => {
+            const billHref = detail.bill_id
+              ? `/print/bill/${detail.bill_id}`
+              : detail.ref?.startsWith("sl_")
+                ? `/print/bill/${detail.ref}`
+                : detail.ref?.startsWith("st_")
+                  ? `/print/purchase/${detail.ref}`
+                  : null;
+            return (
           <div className="flex flex-col gap-3">
             <p
               className={`numeric text-2xl font-semibold ${
@@ -521,7 +563,7 @@ export default function PartyDetailClient({
             <p className="text-xs text-muted">
               {detail.type === "credit" ? creditLabel : paymentLabel} ·{" "}
               {fmtEntryDate(detail.date)}
-              {detail.bill_id ? ` · ${t("party.fromBill", "from a bill")}` : ""}
+              {billHref ? ` · ${t("party.fromBill", "from a bill")}` : ""}
             </p>
             {detail.note ? (
               <p className="whitespace-pre-line rounded-lg border border-line bg-paper p-3 text-sm text-ink">
@@ -529,15 +571,15 @@ export default function PartyDetailClient({
               </p>
             ) : null}
 
-            {detail.bill_id || detail.type === "credit" ? (
+            {billHref || detail.type === "credit" ? (
               <div
                 className={`grid gap-2 ${
-                  detail.bill_id ? "grid-cols-2" : "grid-cols-1"
+                  billHref ? "grid-cols-2" : "grid-cols-1"
                 }`}
               >
-                {detail.bill_id ? (
+                {billHref ? (
                   <a
-                    href={`/print/bill/${detail.bill_id}`}
+                    href={billHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-center text-sm font-semibold text-forest"
@@ -576,7 +618,7 @@ export default function PartyDetailClient({
                 {t("c.delete", "Delete")}
               </button>
             </div>
-            {!detail.bill_id && party.phone ? (
+            {!billHref && party.phone ? (
               <a
                 href={waLink(
                   party.phone,
@@ -592,6 +634,8 @@ export default function PartyDetailClient({
               </a>
             ) : null}
           </div>
+            );
+          })()
         ) : null}
       </Sheet>
 

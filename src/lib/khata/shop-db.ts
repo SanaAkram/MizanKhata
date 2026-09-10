@@ -309,7 +309,7 @@ export async function completeSale(
     note?: string | null;
     method?: "cash" | "bank";
   },
-): Promise<void> {
+): Promise<string> {
   const { lines, paidCash, creditAmount, customerId, customerName } = args;
   const partyKind = args.partyKind ?? "customer";
   const isSupplier = partyKind === "supplier" && !!customerId;
@@ -422,6 +422,8 @@ export async function completeSale(
       });
     }
   }
+
+  return saleId;
 }
 
 /**
@@ -562,7 +564,7 @@ export async function recordPurchase(
     note?: string | null;
     date?: string;
   },
-): Promise<void> {
+): Promise<string> {
   const nowIso = args.date ?? new Date().toISOString();
   const total =
     Math.round(
@@ -608,6 +610,8 @@ export async function recordPurchase(
     date: nowIso,
   });
   if (r2.error) throw r2.error;
+
+  return stId;
 }
 
 export async function restock(

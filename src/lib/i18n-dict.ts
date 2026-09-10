@@ -248,6 +248,13 @@ const DICT: Record<string, Entry> = {
     roman: "Khata, Cash Book aur reports entries kaise dikhayein.",
   },
   "party.fromBill": { en: "from a bill", ur: "بل سے", roman: "bill se" },
+  "party.billReady": { en: "Bill ready", ur: "بل تیار", roman: "Bill tayyar" },
+  "party.billReadyHint": {
+    en: "The bill is saved and stock is updated. Open it to print, save as PDF or share.",
+    ur: "بل محفوظ ہوگیا اور اسٹاک اپڈیٹ ہوگیا۔ پرنٹ، پی ڈی ایف یا شیئر کرنے کے لیے کھولیں۔",
+    roman:
+      "Bill save hogaya aur stock update hogaya. Print, PDF ya share karne ke liye kholein.",
+  },
   "party.shareWa": {
     en: "Share on WhatsApp",
     ur: "واٹس ایپ پر بھیجیں",
@@ -551,6 +558,22 @@ const DICT: Record<string, Entry> = {
   "bills.tax": { en: "Tax", ur: "ٹیکس", roman: "Tax" },
   "bills.billNo": { en: "Bill #{n}", ur: "بل #{n}", roman: "Bill #{n}" },
   "bills.thankYou": { en: "Thank you.", ur: "شکریہ۔", roman: "Shukriya." },
+  "prt.purchaseFrom": {
+    en: "Purchase from",
+    ur: "خریداری بنام",
+    roman: "Khareedari banaam",
+  },
+  "prt.purchaseNote": { en: "On credit", ur: "اُدھار", roman: "Udhaar" },
+  "prt.toPayNow": {
+    en: "To pay {name}",
+    ur: "{name} کو دینے ہیں",
+    roman: "{name} ko dene hain",
+  },
+  "prt.purchaseThanks": {
+    en: "Goods received.",
+    ur: "مال موصول ہوا۔",
+    roman: "Maal mausool hua.",
+  },
 
   // ---- shop dashboard ------------------------------------------------
   "dash.netProfit": {
