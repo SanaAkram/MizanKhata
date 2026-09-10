@@ -408,6 +408,17 @@ const DICT: Record<string, Entry> = {
   "bills.qtyRate": { en: "Qty×Rate", ur: "تعداد×ریٹ", roman: "Qty×Rate" },
   "bills.amount": { en: "Amount", ur: "رقم", roman: "Raqam" },
   "bills.grandTotal": { en: "Bill total", ur: "بل کا کل", roman: "Bill ka kul" },
+  "bills.total": { en: "Total", ur: "کل", roman: "Total" },
+  "bills.previousAmount": {
+    en: "Previous amount",
+    ur: "پچھلی رقم",
+    roman: "Pichli raqam",
+  },
+  "bills.grandTotalDue": {
+    en: "Grand total",
+    ur: "مجموعی رقم",
+    roman: "Grand total",
+  },
   "bills.paidNow": { en: "Paid", ur: "ادا کیا", roman: "Ada kiya" },
   "bills.unpaidThis": {
     en: "Remaining",
@@ -444,6 +455,21 @@ const DICT: Record<string, Entry> = {
     en: "Cash sale — not added to anyone's account. Use Edit to pick a customer.",
     ur: "نقد فروخت — کسی کے حساب میں نہیں۔ گاہک چننے کے لیے ترمیم کریں۔",
     roman: "Cash bikri — kisi ke hisaab mein nahi. Customer chunne ke liye Edit karein.",
+  },
+  "bills.walkinCash": {
+    en: "Walk-in — paid cash",
+    ur: "آنے والا — نقد ادا",
+    roman: "Walk-in — cash ada",
+  },
+  "bills.willGoOnAccount": {
+    en: "This goes on the customer's account.",
+    ur: "یہ گاہک کے حساب میں چڑھے گا۔",
+    roman: "Ye customer ke hisaab mein chdhega.",
+  },
+  "bills.willBeCash": {
+    en: "Recorded as a cash sale.",
+    ur: "نقد فروخت کے طور پر درج۔",
+    roman: "Cash bikri ke tor par darj.",
   },
   "bills.printPdf": { en: "Print / PDF", ur: "پرنٹ / پی ڈی ایف", roman: "Print / PDF" },
   "bills.share": { en: "Share", ur: "بھیجیں", roman: "Bhejein" },

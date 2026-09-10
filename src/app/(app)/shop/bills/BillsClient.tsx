@@ -62,7 +62,6 @@ export default function BillsClient({
   const [edDiscount, setEdDiscount] = useState("");
   const [edTax, setEdTax] = useState("");
   const [edNote, setEdNote] = useState("");
-  const [edPaid, setEdPaid] = useState("");
 
   const brand = (premium && business?.logo_color) || "#2f4a34";
   const billLogo =
@@ -117,8 +116,8 @@ export default function BillsClient({
     Math.round(
       (edSubtotal - (Number(edDiscount) || 0) + (Number(edTax) || 0)) * 100,
     ) / 100;
-  const edPaidNum = Math.max(0, Math.min(Number(edPaid) || 0, edTotal));
-  const edCredit = Math.round((edTotal - edPaidNum) * 100) / 100;
+  // No partial payments: a bill with a customer is fully on credit, a
+  // walk-in bill is fully paid cash.
 
   function openBill(s: Numbered) {
     setArmDel(false);
@@ -127,7 +126,6 @@ export default function BillsClient({
     setEdDiscount(Number(s.discount) ? String(Number(s.discount)) : "");
     setEdTax(Number(s.tax) ? String(Number(s.tax)) : "");
     setEdNote(s.note ?? "");
-    setEdPaid(String(Number(s.paid_cash) || 0));
     setOpen(s);
   }
 
@@ -167,10 +165,6 @@ export default function BillsClient({
 
   async function saveEdit() {
     if (!open) return;
-    if (edCredit > 0 && !edCustId) {
-      toast("Pick a customer for the unpaid amount, or mark it fully paid.", "error");
-      return;
-    }
     setBusy(true);
     try {
       const cust = edCustId ? customers.find((c) => c.id === edCustId) : null;
@@ -180,8 +174,8 @@ export default function BillsClient({
         discount: Number(edDiscount) || 0,
         tax: Number(edTax) || 0,
         note: edNote.trim() || null,
-        paidCash: edPaidNum,
-        creditAmount: edCredit,
+        paidCash: cust ? 0 : edTotal,
+        creditAmount: cust ? edTotal : 0,
       });
       setOpen(null);
       setEditing(false);
@@ -196,16 +190,8 @@ export default function BillsClient({
 
   function badge(s: Sale) {
     const credit = Number(s.credit_amount) || 0;
-    const cash = Number(s.paid_cash) || 0;
     if (credit <= 0)
       return { text: t("bills.badge.cash", "Cash"), cls: "bg-ok/10 text-ok" };
-    if (cash > 0)
-      return {
-        text: t("bills.badge.partial", "Partial · {amt} credit", {
-          amt: fmtRs(credit),
-        }),
-        cls: "bg-gold/10 text-gold",
-      };
     return {
       text: t("bills.badge.credit", "On credit"),
       cls: "bg-danger/10 text-danger",
@@ -323,7 +309,7 @@ export default function BillsClient({
                 className={inputCls}
               >
                 <option value="">
-                  {t("bills.walkinNoLedger", "Walk-in (no ledger)")}
+                  {t("bills.walkinCash", "Walk-in — paid cash")}
                 </option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -352,31 +338,16 @@ export default function BillsClient({
             </label>
 
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span>{t("bills.grandTotal", "Bill total")}</span>
+              <span>{t("bills.total", "Total")}</span>
               <span className="numeric" style={{ color: brand }}>
                 {fmtRs(edTotal)}
               </span>
             </div>
-
-            <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-              {t("bills.paidNow", "Paid")} ({t("c.cash", "cash")})
-              <CalcField
-                value={edPaid}
-                onChange={setEdPaid}
-                placeholder="0"
-              />
-            </label>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted">
-                {t("bills.goesOnCredit", "Goes on credit")}
-              </span>
-              <span
-                className="numeric font-semibold"
-                style={{ color: edCredit > 0 ? brand : undefined }}
-              >
-                {fmtRs(edCredit)}
-              </span>
-            </div>
+            <p className="text-[11px] text-muted">
+              {edCustId
+                ? t("bills.willGoOnAccount", "This goes on the customer's account.")
+                : t("bills.willBeCash", "Recorded as a cash sale.")}
+            </p>
 
             <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
               {t("c.note", "Note")}
@@ -487,74 +458,41 @@ export default function BillsClient({
                 <span className="numeric">+ {fmtRs(Number(open.tax))}</span>
               </div>
             ) : null}
-            <div className="flex items-center justify-between text-sm font-semibold">
-              <span>{t("bills.grandTotal", "Bill total")}</span>
-              <span className="numeric" style={{ color: brand }}>
+            <div
+              className={`flex items-center justify-between text-sm ${
+                openCust ? "text-muted" : "font-semibold"
+              }`}
+            >
+              <span>{t("bills.total", "Total")}</span>
+              <span
+                className="numeric"
+                style={{ color: openCust ? undefined : brand }}
+              >
                 {fmtRs(Number(open.total))}
               </span>
             </div>
-            <div className="flex items-center justify-between text-xs text-muted">
-              <span>{t("bills.paidNow", "Paid")}</span>
-              <span className="numeric">{fmtRs(Number(open.paid_cash))}</span>
-            </div>
-            {Number(open.credit_amount) > 0 ? (
-              <div className="flex items-center justify-between text-xs font-semibold text-danger">
-                <span>{t("bills.unpaidThis", "Remaining")}</span>
-                <span className="numeric">
-                  {fmtRs(Number(open.credit_amount))}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between text-xs font-semibold text-ok">
-                <span>{t("bills.status", "Status")}</span>
-                <span>{t("bills.paidInFull", "All paid")}</span>
-              </div>
-            )}
 
-            <div
-              className="rounded-lg border p-2 text-xs"
-              style={{ borderColor: `${brand}33`, background: `${brand}0a` }}
-            >
-              {openCust ? (
-                <>
-                  <p
-                    className="mb-1 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{ color: brand }}
-                  >
-                    {t("bills.accountTitle", "Account")}
-                  </p>
-                  <div className="flex justify-between text-muted">
-                    <span>{t("bills.prevBalance", "Old balance")}</span>
-                    <span className="numeric">{fmtRs(prevBal)}</span>
-                  </div>
-                  {Number(open.credit_amount) > 0 ? (
-                    <div className="flex justify-between text-muted">
-                      <span>{t("bills.thisBillUnpaid", "This bill")}</span>
-                      <span className="numeric">
-                        + {fmtRs(Number(open.credit_amount))}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div className="flex justify-between font-semibold">
-                    <span>
-                      {t("bills.totalDueFrom", "{name} to pay", {
-                        name: openCust.name,
-                      })}
-                    </span>
-                    <span className="numeric" style={{ color: brand }}>
-                      {fmtRs(newBal)}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <p className="text-muted">
-                  {t(
-                    "bills.walkinNote",
-                    "Cash sale — not added to anyone's account. Use Edit to pick a customer.",
-                  )}
-                </p>
-              )}
-            </div>
+            {openCust ? (
+              <>
+                <div className="flex items-center justify-between text-sm text-muted">
+                  <span>{t("bills.previousAmount", "Previous amount")}</span>
+                  <span className="numeric">{fmtRs(prevBal)}</span>
+                </div>
+                <div className="flex items-center justify-between border-t border-line pt-1.5 text-sm font-semibold">
+                  <span>{t("bills.grandTotalDue", "Grand total")}</span>
+                  <span className="numeric" style={{ color: brand }}>
+                    {fmtRs(prevBal + Number(open.total))}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted">
+                {t(
+                  "bills.walkinNote",
+                  "Cash sale — not added to anyone's account. Use Edit to pick a customer.",
+                )}
+              </p>
+            )}
 
             {open.note ? (
               <p className="whitespace-pre-line text-xs text-muted">

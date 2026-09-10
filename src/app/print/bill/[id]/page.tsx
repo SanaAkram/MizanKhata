@@ -57,10 +57,12 @@ export default async function BillPrintPage({
     ? customers.find((c) => c.id === sale.customer_id)
     : null;
   const custName = sale.customer_name || customer?.name || null;
-  const paid = Number(sale.paid_cash) || 0;
   const billCredit = Number(sale.credit_amount) || 0;
+  const billTotal = Number(sale.total) || 0;
   const newBal = customer ? customerBalance(khataTx, customer.id) : null;
   const prevBal = newBal == null ? null : newBal - billCredit;
+  // Grand total = what they owe once this whole bill is on the account.
+  const grandTotal = prevBal == null ? billTotal : prevBal + billTotal;
 
   return (
     <main
@@ -157,70 +159,28 @@ export default async function BillPrintPage({
           />
         ) : null}
         <Row
-          label={t("bills.grandTotal", "Bill total")}
-          value={fmtRs(Number(sale.total))}
-          bold
-          color={brand}
+          label={t("bills.total", "Total")}
+          value={fmtRs(billTotal)}
+          bold={prevBal == null}
+          color={prevBal == null ? brand : undefined}
         />
-        <Row label={t("bills.paidNow", "Paid")} value={fmtRs(paid)} />
-        {billCredit > 0 ? (
-          <Row
-            label={t("bills.unpaidThis", "Remaining")}
-            value={fmtRs(billCredit)}
-            bold
-          />
-        ) : (
-          <Row
-            label={t("bills.status", "Status")}
-            value={t("bills.paidInFull", "All paid")}
-            color={brand}
-          />
-        )}
+        {prevBal != null ? (
+          <>
+            <Row
+              label={t("bills.previousAmount", "Previous amount")}
+              value={fmtRs(prevBal)}
+            />
+            <Row
+              label={t("bills.grandTotalDue", "Grand total")}
+              value={fmtRs(grandTotal)}
+              bold
+              color={brand}
+            />
+          </>
+        ) : null}
       </div>
 
-      {customer ? (
-        <div
-          style={{
-            marginTop: 10,
-            padding: 10,
-            border: `1px solid ${brand}33`,
-            borderRadius: 8,
-            fontSize: 12,
-            background: `${brand}0a`,
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 700,
-              color: brand,
-              marginBottom: 4,
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-            }}
-          >
-            {t("bills.accountTitle", "Account")}
-          </div>
-          <Row
-            label={t("bills.prevBalance", "Old balance")}
-            value={fmtRs(prevBal ?? 0)}
-          />
-          {billCredit > 0 ? (
-            <Row
-              label={t("bills.thisBillUnpaid", "This bill")}
-              value={`+ ${fmtRs(billCredit)}`}
-            />
-          ) : null}
-          <Row
-            label={t("bills.totalDueFrom", "{name} to pay", {
-              name: customer.name,
-            })}
-            value={fmtRs(newBal ?? 0)}
-            bold
-            color={brand}
-          />
-        </div>
-      ) : (
+      {!customer ? (
         <div
           style={{
             marginTop: 10,
@@ -236,7 +196,7 @@ export default async function BillPrintPage({
             "Cash sale — not added to anyone's account.",
           )}
         </div>
-      )}
+      ) : null}
 
       {sale.note ? (
         <p style={{ fontSize: 12, color: muted, marginTop: 10 }}>{sale.note}</p>
