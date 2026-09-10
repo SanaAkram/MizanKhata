@@ -1,16 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
-import {
-  fetchCustomers,
-  fetchKhataTx,
-  fetchSupplierTx,
-  fetchSuppliers,
-  type Customer,
-  type KhataTx,
-  type Supplier,
-  type SupplierTx,
-} from "@/lib/khata/db";
+import type { KhataTx, SupplierTx } from "@/lib/khata/db";
 import { fetchProducts, type Product } from "@/lib/khata/shop-db";
 import { serverT } from "@/lib/i18n-server";
 import PartyDetailClient from "./PartyDetailClient";
@@ -31,29 +22,29 @@ export default async function PartyPage({
   const { active } = await resolveBusiness(supabase);
   const bid = active?.id ?? "";
 
-  let customers: Customer[] = [];
-  let suppliers: Supplier[] = [];
-  let khataTx: KhataTx[] = [];
-  let supplierTx: SupplierTx[] = [];
-  let products: Product[] = [];
-  try {
-    [customers, suppliers, khataTx, supplierTx, products] = await Promise.all([
-      fetchCustomers(supabase, bid),
-      fetchSuppliers(supabase, bid),
-      fetchKhataTx(supabase, bid),
-      fetchSupplierTx(supabase, bid),
-      fetchProducts(supabase, bid),
-    ]);
-  } catch {
-    /* fall through to not-found */
-  }
+  // Look the party up on the hinted side first, then the other.
+  const wantSupplier = kindHint === "supplier";
+  const custQ = supabase
+    .from("shop_customers")
+    .select("id,name,phone")
+    .eq("business_id", bid)
+    .eq("id", id)
+    .maybeSingle();
+  const suppQ = supabase
+    .from("shop_suppliers")
+    .select("id,name,phone")
+    .eq("business_id", bid)
+    .eq("id", id)
+    .maybeSingle();
 
-  const customer = customers.find((c) => c.id === id);
-  const supplier = suppliers.find((s) => s.id === id);
-  const kind =
-    kindHint === "supplier" || (!customer && supplier)
-      ? "supplier"
-      : "customer";
+  const [{ data: customer }, { data: supplier }, products] = await Promise.all([
+    custQ,
+    suppQ,
+    fetchProducts(supabase, bid).catch(() => [] as Product[]),
+  ]);
+
+  const kind: "customer" | "supplier" =
+    wantSupplier || (!customer && supplier) ? "supplier" : "customer";
   const party = kind === "supplier" ? supplier : customer;
 
   if (!party) {
@@ -73,17 +64,33 @@ export default async function PartyPage({
     );
   }
 
+  // Only this party's transactions — not the whole ledger.
+  let txs: KhataTx[] | SupplierTx[] = [];
+  if (kind === "supplier") {
+    const { data } = await supabase
+      .from("shop_supplier_tx")
+      .select("*")
+      .eq("business_id", bid)
+      .eq("supplier_id", id)
+      .order("date", { ascending: true });
+    txs = data ?? [];
+  } else {
+    const { data } = await supabase
+      .from("shop_khata_tx")
+      .select("*")
+      .eq("business_id", bid)
+      .eq("customer_id", id)
+      .order("date", { ascending: true });
+    txs = data ?? [];
+  }
+
   return (
     <PartyDetailClient
       businessId={bid}
       kind={kind}
       party={{ id: party.id, name: party.name, phone: party.phone }}
       products={products}
-      txs={
-        kind === "supplier"
-          ? supplierTx.filter((t) => t.supplier_id === id)
-          : khataTx.filter((t) => t.customer_id === id)
-      }
+      txs={txs}
     />
   );
 }

@@ -11,12 +11,15 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // The proxy middleware already ran getUser() (authoritative check + token
+  // refresh) and redirected anons. Here we only need a cheap cookie read —
+  // getSession() makes no network call — as a belt-and-braces guard.
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/login");
+  if (!session) redirect("/login");
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-paper shadow-[0_0_80px_rgba(28,46,32,0.07)]">
