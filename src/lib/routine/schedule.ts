@@ -72,6 +72,64 @@ export function intervalProgress(
 }
 
 /**
+ * Turn an interval item (drink water every 2h, 07:00–23:00) into one occurrence
+ * per nudge time, so it shows on the day timeline as a recurring task.
+ * Occurrence k is "done" once the running count has passed it.
+ */
+export function intervalOccurrences(
+  items: RoutineItem[],
+  logs: RoutineLog[],
+  viewDateKey: string,
+  now: Date = new Date(),
+): Occurrence[] {
+  const date = parseDateKey(viewDateKey);
+  const todayKey = dateKey(now);
+  const isToday = viewDateKey === todayKey;
+  const isPast = viewDateKey < todayKey;
+  const nowMin = minutesNow(now);
+  const out: Occurrence[] = [];
+
+  for (const item of intervalItems(items, date)) {
+    const every = item.interval_min || 0;
+    if (every <= 0) continue;
+    const fromMin = minutesOfDay(item.active_from);
+    const toMin = minutesOfDay(item.active_to) || 24 * 60;
+    const log = logs.find((l) => l.item_id === item.id);
+    const count = Number(log?.count ?? 0);
+
+    let k = 0;
+    for (let m = fromMin; m < toMin && k < 24; m += every, k++) {
+      const startMin = m;
+      const endMin = Math.min(m + Math.min(every, 30), toMin);
+      const start = new Date(date);
+      start.setHours(0, startMin, 0, 0);
+      const end = new Date(date);
+      end.setHours(0, endMin, 0, 0);
+
+      let phase: Phase;
+      if (isToday) {
+        phase =
+          nowMin < startMin ? "upcoming" : nowMin < endMin ? "active" : "past";
+      } else {
+        phase = isPast ? "past" : "upcoming";
+      }
+      const status: RoutineStatus = count > k ? "done" : "pending";
+      out.push({
+        item,
+        startMin,
+        endMin,
+        start,
+        end,
+        status,
+        logged: count > k,
+        phase,
+      });
+    }
+  }
+  return out;
+}
+
+/**
  * Build the ordered list of routine occurrences for `viewDateKey`, resolving
  * each one's status against the logs and the current time.
  */
@@ -154,17 +212,27 @@ export function adherence(occs: Occurrence[]): Adherence {
 
 /** Hour bounds [startHour, endHour] to render on the timeline for these items. */
 export function timelineBounds(items: RoutineItem[]): [number, number] {
-  const timed = items.filter((it) => it.kind !== "interval" && it.at_time);
-  if (timed.length === 0) return [5, 23];
   let lo = 24;
   let hi = 0;
-  for (const it of timed) {
-    const s = Math.floor(minutesOfDay(it.at_time) / 60);
-    const e = Math.ceil(
-      Math.min(minutesOfDay(it.at_time) + (it.window_min || 0), 24 * 60) / 60,
-    );
-    lo = Math.min(lo, s);
-    hi = Math.max(hi, e);
+  let any = false;
+  for (const it of items) {
+    if (!it.enabled) continue;
+    if (it.kind === "interval") {
+      const f = minutesOfDay(it.active_from);
+      const t = minutesOfDay(it.active_to) || 24 * 60;
+      lo = Math.min(lo, Math.floor(f / 60));
+      hi = Math.max(hi, Math.ceil(t / 60));
+      any = true;
+    } else if (it.at_time) {
+      const s = Math.floor(minutesOfDay(it.at_time) / 60);
+      const e = Math.ceil(
+        Math.min(minutesOfDay(it.at_time) + (it.window_min || 0), 24 * 60) / 60,
+      );
+      lo = Math.min(lo, s);
+      hi = Math.max(hi, e);
+      any = true;
+    }
   }
+  if (!any) return [5, 23];
   return [Math.max(0, lo - 1), Math.min(24, Math.max(hi + 1, lo + 3))];
 }

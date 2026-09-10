@@ -22,19 +22,21 @@ import {
   buildOccurrences,
   catchUpQueue,
   intervalItems,
+  intervalOccurrences,
   intervalProgress,
   nextUpcoming,
   timelineBounds,
   type Occurrence,
 } from "@/lib/routine/schedule";
 import { useRoutineTicker } from "@/lib/routine/useRoutineTicker";
+import { stopAzan } from "@/lib/routine/sound";
 import {
   clearReminderState,
   notifPermission,
   requestNotif,
   setSnooze,
   snoozedUntil,
-  SNOOZE_MS,
+  snoozeMs,
 } from "@/lib/routine/notify";
 import type {
   RoutineItem,
@@ -130,6 +132,7 @@ export default function RoutineClient({
   async function mark(dk: string, itemId: string, status: RoutineStatus) {
     const id = logId(dk, itemId);
     const nowIso = new Date().toISOString();
+    stopAzan();
     clearReminderState(dk, itemId);
     setLogs((prev) => [
       ...prev.filter((l) => l.id !== id),
@@ -165,7 +168,7 @@ export default function RoutineClient({
   }
 
   function snoozeItem(dk: string, itemId: string) {
-    setSnooze(dk, itemId, Date.now() + SNOOZE_MS);
+    setSnooze(dk, itemId, Date.now() + snoozeMs());
     setPick(null);
   }
 
@@ -260,6 +263,15 @@ export default function RoutineClient({
   const occs = useMemo(
     () => buildOccurrences(items, selectedLogs, selectedKey, now),
     [items, selectedLogs, selectedKey, now],
+  );
+  // timeline also shows interval items (drink water) at each nudge time
+  const timelineOccs = useMemo(
+    () =>
+      [
+        ...occs,
+        ...intervalOccurrences(items, selectedLogs, selectedKey, now),
+      ].sort((a, b) => a.startMin - b.startMin),
+    [occs, items, selectedLogs, selectedKey, now],
   );
   const bounds = useMemo(() => timelineBounds(items), [items]);
 
@@ -413,11 +425,15 @@ export default function RoutineClient({
       ) : null}
 
       <DayTimeline
-        occurrences={occs}
+        occurrences={timelineOccs}
         bounds={bounds}
         isToday={isToday}
         now={now}
-        onPick={setPick}
+        onPick={(o) =>
+          o.item.kind === "interval"
+            ? void bump(selectedKey, o.item.id, 1)
+            : setPick(o)
+        }
       />
 
       <Sheet

@@ -293,6 +293,7 @@ export type Database = {
           last_seen: string
           owner_id: string
           p256dh: string
+          renag_min: number
           tz_offset_min: number
           user_agent: string | null
         }
@@ -304,6 +305,7 @@ export type Database = {
           last_seen?: string
           owner_id?: string
           p256dh: string
+          renag_min?: number
           tz_offset_min?: number
           user_agent?: string | null
         }
@@ -315,6 +317,7 @@ export type Database = {
           last_seen?: string
           owner_id?: string
           p256dh?: string
+          renag_min?: number
           tz_offset_min?: number
           user_agent?: string | null
         }

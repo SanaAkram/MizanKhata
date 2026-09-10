@@ -19,6 +19,25 @@ self.addEventListener("push", (event) => {
   }
   const title = d.title || "MizanKhata";
   const isInterval = d.kind === "interval";
+  const isPrayer = d.category === "prayer";
+  let actions;
+  if (isInterval) {
+    actions = [
+      { action: "plus", title: "+1" },
+      { action: "snooze", title: "Later" },
+    ];
+  } else if (isPrayer) {
+    actions = [
+      { action: "done", title: "I'm praying now" },
+      { action: "snooze", title: "Remind me later" },
+    ];
+  } else {
+    actions = [
+      { action: "done", title: "Done" },
+      { action: "snooze", title: "Snooze" },
+      { action: "skip", title: "Skip" },
+    ];
+  }
   const options = {
     // iOS shows no action buttons, so tapping the body is the whole
     // interaction: for an interval reminder that counts as +1 (see
@@ -33,17 +52,10 @@ self.addEventListener("push", (event) => {
       itemId: d.itemId || "",
       dateKey: d.dateKey || "",
       kind: d.kind || "",
+      category: d.category || "",
       url: d.url || "/routine",
     },
-    actions: isInterval
-      ? [
-          { action: "plus", title: "+1" },
-          { action: "snooze", title: "Snooze 15m" },
-        ]
-      : [
-          { action: "done", title: "Done" },
-          { action: "snooze", title: "Snooze 15m" },
-        ],
+    actions,
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

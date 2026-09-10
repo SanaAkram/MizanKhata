@@ -18,7 +18,6 @@ const VAPID_PUBLIC_JWK = Deno.env.get("VAPID_PUBLIC_JWK") ?? "";
 const VAPID_PRIVATE_JWK = Deno.env.get("VAPID_PRIVATE_JWK") ?? "";
 const CONTACT = Deno.env.get("PUSH_CONTACT") ?? "mailto:admin@mizankhata.app";
 
-const RENAG_EVERY = 10;
 const GRACE_AFTER_WINDOW = 60;
 
 function json(body: unknown, status = 200) {
@@ -38,6 +37,17 @@ function fmtIv(min: number): string {
   if (!min) return "";
   if (min % 60 === 0) return `every ${min / 60}h`;
   return `every ${min}m`;
+}
+
+/** Escalating, companionship-toned copy for a late prayer. */
+function prayerNudge(label: string, minsLate: number): string {
+  if (minsLate < 5)
+    return `It's ${label} time. Chalo mere saath — let's make wudu. 🌊`;
+  if (minsLate < 15)
+    return `The reward for praying on time is huge. Chalo, wudu karein? 🌊`;
+  if (minsLate < 30)
+    return `Don't let the moment slip away — you're stronger than the delay. 💪`;
+  return `Time is going, but Allah's mercy is waiting. Rukho scrolling, start ${label}. ✨`;
 }
 
 Deno.serve(async (req) => {
@@ -78,6 +88,7 @@ Deno.serve(async (req) => {
 
   for (const [ownerId, ownerSubs] of byOwner) {
     const tz = ownerSubs[0].tz_offset_min ?? 300;
+    const renag = Math.max(1, Number(ownerSubs[0].renag_min) || 10);
     const local = new Date(nowUtcMs + tz * 60_000);
     const dow = local.getUTCDay();
     const localMin = local.getUTCHours() * 60 + local.getUTCMinutes();
@@ -106,6 +117,7 @@ Deno.serve(async (req) => {
 
       let kind: "start" | "ask" | "interval" | null = null;
       let atMinute = localMin;
+      let minsLate = 0;
 
       if (it.kind === "interval") {
         const target = Number(it.target_count) || 0;
@@ -126,9 +138,10 @@ Deno.serve(async (req) => {
         if (localMin >= endMin + GRACE_AFTER_WINDOW) continue;
         const inWindow = localMin < endMin;
         const since = inWindow ? localMin - startMin : localMin - endMin;
-        if (since % RENAG_EVERY !== 0) continue;
+        if (since % renag !== 0) continue;
         kind = inWindow ? "start" : "ask";
         atMinute = localMin;
+        minsLate = Math.max(0, localMin - startMin);
       }
       if (!kind) continue;
 
@@ -145,18 +158,22 @@ Deno.serve(async (req) => {
         const u = it.count_unit ?? "one";
         title = `${it.label} — time for a ${u}`;
         body = it.target_count
-          ? `${it.target_count} ${u} a day · ${fmtIv(it.interval_min || 0)}. Tap +1.`
-          : `${fmtIv(it.interval_min || 0)}. Tap +1 when done.`;
+          ? `${it.target_count} ${u} a day · ${fmtIv(it.interval_min || 0)}.`
+          : `${fmtIv(it.interval_min || 0)}.`;
       } else if (kind === "start") {
         title = isPrayer
           ? `${it.label} — prayer time`
           : `${it.label} — it's time`;
-        body = "Tap Done when finished, or Snooze.";
+        body = isPrayer
+          ? `It's time. Chalo mere saath. 🤲`
+          : `Chalo, kar lete hain.`;
       } else {
         title = isPrayer
           ? `Did you offer ${it.label} prayer?`
           : `${it.label} — done?`;
-        body = "Still not logged — tap Done or Snooze.";
+        body = isPrayer
+          ? prayerNudge(it.label, minsLate)
+          : `${it.label} still pending. Chalo, kar lein.`;
       }
 
       const payload = JSON.stringify({
@@ -164,6 +181,7 @@ Deno.serve(async (req) => {
         body,
         tag: `routine-${it.id}`,
         kind,
+        category: it.category ?? "",
         itemId: it.id,
         dateKey,
         url: "/routine",

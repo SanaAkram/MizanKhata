@@ -15,14 +15,22 @@ import {
 import {
   disablePush,
   enablePush,
+  pushSetRenag,
   pushState,
   type PushState,
 } from "@/lib/routine/push";
 import {
+  getAzanEnabled,
+  getNudgeMin,
   getSound,
+  NUDGE_OPTIONS,
+  playAzan,
   playReminderSound,
+  setAzanEnabled,
+  setNudgeMin,
   setSound,
   SOUND_OPTIONS,
+  stopAzan,
   type SoundName,
 } from "@/lib/routine/sound";
 import type { Database } from "@/lib/database.types";
@@ -351,6 +359,8 @@ function ReminderSettings({
 }) {
   const [push, setPush] = useState<PushState>("off");
   const [sound, setSoundState] = useState<SoundName>("chime");
+  const [azan, setAzanState] = useState(true);
+  const [nudge, setNudgeState] = useState(10);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -358,6 +368,8 @@ function ReminderSettings({
     void pushState().then(setPush);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSoundState(getSound());
+    setAzanState(getAzanEnabled());
+    setNudgeState(getNudgeMin());
   }, []);
 
   async function toggle() {
@@ -418,9 +430,35 @@ function ReminderSettings({
       {msg ? <p className="mt-2 text-xs text-danger">{msg}</p> : null}
 
       <div className="mt-4">
+        <p className="text-sm font-semibold text-ink">Re-remind every</p>
+        <p className="text-xs text-muted">
+          How often an unanswered reminder nudges you again, and how long
+          &quot;remind me later&quot; waits.
+        </p>
+        <div className="mt-2 flex gap-1 rounded-xl border border-line p-1">
+          {NUDGE_OPTIONS.map((n) => (
+            <button
+              key={n}
+              onClick={() => {
+                setNudgeState(n);
+                setNudgeMin(n);
+                void pushSetRenag(supabase, n);
+              }}
+              className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
+                nudge === n ? "bg-forest text-paper" : "text-muted"
+              }`}
+            >
+              {n} min
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4">
         <p className="text-sm font-semibold text-ink">In-app sound</p>
         <p className="text-xs text-muted">
-          Plays when a reminder fires while the app is open.
+          Plays when a reminder fires while the app is open. When the phone is
+          locked, notifications use the phone&apos;s own sound.
         </p>
         <div className="mt-2 flex items-center gap-2">
           <select
@@ -444,6 +482,39 @@ function ReminderSettings({
             className="rounded-lg border border-line px-3 py-2 text-xs font-semibold text-muted"
           >
             Test
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Play azan for prayers</p>
+          <p className="text-xs text-muted">
+            Plays the azan (instead of the tone) when a prayer reminder fires
+            while the app is open.
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {azan ? (
+            <button
+              onClick={() => void playAzan()}
+              className="rounded-lg border border-line px-3 py-2 text-xs font-semibold text-muted"
+            >
+              Test
+            </button>
+          ) : null}
+          <button
+            onClick={() => {
+              const v = !azan;
+              setAzanState(v);
+              setAzanEnabled(v);
+              if (!v) stopAzan();
+            }}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+              azan ? "bg-forest text-paper" : "border border-line text-muted"
+            }`}
+          >
+            {azan ? "On" : "Off"}
           </button>
         </div>
       </div>

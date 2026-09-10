@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { getNudgeMin } from "./sound";
 
 type DB = SupabaseClient<Database>;
 
@@ -81,6 +82,7 @@ export async function enablePush(db: DB): Promise<PushResult> {
         p256dh: keys.p256dh,
         auth: keys.auth,
         tz_offset_min: -new Date().getTimezoneOffset(),
+        renag_min: getNudgeMin(),
         user_agent: navigator.userAgent.slice(0, 300),
         last_seen: new Date().toISOString(),
       },
@@ -90,6 +92,21 @@ export async function enablePush(db: DB): Promise<PushResult> {
     return "on";
   } catch {
     return "error";
+  }
+}
+
+/** Push the re-nag interval to the current subscription row (best effort). */
+export async function pushSetRenag(db: DB, min: number): Promise<void> {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await db
+      .from("shop_push_subscriptions")
+      .update({ renag_min: min })
+      .eq("id", await hashId(sub.endpoint));
+  } catch {
+    /* ignore */
   }
 }
 

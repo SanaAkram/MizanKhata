@@ -106,10 +106,11 @@ export default function DayTimeline({
 
         {/* occurrences */}
         {lanes.map(({ occ, lane }) => {
+          const isInterval = occ.item.kind === "interval";
           const top = (occ.startMin - topMin) * PX_PER_MIN;
           const h = Math.max(
             (occ.endMin - occ.startMin) * PX_PER_MIN,
-            34,
+            isInterval ? 22 : 34,
           );
           const laneW = `calc((100% - ${GUTTER}px) / ${count})`;
           const left = `calc(${GUTTER}px + (100% - ${GUTTER}px) / ${count} * ${lane})`;
@@ -122,9 +123,11 @@ export default function DayTimeline({
 
           return (
             <button
-              key={occ.item.id}
+              key={`${occ.item.id}:${occ.startMin}`}
               onClick={() => onPick(occ)}
-              className={`absolute z-10 overflow-hidden rounded-lg border px-2 py-1 text-left ${s.box}`}
+              className={`absolute z-10 overflow-hidden rounded-lg border px-2 py-1 text-left ${
+                isInterval ? "border-dashed" : ""
+              } ${s.box}`}
               style={{
                 top,
                 height: h,
@@ -140,11 +143,16 @@ export default function DayTimeline({
                 {occ.status === "done" ? (
                   <CheckIcon className="h-3.5 w-3.5 shrink-0 text-ok" />
                 ) : null}
-                <span className="truncate">{occ.item.label}</span>
+                <span className="truncate">
+                  {occ.item.label}
+                  {isInterval ? " +" : ""}
+                </span>
               </span>
-              <span className="block text-[10px] text-muted">
-                {fmt12h(occ.item.at_time)}
-              </span>
+              {!isInterval ? (
+                <span className="block text-[10px] text-muted">
+                  {fmt12h(occ.item.at_time)}
+                </span>
+              ) : null}
             </button>
           );
         })}

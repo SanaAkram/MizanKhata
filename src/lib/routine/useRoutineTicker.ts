@@ -11,10 +11,9 @@ import {
   showRoutineNotif,
   snoozedUntil,
 } from "./notify";
-import { playReminderSound } from "./sound";
+import { getNudgeMin, playReminderSound } from "./sound";
 
 const TICK_MS = 20_000;
-const NUDGE_MS = 10 * 60 * 1000; // re-nag a scheduled item every 10 min
 const SLACK_MS = 30_000; // let the interval fire ~1 tick early
 
 /**
@@ -88,10 +87,15 @@ export function useRoutineTicker(
         const startMin = minutesOfDay(it.at_time);
         if (nowMin < startMin) continue;
         if (nowMs < snoozedUntil(dk, it.id)) continue;
-        if (nowMs - lastNudge(dk, it.id) < NUDGE_MS) continue;
+        if (nowMs - lastNudge(dk, it.id) < getNudgeMin() * 60_000) continue;
         const endMin = Math.min(startMin + (it.window_min || 0), 24 * 60);
-        void showRoutineNotif(it, dk, nowMin < endMin ? "start" : "ask");
-        playReminderSound();
+        void showRoutineNotif(
+          it,
+          dk,
+          nowMin < endMin ? "start" : "ask",
+          Math.max(0, nowMin - startMin),
+        );
+        playReminderSound({ prayer: it.category === "prayer" });
         setLastNudge(dk, it.id, nowMs);
       }
     };
