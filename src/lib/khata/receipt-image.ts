@@ -8,7 +8,7 @@ export type ReceiptSpec = {
   shopName: string;
   shopSub?: string; // phone / address line
   heading: string; // "ORDER" or "BILL #12"
-  party?: string; // customer / supplier name
+  party?: string; // customer / supplier name (omit for supplier-facing order slips)
   dateText?: string;
   rows: ReceiptRow[]; // item lines
   totals?: { label: string; value: string; bold?: boolean }[];
@@ -18,187 +18,306 @@ export type ReceiptSpec = {
 
 const W = 480;
 const PAD = 28;
-const ACCENT_DEFAULT = "#2f4a34";
+const BODY = W - PAD * 2;
+const ACCENT = "#2f4a34";
+const MUTED = "#6b7266";
+const INK = "#23291f";
+const MAX_ROWS = 120; // hard cap so the canvas can't blow past mobile limits
 
-function wrap(
+const FONT = (s: string) => `${s} 'IBM Plex Sans', system-ui, sans-serif`;
+
+// ---- a step = a strip of vertical space + how to paint it -----------
+type Step = { h: number; paint: (ctx: CanvasRenderingContext2D, y: number) => void };
+
+function textWidth(ctx: CanvasRenderingContext2D, font: string, s: string) {
+  ctx.font = font;
+  return ctx.measureText(s).width;
+}
+
+/** Wrap `text` to `maxW`, hard-breaking any single token that still overflows. */
+function wrapLines(
   ctx: CanvasRenderingContext2D,
+  font: string,
   text: string,
   maxW: number,
 ): string[] {
+  ctx.font = font;
   const out: string[] = [];
-  for (const para of String(text).split("\n")) {
-    const words = para.split(/\s+/);
+  const paras = String(text).replace(/\r\n?/g, "\n").split("\n");
+  for (const para of paras) {
+    if (para.trim() === "") continue;
     let line = "";
-    for (const w of words) {
+    for (const word of para.split(/\s+/).filter(Boolean)) {
+      let w = word;
+      // hard-break a token wider than the whole body
+      while (ctx.measureText(w).width > maxW && w.length > 1) {
+        let cut = w.length;
+        while (cut > 1 && ctx.measureText(w.slice(0, cut)).width > maxW) cut--;
+        const head = w.slice(0, cut);
+        if (line) {
+          out.push(line);
+          line = "";
+        }
+        out.push(head);
+        w = w.slice(cut);
+      }
       const test = line ? `${line} ${w}` : w;
-      if (ctx.measureText(test).width > maxW && line) {
+      if (line && ctx.measureText(test).width > maxW) {
         out.push(line);
         line = w;
       } else {
         line = test;
       }
     }
-    out.push(line);
+    if (line) out.push(line);
   }
-  return out;
+  return out.length ? out : [""];
 }
 
-/** Draw a shop receipt / order slip to a PNG blob (2x for retina). */
+function ellipsize(
+  ctx: CanvasRenderingContext2D,
+  font: string,
+  s: string,
+  maxW: number,
+): string {
+  ctx.font = font;
+  if (ctx.measureText(s).width <= maxW) return s;
+  let out = s;
+  while (out.length > 1 && ctx.measureText(out + "…").width > maxW)
+    out = out.slice(0, -1);
+  return out + "…";
+}
+
+function loadIcon(): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = "/icon.svg"; // same-origin — safe for toBlob
+  });
+}
+
+/** Build a shop receipt / order slip and return it as a PNG blob (2x). */
 export async function receiptImage(spec: ReceiptSpec): Promise<Blob> {
-  const accent = spec.brand || ACCENT_DEFAULT;
+  const accent = spec.brand || ACCENT;
+  const icon = await loadIcon();
+  const m = document.createElement("canvas").getContext("2d");
+  if (!m) throw new Error("canvas unavailable");
+
+  const steps: Step[] = [];
+
+  // logo
+  if (icon) {
+    const lw = 46;
+    const lh = (icon.height / icon.width) * lw || 46;
+    steps.push({
+      h: lh + 8,
+      paint: (ctx, y) => ctx.drawImage(icon, (W - lw) / 2, y, lw, lh),
+    });
+  }
+
+  // shop name
+  steps.push({
+    h: 26,
+    paint: (ctx, y) => {
+      ctx.font = FONT("800 20px");
+      ctx.fillStyle = accent;
+      ctx.textAlign = "center";
+      ctx.fillText(
+        ellipsize(ctx, FONT("800 20px"), spec.shopName || APP_NAME, BODY),
+        W / 2,
+        y + 19,
+      );
+    },
+  });
+
+  if (spec.shopSub) {
+    steps.push({
+      h: 16,
+      paint: (ctx, y) => {
+        ctx.font = FONT("12px");
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = "center";
+        ctx.fillText(ellipsize(ctx, FONT("12px"), spec.shopSub!, BODY), W / 2, y + 12);
+      },
+    });
+  }
+
+  steps.push({ h: 12, paint: () => {} });
+  steps.push({
+    h: 2,
+    paint: (ctx, y) => {
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(PAD, y + 1);
+      ctx.lineTo(W - PAD, y + 1);
+      ctx.stroke();
+    },
+  });
+  steps.push({ h: 12, paint: () => {} });
+
+  // heading + date on one baseline
+  steps.push({
+    h: 20,
+    paint: (ctx, y) => {
+      ctx.font = FONT("700 14px");
+      ctx.fillStyle = accent;
+      ctx.textAlign = "left";
+      ctx.fillText(spec.heading, PAD, y + 14);
+      if (spec.dateText) {
+        ctx.font = FONT("12px");
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = "right";
+        ctx.fillText(spec.dateText, W - PAD, y + 14);
+      }
+    },
+  });
+
+  if (spec.party) {
+    steps.push({
+      h: 18,
+      paint: (ctx, y) => {
+        ctx.font = FONT("700 14px");
+        ctx.fillStyle = INK;
+        ctx.textAlign = "left";
+        ctx.fillText(ellipsize(ctx, FONT("700 14px"), spec.party!, BODY), PAD, y + 14);
+      },
+    });
+  }
+
+  steps.push({ h: 8, paint: () => {} });
+  steps.push({
+    h: 1,
+    paint: (ctx, y) => {
+      ctx.strokeStyle = "#dddddd";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD, y);
+      ctx.lineTo(W - PAD, y);
+      ctx.stroke();
+    },
+  });
+  steps.push({ h: 10, paint: () => {} });
+
+  // item rows
+  const rowFont = FONT("15px");
+  const rows = spec.rows.slice(0, MAX_ROWS);
+  for (const r of rows) {
+    const rightW = r.right ? textWidth(m, rowFont, r.right) + 14 : 0;
+    const lines = wrapLines(m, rowFont, r.left, BODY - rightW);
+    steps.push({
+      h: lines.length * 20 + 6,
+      paint: (ctx, y) => {
+        ctx.font = rowFont;
+        ctx.fillStyle = INK;
+        if (r.right) {
+          ctx.textAlign = "right";
+          ctx.fillText(r.right, W - PAD, y + 15);
+        }
+        ctx.textAlign = "left";
+        let ly = y + 15;
+        for (const ln of lines) {
+          ctx.fillText(ln, PAD, ly);
+          ly += 20;
+        }
+      },
+    });
+  }
+  if (spec.rows.length > MAX_ROWS) {
+    steps.push({
+      h: 20,
+      paint: (ctx, y) => {
+        ctx.font = FONT("12px");
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = "left";
+        ctx.fillText(`+ ${spec.rows.length - MAX_ROWS} more…`, PAD, y + 14);
+      },
+    });
+  }
+
+  steps.push({ h: 8, paint: () => {} });
+  steps.push({
+    h: 1,
+    paint: (ctx, y) => {
+      ctx.strokeStyle = "#dddddd";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD, y);
+      ctx.lineTo(W - PAD, y);
+      ctx.stroke();
+    },
+  });
+  steps.push({ h: 10, paint: () => {} });
+
+  for (const trow of spec.totals ?? []) {
+    steps.push({
+      h: 22,
+      paint: (ctx, y) => {
+        ctx.font = trow.bold ? FONT("700 15px") : FONT("14px");
+        ctx.fillStyle = trow.bold ? accent : INK;
+        ctx.textAlign = "left";
+        ctx.fillText(trow.label, PAD, y + 15);
+        ctx.textAlign = "right";
+        ctx.fillText(trow.value, W - PAD, y + 15);
+      },
+    });
+  }
+
+  if (spec.note && spec.note.trim()) {
+    const noteLines = wrapLines(m, FONT("13px"), spec.note.trim(), BODY);
+    steps.push({ h: 8, paint: () => {} });
+    steps.push({
+      h: noteLines.length * 17,
+      paint: (ctx, y) => {
+        ctx.font = FONT("13px");
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = "left";
+        let ly = y + 13;
+        for (const ln of noteLines) {
+          ctx.fillText(ln, PAD, ly);
+          ly += 17;
+        }
+      },
+    });
+  }
+
+  steps.push({ h: 18, paint: () => {} });
+  steps.push({
+    h: 14,
+    paint: (ctx, y) => {
+      ctx.font = FONT("11px");
+      ctx.fillStyle = "#9aa39a";
+      ctx.textAlign = "center";
+      ctx.fillText(`${APP_NAME} · ${APP_URL}`, W / 2, y + 11);
+    },
+  });
+
+  const H = Math.ceil(PAD * 2 + steps.reduce((s, st) => s + st.h, 0));
   const scale = 2;
-  const measure = document.createElement("canvas").getContext("2d")!;
-  const bodyW = W - PAD * 2;
-
-  // ---- measure pass: compute total height ----
-  let h = PAD;
-  h += 30; // shop name
-  if (spec.shopSub) h += 18;
-  h += 10;
-  h += 2; // rule
-  h += 14;
-  h += 22; // heading row
-  if (spec.party) h += 18;
-  if (spec.dateText) h += 16;
-  h += 12;
-  h += 1; // rule
-  h += 12;
-  measure.font = "15px system-ui, sans-serif";
-  for (const r of spec.rows) {
-    const rightW = r.right ? measure.measureText(r.right).width + 12 : 0;
-    const lines = wrap(measure, r.left, bodyW - rightW);
-    h += Math.max(1, lines.length) * 21 + 6;
-  }
-  h += 10;
-  h += 1; // rule
-  h += 12;
-  if (spec.totals) h += spec.totals.length * 22;
-  if (spec.note) {
-    measure.font = "13px system-ui, sans-serif";
-    h += wrap(measure, spec.note, bodyW).length * 17 + 10;
-  }
-  h += 16;
-  h += 14; // footer
-  h += PAD;
-
-  // ---- draw pass ----
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
-  canvas.height = Math.ceil(h) * scale;
-  const ctx = canvas.getContext("2d")!;
+  canvas.height = H * scale;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas unavailable");
   ctx.scale(scale, scale);
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, W, h);
+  ctx.fillRect(0, 0, W, H);
   ctx.textBaseline = "alphabetic";
 
-  let y = PAD + 20;
-  ctx.fillStyle = accent;
-  ctx.font = "800 22px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(spec.shopName || APP_NAME, W / 2, y);
-  y += 10;
-  if (spec.shopSub) {
-    ctx.fillStyle = "#6b7266";
-    ctx.font = "12px system-ui, sans-serif";
-    y += 14;
-    ctx.fillText(spec.shopSub, W / 2, y);
+  let y = PAD;
+  for (const st of steps) {
+    st.paint(ctx, y);
+    y += st.h;
   }
-  y += 16;
-
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PAD, y);
-  ctx.lineTo(W - PAD, y);
-  ctx.stroke();
-  y += 22;
-
-  ctx.textAlign = "left";
-  ctx.fillStyle = accent;
-  ctx.font = "700 15px system-ui, sans-serif";
-  ctx.fillText(spec.heading, PAD, y);
-  if (spec.dateText) {
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#6b7266";
-    ctx.font = "12px system-ui, sans-serif";
-    ctx.fillText(spec.dateText, W - PAD, y);
-  }
-  y += 18;
-  if (spec.party) {
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#23291f";
-    ctx.font = "700 14px system-ui, sans-serif";
-    ctx.fillText(spec.party, PAD, y);
-    y += 14;
-  }
-  y += 10;
-
-  ctx.strokeStyle = "#dddddd";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(PAD, y);
-  ctx.lineTo(W - PAD, y);
-  ctx.stroke();
-  y += 20;
-
-  ctx.font = "15px system-ui, sans-serif";
-  for (const r of spec.rows) {
-    ctx.fillStyle = "#23291f";
-    ctx.textAlign = "right";
-    const rightW = r.right ? ctx.measureText(r.right).width + 12 : 0;
-    if (r.right) ctx.fillText(r.right, W - PAD, y);
-    ctx.textAlign = "left";
-    for (const ln of wrap(ctx, r.left, bodyW - rightW)) {
-      ctx.fillText(ln, PAD, y);
-      y += 21;
-    }
-    y += 6;
-  }
-
-  y += 4;
-  ctx.strokeStyle = "#dddddd";
-  ctx.beginPath();
-  ctx.moveTo(PAD, y);
-  ctx.lineTo(W - PAD, y);
-  ctx.stroke();
-  y += 20;
-
-  if (spec.totals) {
-    for (const trow of spec.totals) {
-      ctx.font = trow.bold
-        ? "700 15px system-ui, sans-serif"
-        : "14px system-ui, sans-serif";
-      ctx.fillStyle = trow.bold ? accent : "#23291f";
-      ctx.textAlign = "left";
-      ctx.fillText(trow.label, PAD, y);
-      ctx.textAlign = "right";
-      ctx.fillText(trow.value, W - PAD, y);
-      y += 22;
-    }
-  }
-
-  if (spec.note) {
-    y += 6;
-    ctx.fillStyle = "#6b7266";
-    ctx.font = "13px system-ui, sans-serif";
-    ctx.textAlign = "left";
-    for (const ln of wrap(ctx, spec.note, bodyW)) {
-      ctx.fillText(ln, PAD, y);
-      y += 17;
-    }
-  }
-
-  y += 20;
-  ctx.fillStyle = "#9aa39a";
-  ctx.font = "11px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(`${APP_NAME} · ${APP_URL}`, W / 2, y);
 
   return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
-      "image/png",
-    );
+    const to = setTimeout(() => reject(new Error("toBlob timeout")), 8000);
+    canvas.toBlob((b) => {
+      clearTimeout(to);
+      if (b) resolve(b);
+      else reject(new Error("toBlob failed"));
+    }, "image/png");
   });
 }
 
@@ -208,18 +327,21 @@ export async function shareImage(
   filename: string,
   title: string,
 ): Promise<"shared" | "downloaded"> {
-  const file = new File([blob], filename, { type: "image/png" });
-  const nav = navigator as Navigator & {
-    canShare?: (d: unknown) => boolean;
-  };
-  if (nav.canShare?.({ files: [file] }) && typeof navigator.share === "function") {
-    try {
-      await navigator.share({ files: [file], title });
-      return "shared";
-    } catch {
-      return "shared"; // user cancelled — don't also download
+  const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
+  try {
+    if (typeof File === "function" && typeof navigator.share === "function") {
+      const file = new File([blob], filename, { type: "image/png" });
+      if (!nav.canShare || nav.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title });
+        return "shared";
+      }
     }
+  } catch (e) {
+    // user dismissed the sheet — treat as done, don't also download
+    if (e instanceof Error && e.name === "AbortError") return "shared";
+    // any other failure → fall through to the download path
   }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

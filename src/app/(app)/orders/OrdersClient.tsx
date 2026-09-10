@@ -105,13 +105,19 @@ export default function OrdersClient({
   async function shareAsPhoto(o: Order) {
     setImgBusy(true);
     try {
-      // details = "qty name" lines, optionally "\n\n<note>"
+      // details may be "qty name" lines (ledger) OR "qty name <rate>Rs" lines
+      // (Order Book form) OR free text. Split off a note after a blank line,
+      // then strip any trailing price so the supplier only sees qty + name.
       const [itemsBlock, ...rest] = (o.details ?? "").split("\n\n");
       const rows = (itemsBlock || o.title)
         .split("\n")
-        .map((s) => s.trim())
+        .map((s) => s.trim().replace(/\s+[\d,.]+\s*Rs\.?$/i, ""))
         .filter(Boolean)
         .map((left) => ({ left }));
+      const stem = (o.title || "list")
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 24);
       const blob = await receiptImage({
         shopName: businessName || "MizanKhata",
         heading: t("ord.orderSlip", "ORDER"),
@@ -120,11 +126,11 @@ export default function OrdersClient({
           ? `${t("ord.due", "Due")} ${o.due_date}`
           : undefined,
         rows,
-        note: rest.join("\n\n") || null,
+        note: rest.join("\n\n").replace(/\s+[\d,.]+\s*Rs\.?/gi, "") || null,
       });
       await shareImage(
         blob,
-        `order-${(o.title || "list").replace(/[^a-z0-9]+/gi, "-").slice(0, 24)}.png`,
+        `order-${stem || o.id.slice(-6)}.png`,
         t("ord.orderSlip", "ORDER"),
       );
     } catch {

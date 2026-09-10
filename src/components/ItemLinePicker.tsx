@@ -139,7 +139,11 @@ export default function ItemLinePicker({
           })}
         </ul>
         <div className="flex items-center justify-between border-t border-line pt-2">
-          <span className="numeric text-sm font-semibold">{fmtRs(total)}</span>
+          <span className="numeric text-sm font-semibold">
+            {hideRate
+              ? `${chosen.length} item${chosen.length === 1 ? "" : "s"}`
+              : fmtRs(total)}
+          </span>
           <button
             onClick={() => {
               onDone(chosen);

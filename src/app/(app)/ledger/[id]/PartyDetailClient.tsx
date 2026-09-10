@@ -270,7 +270,7 @@ export default function PartyDetailClient({
         .slice(0, 80),
       details: note ? `${qtyText}\n\n${note}` : qtyText,
       amount,
-      dueDate: dateIso.slice(0, 10),
+      dueDate: dateIso ? dateIso.slice(0, 10) : null,
     });
     setOrdering(false);
     setOrderDone(true);
@@ -959,14 +959,14 @@ function OrderForm({
 }) {
   const t = useT();
   const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(now.getDate()).padStart(2, "0")}`;
   const [lines, setLines] = useState<ItemLine[]>([]);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [date, setDate] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-      now.getDate(),
-    ).padStart(2, "0")}`,
-  );
+  const [date, setDate] = useState(""); // empty = no deadline
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -1025,14 +1025,16 @@ function OrderForm({
         <CalcField value={amount} onChange={setAmount} placeholder="0" />
       </label>
 
-      <div className="flex gap-2">
+      <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+        {t("ord.dueDate", "Deliver by")} ({t("c.optional", "optional")})
         <input
           type="date"
           value={date}
+          min={todayStr}
           onChange={(e) => setDate(e.target.value)}
-          className={`${cls} flex-1`}
+          className={cls}
         />
-      </div>
+      </label>
 
       <textarea
         value={note}
@@ -1046,8 +1048,11 @@ function OrderForm({
         onClick={() => {
           if (lines.length === 0 || busy) return;
           setBusy(true);
-          const iso = new Date(`${date}T12:00:00`).toISOString();
-          onSubmit(lines, amt, note.trim(), iso);
+          const iso =
+            date && date >= todayStr
+              ? new Date(`${date}T12:00:00`).toISOString()
+              : "";
+          onSubmit(lines, amt > 0 ? amt : linesTotal(lines), note.trim(), iso);
         }}
         disabled={lines.length === 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
