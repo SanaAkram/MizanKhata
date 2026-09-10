@@ -34,7 +34,7 @@ const DICT: Record<string, Entry> = {
   "c.done": { en: "Done", ur: "مکمل", roman: "Ho gaya" },
   "c.loading": { en: "Loading…", ur: "کھل رہا ہے…", roman: "Load ho raha hai…" },
   "c.optional": { en: "optional", ur: "اختیاری", roman: "ikhtiyari" },
-  "c.note": { en: "Note", ur: "نوٹ", roman: "Yaddasht" },
+  "c.note": { en: "Note", ur: "نوٹ", roman: "Note" },
   "c.notePh": {
     en: "Details / comments",
     ur: "تفصیل / تبصرہ",
