@@ -39,6 +39,13 @@ function fmtIv(min: number): string {
   return `every ${min}m`;
 }
 
+/** Whole days from `fromKey` (YYYY-MM-DD) to `dueKey`; negative = overdue. */
+function dayDiff(fromKey: string, dueKey: string): number {
+  const a = Date.parse(fromKey + "T00:00:00Z");
+  const b = Date.parse(dueKey + "T00:00:00Z");
+  return Math.round((b - a) / 86_400_000);
+}
+
 /** Escalating, companionship-toned copy for a late prayer. */
 function prayerNudge(label: string, minsLate: number): string {
   if (minsLate < 5)
@@ -101,7 +108,7 @@ Deno.serve(async (req) => {
       )
       .eq("owner_id", ownerId)
       .eq("enabled", true);
-    if (!items || items.length === 0) continue;
+    // still fall through to order reminders below even with no routine items
 
     const { data: logs } = await db
       .from("shop_routine_log")
@@ -110,7 +117,7 @@ Deno.serve(async (req) => {
       .eq("date", dateKey);
     const logByItem = new Map((logs ?? []).map((l) => [l.item_id, l]));
 
-    for (const it of items) {
+    for (const it of items ?? []) {
       const days: number[] = it.days ?? [];
       if (days.length > 0 && !days.includes(dow)) continue;
       const log = logByItem.get(it.id);
@@ -200,6 +207,93 @@ Deno.serve(async (req) => {
           const status = (e as { response?: Response })?.response?.status ?? 0;
           if (status === 404 || status === 410) {
             await db.from("shop_push_subscriptions").delete().eq("id", s.id);
+          }
+        }
+      }
+    }
+
+    // ---- Order Book reminders --------------------------------------
+    // One notification per stage per day: a 2-day and 1-day heads-up at
+    // ~09:00, an "is it sent/received?" nudge at ~19:00 on the due day,
+    // and a daily overdue nudge at ~10:00.
+    const HEADS_UP = 9 * 60; // 09:00
+    const OVERDUE_AT = 10 * 60; // 10:00
+    const END_OF_DAY = 19 * 60; // 19:00
+    const inWin = (target: number) =>
+      localMin >= target && localMin < target + 10;
+
+    if (inWin(HEADS_UP) || inWin(OVERDUE_AT) || inWin(END_OF_DAY)) {
+      const { data: orders } = await db
+        .from("shop_orders")
+        .select("id,direction,title,party_name,due_date")
+        .eq("owner_id", ownerId)
+        .eq("status", "open")
+        .not("due_date", "is", null);
+
+      for (const o of orders ?? []) {
+        const d = dayDiff(dateKey, o.due_date as string);
+        let stage: string | null = null;
+        if (inWin(HEADS_UP) && d === 2) stage = "d2";
+        else if (inWin(HEADS_UP) && d === 1) stage = "d1";
+        else if (inWin(END_OF_DAY) && d === 0) stage = "due";
+        else if (inWin(OVERDUE_AT) && d < 0) stage = "late";
+        if (!stage) continue;
+
+        const sentId = `${ownerId}:${dateKey}:order:${o.id}:${stage}`;
+        const dup = await db
+          .from("shop_push_sent")
+          .insert({ id: sentId, owner_id: ownerId });
+        if (dup.error) continue;
+
+        const who =
+          o.party_name ||
+          (o.direction === "in" ? "a customer" : "a supplier");
+        const what = o.title || "Order";
+        let title: string;
+        let body: string;
+        if (stage === "d2" || stage === "d1") {
+          title = `${what} — due ${stage === "d2" ? "in 2 days" : "tomorrow"}`;
+          body =
+            o.direction === "in"
+              ? `Order from ${who}. Get it ready.`
+              : `Order to ${who}. Follow up so it arrives on time.`;
+        } else if (stage === "due") {
+          title = `${what} — due today`;
+          body =
+            o.direction === "in"
+              ? `Is ${who}'s order sent? Open to mark it.`
+              : `Did ${who}'s order arrive? Open to mark it.`;
+        } else {
+          title = `${what} — ${-d} day${-d === 1 ? "" : "s"} late`;
+          body =
+            o.direction === "in"
+              ? `${who} is still waiting. Send it or update the date.`
+              : `Still not in from ${who}. Chase it up.`;
+        }
+
+        const payload = JSON.stringify({
+          title,
+          body,
+          tag: `order-${o.id}`,
+          kind: "order",
+          category: "work",
+          url: "/orders",
+        });
+
+        for (const s of ownerSubs) {
+          attempted++;
+          try {
+            const subscriber = appServer.subscribe({
+              endpoint: s.endpoint,
+              keys: { p256dh: s.p256dh, auth: s.auth },
+            });
+            await subscriber.pushTextMessage(payload, {});
+            sent++;
+          } catch (e) {
+            const status = (e as { response?: Response })?.response?.status ?? 0;
+            if (status === 404 || status === 410) {
+              await db.from("shop_push_subscriptions").delete().eq("id", s.id);
+            }
           }
         }
       }
