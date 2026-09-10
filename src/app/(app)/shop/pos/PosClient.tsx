@@ -64,6 +64,18 @@ export default function PosClient({ businessId, products, customers }: Props) {
     );
   }
 
+  // Set an absolute quantity (typed in the cart), clamped to available stock.
+  function setQty(id: string, qty: number) {
+    const p = products.find((x) => x.id === id);
+    const max = p ? Number(p.stock) : qty;
+    const clamped = Math.max(0, Math.min(Math.floor(qty) || 0, max));
+    setCart((c) =>
+      c
+        .map((l) => (l.productId === id ? { ...l, qty: clamped } : l))
+        .filter((l) => l.qty > 0),
+    );
+  }
+
   const shown = products.filter(
     (p) => !q || p.name.toLowerCase().includes(q.toLowerCase()),
   );
@@ -156,17 +168,21 @@ export default function PosClient({ businessId, products, customers }: Props) {
                 className="flex items-center justify-between py-1 text-sm"
               >
                 <span className="min-w-0 truncate text-ink">{l.name}</span>
-                <span className="flex shrink-0 items-center gap-2">
+                <span className="flex shrink-0 items-center gap-1.5">
                   <button
                     onClick={() => bump(l.productId, -1)}
-                    className="h-6 w-6 rounded-md border border-line text-muted"
+                    className="h-7 w-7 rounded-md border border-line text-muted"
                   >
                     −
                   </button>
-                  <span className="numeric w-6 text-center">{l.qty}</span>
+                  <CartQty
+                    key={l.qty}
+                    qty={l.qty}
+                    onCommit={(n) => setQty(l.productId, n)}
+                  />
                   <button
                     onClick={() => bump(l.productId, 1)}
-                    className="h-6 w-6 rounded-md border border-line text-muted"
+                    className="h-7 w-7 rounded-md border border-line text-muted"
                   >
                     +
                   </button>
@@ -195,6 +211,36 @@ export default function PosClient({ businessId, products, customers }: Props) {
         />
       </Sheet>
     </div>
+  );
+}
+
+/** Typeable quantity box for a cart line. Remounted (via key={qty}) whenever
+ *  the +/- buttons change the amount, so it always starts from the real qty. */
+function CartQty({
+  qty,
+  onCommit,
+}: {
+  qty: number;
+  onCommit: (n: number) => void;
+}) {
+  const [text, setText] = useState(String(qty));
+  function commit() {
+    const n = Math.max(0, Math.floor(Number(text) || 0));
+    onCommit(n);
+  }
+  return (
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value.replace(/[^\d]/g, ""))}
+      onFocus={(e) => e.target.select()}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      inputMode="numeric"
+      aria-label="Quantity"
+      className="numeric w-14 rounded-md border border-line bg-card py-1 text-center text-sm outline-none focus:border-forest"
+    />
   );
 }
 
