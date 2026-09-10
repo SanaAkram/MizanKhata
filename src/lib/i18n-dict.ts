@@ -986,6 +986,12 @@ const DICT: Record<string, Entry> = {
     ur: "دکان کا پتہ",
     roman: "Dukaan ka pata",
   },
+  "shopset.data": { en: "Data", ur: "ڈیٹا", roman: "Data" },
+  "shopset.importDigikhata": {
+    en: "Import from Digikhata",
+    ur: "ڈیجی کھاتہ سے درآمد کریں",
+    roman: "Digikhata se import karein",
+  },
 };
 
 /** Replace `{k}` placeholders. */

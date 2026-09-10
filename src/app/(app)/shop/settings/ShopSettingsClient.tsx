@@ -362,6 +362,18 @@ export default function ShopSettingsClient({
           {busy ? t("c.saving", "Saving…") : t("c.save", "Save")}
         </button>
       </section>
+
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          {t("shopset.data", "Data")}
+        </h2>
+        <Link
+          href="/shop/import"
+          className="block rounded-xl border border-line px-4 py-3 text-sm font-semibold text-forest"
+        >
+          {t("shopset.importDigikhata", "Import from Digikhata")}
+        </Link>
+      </section>
     </div>
   );
 }
