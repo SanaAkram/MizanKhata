@@ -514,6 +514,8 @@ const DICT: Record<string, Entry> = {
     ur: "جلد بھروائیں",
     roman: "Jald bharwayein",
   },
+  "dash.seeAll": { en: "See all", ur: "سب دیکھیں", roman: "Sab dekhein" },
+  "dash.more": { en: "more", ur: "اور", roman: "aur" },
   "dash.topSelling": {
     en: "Top selling",
     ur: "زیادہ بکنے والی",

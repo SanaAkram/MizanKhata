@@ -22,9 +22,13 @@ export default async function AppLayout({
   if (!session) redirect("/login");
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-paper shadow-[0_0_80px_rgba(28,46,32,0.07)]">
+    // App shell: fixed-height column, only <main> scrolls. This avoids iOS
+    // position:fixed bugs (floating nav, un-tappable footer bars).
+    <div className="mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col overflow-hidden bg-paper shadow-[0_0_80px_rgba(28,46,32,0.07)]">
       <AppHeader />
-      <main className="flex-1 px-5 pb-28 pt-4">{children}</main>
+      <main className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-8 pt-4">
+        {children}
+      </main>
       <BottomNav />
       <ServiceWorkerRegister />
       <Toaster />

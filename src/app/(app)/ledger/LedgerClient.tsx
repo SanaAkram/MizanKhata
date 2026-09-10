@@ -127,7 +127,7 @@ export default function LedgerClient({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 pb-20">
       <section className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">

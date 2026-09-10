@@ -123,7 +123,7 @@ export default function StockItemClient({
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-24">
+    <div className="flex min-h-full flex-col gap-4">
       <div className="flex items-center justify-between">
         <Link href="/shop/stock" className="text-sm text-muted">
           ‹ {t("nav.shop", "Stock")}
@@ -213,8 +213,8 @@ export default function StockItemClient({
         </ul>
       )}
 
-      {/* IN / OUT buttons */}
-      <div className="fixed inset-x-0 bottom-16 z-30 mx-auto flex max-w-[480px] gap-2 border-t border-line bg-paper/98 px-5 py-3 backdrop-blur">
+      {/* IN / OUT buttons — stick to the bottom of the scroll area */}
+      <div className="sticky bottom-0 z-30 -mx-5 mt-auto flex gap-2 border-t border-line bg-paper px-5 pb-2 pt-3">
         <button
           onClick={() => setAddKind("in")}
           className="flex-1 rounded-xl bg-ok px-4 py-3 text-sm font-semibold text-paper"

@@ -95,9 +95,9 @@ export default function PosClient({ businessId, products, customers }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3 pb-40">
+    <div className="flex min-h-full flex-col gap-3">
       <Link href="/shop" className="text-sm text-muted">
-        ‹ Shop
+        ‹ {t("nav.shop", "Shop")}
       </Link>
 
       {products.length === 0 ? (
@@ -148,7 +148,7 @@ export default function PosClient({ businessId, products, customers }: Props) {
       )}
 
       {cart.length > 0 ? (
-        <div className="fixed inset-x-0 bottom-16 z-30 mx-auto max-w-[480px] border-t border-line bg-paper/98 px-5 py-3 backdrop-blur">
+        <div className="sticky bottom-0 z-30 -mx-5 mt-auto border-t border-line bg-paper px-5 pb-2 pt-3">
           <div className="max-h-40 overflow-y-auto">
             {cart.map((l) => (
               <div

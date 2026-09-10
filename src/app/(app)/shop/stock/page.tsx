@@ -13,7 +13,12 @@ import StockClient from "./StockClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function StockPage() {
+export default async function StockPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ low?: string }>;
+}) {
+  const { low } = await searchParams;
   const db = await createClient();
   const { active } = await resolveBusiness(db);
   const bid = active?.id ?? "";
@@ -44,6 +49,7 @@ export default async function StockPage() {
       purchases={purchases}
       moves={moves}
       suppliers={suppliers}
+      initialTab={low ? "low" : "all"}
     />
   );
 }

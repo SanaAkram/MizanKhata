@@ -29,7 +29,7 @@ export default function AppHeader() {
   const title = key ? t(`title.${key}`, "MizanKhata") : "MizanKhata";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper/95 px-5 py-3.5 backdrop-blur">
+    <header className="flex shrink-0 items-center justify-between border-b border-line bg-paper px-5 py-3.5">
       <div className="flex items-baseline gap-2">
         <span className="numeric text-lg font-semibold text-forest">
           {title}

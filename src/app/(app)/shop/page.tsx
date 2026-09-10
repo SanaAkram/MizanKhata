@@ -84,10 +84,10 @@ export default async function ShopDashboardPage() {
   const stockVal = stockValue(products, purchases);
   const inStock = products.filter((p) => Number(p.stock) > 0).length;
   const top = topSellers(saleItems, products, 5);
-  const restock = products
+  const restockAll = products
     .filter((p) => Number(p.stock) <= (Number(p.low_stock) || 5))
-    .sort((a, b) => Number(a.stock) - Number(b.stock))
-    .slice(0, 8);
+    .sort((a, b) => Number(a.stock) - Number(b.stock));
+  const restock = restockAll.slice(0, 8);
 
   const cashHand = cashInHand(cash.filter((c) => (c.method ?? "cash") === "cash"));
   const bankBal = cashInHand(cash.filter((c) => c.method === "bank"));
@@ -231,10 +231,18 @@ export default async function ShopDashboardPage() {
         </section>
       ) : null}
 
-      {restock.length > 0 ? (
+      {restockAll.length > 0 ? (
         <section className="rounded-2xl border border-line bg-card p-4">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-            {t("dash.restockSoon", "Restock soon")}
+          <h2 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted">
+            <span>
+              {t("dash.restockSoon", "Restock soon")} · {restockAll.length}
+            </span>
+            <Link
+              href="/shop/stock?low=1"
+              className="font-semibold text-forest underline underline-offset-2"
+            >
+              {t("dash.seeAll", "See all")}
+            </Link>
           </h2>
           <ul className="flex flex-col gap-1.5">
             {restock.map((p) => (
@@ -250,6 +258,17 @@ export default async function ShopDashboardPage() {
                 </Link>
               </li>
             ))}
+            {restockAll.length > restock.length ? (
+              <li>
+                <Link
+                  href="/shop/stock?low=1"
+                  className="text-xs font-semibold text-forest underline underline-offset-2"
+                >
+                  + {restockAll.length - restock.length}{" "}
+                  {t("dash.more", "more")}
+                </Link>
+              </li>
+            ) : null}
           </ul>
         </section>
       ) : null}

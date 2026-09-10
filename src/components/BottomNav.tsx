@@ -22,7 +22,7 @@ export default function BottomNav() {
   const t = useT();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-[480px] border-t border-line bg-paper/95 backdrop-blur">
+    <nav className="shrink-0 border-t border-line bg-paper">
       <div className="flex w-full pb-[env(safe-area-inset-bottom)]">
         {TABS.map(({ href, key, label, Icon }) => {
           const active =

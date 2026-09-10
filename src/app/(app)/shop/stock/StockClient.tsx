@@ -57,6 +57,7 @@ type Props = {
   purchases: Purchase[];
   moves: StockMove[];
   suppliers: { id: string; name: string }[];
+  initialTab?: "all" | "low";
 };
 
 export default function StockClient({
@@ -65,11 +66,12 @@ export default function StockClient({
   purchases,
   moves,
   suppliers,
+  initialTab = "all",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const t = useT();
-  const [tab, setTab] = useState<"all" | "low">("all");
+  const [tab, setTab] = useState<"all" | "low">(initialTab);
   const [q, setQ] = useState("");
   const [restocking, setRestocking] = useState(false);
 
@@ -96,7 +98,7 @@ export default function StockClient({
     );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 pb-20">
       <Link href="/shop" className="text-sm text-muted">
         ‹ {t("nav.shop", "Shop")}
       </Link>
