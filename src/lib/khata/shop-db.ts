@@ -563,13 +563,19 @@ export async function recordPurchase(
     lines: { productId: string; name: string; qty: number; price: number }[];
     note?: string | null;
     date?: string;
+    /** Override the ledger amount (rates are hidden; the typed total wins). */
+    amountOverride?: number;
   },
 ): Promise<string> {
   const nowIso = args.date ?? new Date().toISOString();
-  const total =
+  const linesSum =
     Math.round(
       args.lines.reduce((s, l) => s + l.qty * l.price, 0) * 100,
     ) / 100;
+  const total =
+    args.amountOverride != null && args.amountOverride > 0
+      ? args.amountOverride
+      : linesSum;
   const itemsText = args.lines
     .map((l) => `${l.qty} ${l.name} ${l.price}Rs`)
     .join("\n");

@@ -45,7 +45,8 @@ export default function ItemLinePicker({
   const shown = products.filter(
     (p) => !q || p.name.toLowerCase().includes(q.toLowerCase()),
   );
-  const chosen = Object.values(sel);
+  // Only lines with a real quantity typed in count.
+  const chosen = Object.values(sel).filter((l) => l.qty > 0);
   const total = linesTotal(chosen);
 
   function toggle(p: Product) {
@@ -57,7 +58,7 @@ export default function ItemLinePicker({
           productId: p.id,
           name: p.name,
           unit: p.unit,
-          qty: 1,
+          qty: 0,
           rate:
             Number(
               rateFrom === "purchase" ? p.purchase_price : p.sale_price,
@@ -103,7 +104,8 @@ export default function ItemLinePicker({
                   <div className="mt-1.5 flex items-center gap-2 pl-6">
                     <input
                       inputMode="decimal"
-                      value={line.qty}
+                      value={line.qty || ""}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) =>
                         patch(p.id, "qty", Number(e.target.value) || 0)
                       }

@@ -115,11 +115,7 @@ export default function OrdersClient({
       const blob = await receiptImage({
         shopName: businessName || "MizanKhata",
         heading: t("ord.orderSlip", "ORDER"),
-        party:
-          o.party_name ||
-          (o.direction === "in"
-            ? t("ord.aCustomer", "a customer")
-            : t("ord.aSupplier", "a supplier")),
+        // No party name — this list is sent to a supplier; the customer is private.
         dateText: o.due_date
           ? `${t("ord.due", "Due")} ${o.due_date}`
           : undefined,

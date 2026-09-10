@@ -148,6 +148,14 @@ export default function PartyDetailClient({
     // supplier purchase on credit (stock in). Both write their own itemised
     // note, so the form's auto-appended one is dropped.
     if (type === "credit" && lines.length > 0) {
+      // Rates come from stock (hidden); the typed amount wins. Reconcile the
+      // gap between the stock-priced lines and the typed amount as a
+      // discount (amount lower) or "extra" (amount higher) so the document
+      // total equals what the shopkeeper entered.
+      const linesSum =
+        Math.round(lines.reduce((s, l) => s + l.qty * l.rate, 0) * 100) / 100;
+      const wanted = amount > 0 ? amount : linesSum;
+      const gap = Math.round((wanted - linesSum) * 100) / 100;
       if (isCust) {
         const saleId = await completeSale(supabase, businessId, {
           lines: lines.map((l) => ({
@@ -158,7 +166,9 @@ export default function PartyDetailClient({
             qty: l.qty,
           })),
           paidCash: 0,
-          creditAmount: lines.reduce((s, l) => s + l.qty * l.rate, 0),
+          creditAmount: wanted,
+          discount: gap < 0 ? -gap : 0,
+          tax: gap > 0 ? gap : 0,
           customerId: party.id,
           customerName: party.name,
           partyKind: "customer",
@@ -175,6 +185,7 @@ export default function PartyDetailClient({
             qty: l.qty,
             price: l.rate,
           })),
+          amountOverride: wanted,
           date: dateIso,
         });
         setMadeBill(`/print/purchase/${stId}`);
@@ -525,6 +536,7 @@ export default function PartyDetailClient({
             products={products}
             showMethod={addType === "payment"}
             allowItems={addType === "credit"}
+            hideRate
             rateFrom={isCust ? "sale" : "purchase"}
             billNote={
               addType === "credit"
@@ -728,6 +740,7 @@ export default function PartyDetailClient({
             products={products}
             showMethod={false}
             allowItems
+            hideRate
             rateFrom={isCust ? "sale" : "purchase"}
             submitLabel={t("c.saveChanges", "Save changes")}
             initial={{
@@ -769,6 +782,7 @@ function EntryForm({
   products,
   showMethod,
   allowItems = false,
+  hideRate = false,
   submitLabel,
   rateFrom = "sale",
   billNote,
@@ -778,6 +792,7 @@ function EntryForm({
   products: Product[];
   showMethod: boolean;
   allowItems?: boolean;
+  hideRate?: boolean;
   submitLabel: string;
   rateFrom?: "sale" | "purchase";
   billNote?: string;
@@ -922,6 +937,7 @@ function EntryForm({
         open={picker}
         products={products}
         rateFrom={rateFrom}
+        hideRate={hideRate}
         onClose={() => setPicker(false)}
         onDone={addLines}
       />
