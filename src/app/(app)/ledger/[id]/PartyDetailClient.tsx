@@ -19,7 +19,7 @@ import {
   type PartyKind,
   type TxType,
 } from "@/lib/khata/db";
-import type { Product } from "@/lib/khata/shop-db";
+import { completeSale, type Product } from "@/lib/khata/shop-db";
 import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
@@ -132,7 +132,33 @@ export default function PartyDetailClient({
     note: string,
     dateIso: string,
     method: "cash" | "bank",
+    lines: ItemLine[],
   ) {
+    // "You gave" to a customer, built from stock items = a sale on credit.
+    // Make it a real bill (stock out + ledger credit), not just a note.
+    // completeSale writes its own itemised note, so don't pass the form's
+    // (which already has the same lines auto-appended).
+    if (type === "credit" && isCust && lines.length > 0) {
+      await completeSale(supabase, businessId, {
+        lines: lines.map((l) => ({
+          productId: l.productId,
+          name: l.name,
+          unit: l.unit,
+          price: l.rate,
+          qty: l.qty,
+        })),
+        paidCash: 0,
+        creditAmount: lines.reduce((s, l) => s + l.qty * l.rate, 0),
+        customerId: party.id,
+        customerName: party.name,
+        partyKind: "customer",
+        note: null,
+      });
+      setAddType(null);
+      router.refresh();
+      return;
+    }
+
     const id = newId("tx_");
     await addPartyTx(supabase, businessId, kind, party.id, {
       id,
@@ -411,8 +437,16 @@ export default function PartyDetailClient({
             products={products}
             showMethod={addType === "payment"}
             rateFrom={isCust ? "sale" : "purchase"}
+            billNote={
+              addType === "credit" && isCust
+                ? t(
+                    "party.itemsMakeBill",
+                    "Adding items here creates a bill and takes them out of stock.",
+                  )
+                : undefined
+            }
             submitLabel={t("c.save", "Save")}
-            onSubmit={(a, n, d, m) => saveAdd(addType, a, n, d, m)}
+            onSubmit={(a, n, d, m, lines) => saveAdd(addType, a, n, d, m, lines)}
           />
         ) : null}
       </Sheet>
@@ -536,6 +570,7 @@ function EntryForm({
   showMethod,
   submitLabel,
   rateFrom = "sale",
+  billNote,
   initial,
   onSubmit,
 }: {
@@ -543,18 +578,21 @@ function EntryForm({
   showMethod: boolean;
   submitLabel: string;
   rateFrom?: "sale" | "purchase";
+  billNote?: string;
   initial?: { amount: string; note: string; date: string };
   onSubmit: (
     amount: number,
     note: string,
     dateIso: string,
     method: "cash" | "bank",
+    lines: ItemLine[],
   ) => void;
 }) {
   const t = useT();
   const start = initial?.date ? new Date(initial.date) : new Date();
   const [amount, setAmount] = useState(initial?.amount ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
+  const [lines, setLines] = useState<ItemLine[]>([]);
   const [date, setDate] = useState(
     `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(
       start.getDate(),
@@ -574,12 +612,17 @@ function EntryForm({
   const cls =
     "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
 
-  function addLines(lines: ItemLine[]) {
-    if (lines.length === 0) return;
-    const text = linesToText(lines);
+  function addLines(picked: ItemLine[]) {
+    if (picked.length === 0) return;
+    const text = linesToText(picked);
     setNote((n) => (n ? n + "\n" + text : text));
-    setAmount(String(Math.round((amt + linesTotal(lines)) * 100) / 100));
+    setAmount(String(Math.round((amt + linesTotal(picked)) * 100) / 100));
+    setLines((prev) => [...prev, ...picked]);
     setPicker(false);
+  }
+
+  function clearLines() {
+    setLines([]);
   }
 
   return (
@@ -598,6 +641,27 @@ function EntryForm({
       >
         {t("party.addItem", "+ Add item from stock")}
       </button>
+
+      {lines.length > 0 ? (
+        <div className="rounded-lg border border-forest/25 bg-forest/5 px-3 py-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-forest">
+              {t("party.itemsCount", "{n} item(s) → bill", {
+                n: lines.length,
+              })}
+            </span>
+            <button
+              onClick={clearLines}
+              className="font-semibold text-muted underline underline-offset-2"
+            >
+              {t("party.clearItems", "Clear")}
+            </button>
+          </div>
+          {billNote ? (
+            <p className="mt-1 text-muted">{billNote}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <textarea
         value={note}
@@ -651,7 +715,7 @@ function EntryForm({
           setBusy(true);
           const iso = new Date(`${date}T${time || "12:00"}:00`).toISOString();
           const full = ref ? `${note}${note ? "\n" : ""}Bill: ${ref}` : note;
-          onSubmit(amt, full.trim(), iso, method);
+          onSubmit(amt, full.trim(), iso, method, lines);
         }}
         disabled={amt <= 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
