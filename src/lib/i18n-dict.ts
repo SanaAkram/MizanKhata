@@ -729,6 +729,11 @@ const DICT: Record<string, Entry> = {
     ur: "تفصیل (اختیاری)",
     roman: "Tafseel (optional)",
   },
+  "ord.itemsCount": {
+    en: "{n} items · {amt}",
+    ur: "{n} چیزیں · {amt}",
+    roman: "{n} items · {amt}",
+  },
   "ord.dueDate": { en: "Deliver by", ur: "اِس تاریخ تک", roman: "Is tareekh tak" },
   "ord.amountOpt": {
     en: "Value (optional)",

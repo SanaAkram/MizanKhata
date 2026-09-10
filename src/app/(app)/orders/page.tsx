@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
 import { fetchCustomers, fetchSuppliers } from "@/lib/khata/db";
+import { fetchProducts, type Product } from "@/lib/khata/shop-db";
 import { fetchOrders, type Order } from "@/lib/khata/orders";
 import OrdersClient, { type PartyOpt } from "./OrdersClient";
 
@@ -13,13 +14,16 @@ export default async function OrdersPage() {
 
   let orders: Order[] = [];
   let parties: PartyOpt[] = [];
+  let products: Product[] = [];
   try {
-    const [o, c, s] = await Promise.all([
+    const [o, c, s, p] = await Promise.all([
       fetchOrders(db, bid),
       fetchCustomers(db, bid),
       fetchSuppliers(db, bid),
+      fetchProducts(db, bid),
     ]);
     orders = o;
+    products = p;
     parties = [
       ...c.map((x) => ({ id: x.id, name: x.name, kind: "customer" as const })),
       ...s.map((x) => ({ id: x.id, name: x.name, kind: "supplier" as const })),
@@ -28,5 +32,12 @@ export default async function OrdersPage() {
     /* render empty */
   }
 
-  return <OrdersClient businessId={bid} orders={orders} parties={parties} />;
+  return (
+    <OrdersClient
+      businessId={bid}
+      orders={orders}
+      parties={parties}
+      products={products}
+    />
+  );
 }

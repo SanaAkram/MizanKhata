@@ -19,7 +19,13 @@ import {
   type OrderBucket,
   type OrderDirection,
 } from "@/lib/khata/orders";
+import type { Product } from "@/lib/khata/shop-db";
 import Sheet from "@/components/Sheet";
+import ItemLinePicker, {
+  linesToText,
+  linesTotal,
+  type ItemLine,
+} from "@/components/ItemLinePicker";
 
 export type PartyOpt = {
   id: string;
@@ -39,10 +45,12 @@ export default function OrdersClient({
   businessId,
   orders,
   parties,
+  products,
 }: {
   businessId: string;
   orders: Order[];
   parties: PartyOpt[];
+  products: Product[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -210,6 +218,7 @@ export default function OrdersClient({
       >
         <OrderForm
           parties={parties}
+          products={products}
           submitLabel={t("c.save", "Save")}
           onSubmit={async (v) => {
             try {
@@ -235,6 +244,7 @@ export default function OrdersClient({
         {detail && editing ? (
           <OrderForm
             parties={parties}
+            products={products}
             submitLabel={t("c.saveChanges", "Save changes")}
             initial={detail}
             onSubmit={async (v) => {
@@ -428,11 +438,13 @@ type FormValue = {
 
 function OrderForm({
   parties,
+  products,
   submitLabel,
   initial,
   onSubmit,
 }: {
   parties: PartyOpt[];
+  products: Product[];
   submitLabel: string;
   initial?: Order;
   onSubmit: (v: FormValue) => void | Promise<void>;
@@ -448,12 +460,28 @@ function OrderForm({
     initial && Number(initial.amount) ? String(Number(initial.amount)) : "",
   );
   const [due, setDue] = useState(initial?.due_date ?? "");
+  const [lines, setLines] = useState<ItemLine[]>([]);
+  const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const wantKind = direction === "in" ? "customer" : "supplier";
   const pickList = parties.filter((p) => p.kind === wantKind);
+  const amt = Math.round((parseFloat(amount) || 0) * 100) / 100;
   const cls =
     "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
+
+  // "Customer ordered" = they buy from us → sale prices. "I ordered" = we buy
+  // from a supplier → purchase prices.
+  const rateFrom = direction === "in" ? "sale" : "purchase";
+
+  function addLines(picked: ItemLine[]) {
+    if (picked.length === 0) return;
+    const text = linesToText(picked);
+    setDetails((n) => (n ? n + "\n" + text : text));
+    setAmount(String(Math.round((amt + linesTotal(picked)) * 100) / 100));
+    setLines((prev) => [...prev, ...picked]);
+    setPicker(false);
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -504,6 +532,32 @@ function OrderForm({
         autoFocus
       />
 
+      {products.length > 0 ? (
+        <button
+          onClick={() => setPicker(true)}
+          className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
+        >
+          {t("party.addItem", "+ Add item from stock")}
+        </button>
+      ) : null}
+
+      {lines.length > 0 ? (
+        <div className="flex items-center justify-between rounded-lg border border-forest/25 bg-forest/5 px-3 py-2 text-xs">
+          <span className="font-semibold text-forest">
+            {t("ord.itemsCount", "{n} items · {amt}", {
+              n: lines.length,
+              amt: fmtRs(linesTotal(lines)),
+            })}
+          </span>
+          <button
+            onClick={() => setLines([])}
+            className="font-semibold text-muted underline underline-offset-2"
+          >
+            {t("party.clearItems", "Clear")}
+          </button>
+        </div>
+      ) : null}
+
       <textarea
         value={details}
         onChange={(e) => setDetails(e.target.value)}
@@ -536,7 +590,12 @@ function OrderForm({
 
       <button
         onClick={async () => {
-          if (!title.trim() || busy) return;
+          const heading =
+            title.trim() ||
+            (lines.length
+              ? lines.map((l) => `${l.qty} ${l.name}`).join(", ").slice(0, 80)
+              : "");
+          if (!heading || busy) return;
           setBusy(true);
           const p = pickList.find((x) => x.id === partyId) ?? null;
           await onSubmit({
@@ -544,18 +603,28 @@ function OrderForm({
             partyType: p ? p.kind : null,
             partyId: p ? p.id : null,
             partyName: p ? p.name : null,
-            title: title.trim(),
+            title: heading,
             details: details.trim() || null,
-            amount: Math.max(0, Math.round((parseFloat(amount) || 0) * 100) / 100),
+            amount: Math.max(0, amt),
             dueDate: due || null,
           });
           setBusy(false);
         }}
-        disabled={!title.trim() || busy}
+        disabled={(!title.trim() && lines.length === 0) || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
         {busy ? t("c.saving", "Saving…") : submitLabel}
       </button>
+
+      {products.length > 0 ? (
+        <ItemLinePicker
+          open={picker}
+          products={products}
+          rateFrom={rateFrom}
+          onClose={() => setPicker(false)}
+          onDone={addLines}
+        />
+      ) : null}
     </div>
   );
 }
