@@ -464,6 +464,14 @@ function OrderForm({
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // A delivery date can't be in the past.
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+  })();
+
   const wantKind = direction === "in" ? "customer" : "supplier";
   const pickList = parties.filter((p) => p.kind === wantKind);
   const amt = Math.round((parseFloat(amount) || 0) * 100) / 100;
@@ -572,6 +580,7 @@ function OrderForm({
           <input
             type="date"
             value={due}
+            min={todayStr}
             onChange={(e) => setDue(e.target.value)}
             className={cls}
           />
@@ -606,7 +615,11 @@ function OrderForm({
             title: heading,
             details: details.trim() || null,
             amount: Math.max(0, amt),
-            dueDate: due || null,
+            // Can't newly set a past date; keep an existing one when editing.
+            dueDate:
+              due && (due >= todayStr || due === initial?.due_date)
+                ? due
+                : null,
           });
           setBusy(false);
         }}
