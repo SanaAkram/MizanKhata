@@ -15,6 +15,12 @@ import {
 import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import LayoutToggle from "@/components/LayoutToggle";
+import {
+  GRACE_OPTIONS,
+  SOON_OPTIONS,
+  setOrderPrefs,
+  useOrderPrefs,
+} from "@/lib/khata/order-prefs";
 
 export default function ShopSettingsClient({
   list,
@@ -384,6 +390,8 @@ export default function ShopSettingsClient({
         </div>
       </section>
 
+      <OrderSettings />
+
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
           {t("shopset.data", "Data")}
@@ -396,5 +404,66 @@ export default function ShopSettingsClient({
         </Link>
       </section>
     </div>
+  );
+}
+
+function OrderSettings() {
+  const t = useT();
+  const prefs = useOrderPrefs();
+  const sel =
+    "rounded-lg border border-line bg-paper px-2 py-1.5 text-sm outline-none focus:border-forest";
+
+  return (
+    <section>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+        {t("shopset.orders", "Orders")}
+      </h2>
+      <div className="flex flex-col gap-3 rounded-xl border border-line bg-card px-4 py-3">
+        <label className="flex items-center justify-between gap-3">
+          <span className="min-w-0 text-sm text-ink">
+            {t("shopset.orderSoon", "Flag “due soon” this many days early")}
+          </span>
+          <select
+            value={prefs.soonDays}
+            onChange={(e) =>
+              setOrderPrefs({ ...prefs, soonDays: Number(e.target.value) })
+            }
+            className={sel}
+          >
+            {SOON_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n} {n === 1 ? t("c.day", "day") : t("c.days", "days")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center justify-between gap-3">
+          <span className="min-w-0 text-sm text-ink">
+            {t("shopset.orderOverdue", "Count as overdue after")}
+          </span>
+          <select
+            value={prefs.graceDays}
+            onChange={(e) =>
+              setOrderPrefs({ ...prefs, graceDays: Number(e.target.value) })
+            }
+            className={sel}
+          >
+            {GRACE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n === 0
+                  ? t("shopset.onDueDate", "the due date")
+                  : `${n} ${n === 1 ? t("c.day", "day") : t("c.days", "days")}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="text-xs text-muted">
+          {t(
+            "shopset.orderHint",
+            "Changes what the Order Book highlights. Background reminders still fire on the due date.",
+          )}
+        </p>
+      </div>
+    </section>
   );
 }

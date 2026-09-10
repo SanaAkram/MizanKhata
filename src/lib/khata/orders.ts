@@ -110,21 +110,25 @@ export function daysUntil(dueKey: string | null): number | null {
 
 export type OrderBucket = "overdue" | "today" | "soon" | "later" | "nodate";
 
-/** Which urgency bucket an open order falls in (soon = within 2 days). */
-export function orderBucket(o: Order): OrderBucket {
+/** How the Order Book decides urgency. Defaults: flag "soon" 2 days out,
+ *  "overdue" the moment the due date passes (0 grace). */
+export type BucketPrefs = { soonDays: number; graceDays: number };
+const DEFAULT_PREFS: BucketPrefs = { soonDays: 2, graceDays: 0 };
+
+export function orderBucket(o: Order, prefs: BucketPrefs = DEFAULT_PREFS): OrderBucket {
   if (o.status !== "open") return "later";
   const d = daysUntil(o.due_date);
   if (d == null) return "nodate";
-  if (d < 0) return "overdue";
-  if (d === 0) return "today";
-  if (d <= 2) return "soon";
+  if (d < -prefs.graceDays) return "overdue"; // past the grace window
+  if (d <= 0) return "today"; // due, or within grace
+  if (d <= prefs.soonDays) return "soon";
   return "later";
 }
 
-/** Open orders that need attention now (overdue / due today / due within 2 days). */
-export function dueOrders(orders: Order[]): Order[] {
+/** Open orders that need attention now (overdue / due today / due soon). */
+export function dueOrders(orders: Order[], prefs?: BucketPrefs): Order[] {
   return orders.filter((o) => {
-    const b = orderBucket(o);
+    const b = orderBucket(o, prefs);
     return b === "overdue" || b === "today" || b === "soon";
   });
 }

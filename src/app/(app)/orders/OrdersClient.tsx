@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { newId } from "@/lib/ids";
 import { fmtRs } from "@/lib/format";
 import { useT } from "@/lib/i18n";
+import { useOrderPrefs } from "@/lib/khata/order-prefs";
 import {
   addOrder,
   daysUntil,
@@ -58,6 +59,7 @@ export default function OrdersClient({
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const t = useT();
+  const prefs = useOrderPrefs();
   const [tab, setTab] = useState<"open" | "done">("open");
   const [adding, setAdding] = useState(false);
   const [detail, setDetail] = useState<Order | null>(null);
@@ -74,20 +76,20 @@ export default function OrdersClient({
     [orders],
   );
   const dueCount = open.filter((o) => {
-    const b = orderBucket(o);
+    const b = orderBucket(o, prefs);
     return b === "overdue" || b === "today" || b === "soon";
   }).length;
 
   const grouped = useMemo(() => {
     const m = new Map<OrderBucket, Order[]>();
     for (const o of open) {
-      const b = orderBucket(o);
+      const b = orderBucket(o, prefs);
       const arr = m.get(b) ?? [];
       arr.push(o);
       m.set(b, arr);
     }
     return m;
-  }, [open]);
+  }, [open, prefs]);
 
   async function mark(o: Order, status: "done" | "cancelled" | "open") {
     setBusy(true);

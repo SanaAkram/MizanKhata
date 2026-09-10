@@ -679,17 +679,17 @@ const DICT: Record<string, Entry> = {
   },
 
   // ---- order book -------------------------------------------------
-  "ord.openOrders": { en: "Open orders", ur: "کھلے آرڈر", roman: "Khule orders" },
+  "ord.openOrders": { en: "Open orders", ur: "کھلے آرڈر", roman: "Open orders" },
   "ord.needAttention": {
     en: "{n} need attention",
     ur: "{n} پر توجہ درکار",
-    roman: "{n} par tawajjo darkaar",
+    roman: "{n} par attention chahiye",
   },
-  "ord.tabOpen": { en: "Open", ur: "کھلے", roman: "Khule" },
+  "ord.tabOpen": { en: "Open", ur: "کھلے", roman: "Open" },
   "ord.tabDone": {
     en: "Done / cancelled",
     ur: "مکمل / منسوخ",
-    roman: "Mukammal / mansookh",
+    roman: "Done / cancelled",
   },
   "ord.noneOpen": {
     en: "No open orders — tap + to add one.",
@@ -701,20 +701,20 @@ const DICT: Record<string, Entry> = {
     ur: "ابھی کچھ مکمل نہیں ہوا۔",
     roman: "Abhi kuch mukammal nahi hua.",
   },
-  "ord.add": { en: "Add order", ur: "آرڈر شامل کریں", roman: "Order add karein" },
+  "ord.add": { en: "Add order", ur: "آرڈر شامل کریں", roman: "Add order" },
   "ord.order": { en: "Order", ur: "آرڈر", roman: "Order" },
-  "ord.bucket.overdue": { en: "Overdue", ur: "تاخیر شدہ", roman: "Late" },
-  "ord.bucket.today": { en: "Due today", ur: "آج مکمل کرنا ہے", roman: "Aaj due" },
+  "ord.bucket.overdue": { en: "Overdue", ur: "تاخیر شدہ", roman: "Overdue" },
+  "ord.bucket.today": { en: "Due today", ur: "آج مکمل کرنا ہے", roman: "Due today" },
   "ord.bucket.soon": {
     en: "Due soon",
     ur: "جلد مکمل کرنا ہے",
-    roman: "Jald due",
+    roman: "Due soon",
   },
-  "ord.bucket.later": { en: "Later", ur: "بعد میں", roman: "Baad mein" },
+  "ord.bucket.later": { en: "Later", ur: "بعد میں", roman: "Later" },
   "ord.bucket.nodate": {
     en: "No due date",
     ur: "کوئی تاریخ نہیں",
-    roman: "Koi tareekh nahi",
+    roman: "No due date",
   },
   "ord.fromCustomer": {
     en: "Order from {name}",
@@ -728,7 +728,7 @@ const DICT: Record<string, Entry> = {
   },
   "ord.aCustomer": { en: "a customer", ur: "ایک گاہک", roman: "ek customer" },
   "ord.aSupplier": { en: "a supplier", ur: "ایک سپلائر", roman: "ek supplier" },
-  "ord.due": { en: "Due", ur: "مکمل کرنا ہے", roman: "Tareekh" },
+  "ord.due": { en: "Due", ur: "مکمل کرنا ہے", roman: "Due" },
   "ord.noDue": { en: "No due date", ur: "کوئی تاریخ نہیں", roman: "Koi tareekh nahi" },
   "ord.daysLate": {
     en: "{n} days late",
@@ -738,17 +738,17 @@ const DICT: Record<string, Entry> = {
   "ord.today": { en: "today", ur: "آج", roman: "aaj" },
   "ord.tomorrow": { en: "tomorrow", ur: "کل", roman: "kal" },
   "ord.inDays": { en: "in {n} days", ur: "{n} دن میں", roman: "{n} din mein" },
-  "ord.markSent": { en: "Mark sent", ur: "بھیج دیا", roman: "Bhej diya" },
+  "ord.markSent": { en: "Mark sent", ur: "بھیج دیا", roman: "Mark sent" },
   "ord.markReceived": {
     en: "Mark received",
     ur: "موصول ہوگیا",
-    roman: "Mausool hogaya",
+    roman: "Mark received",
   },
-  "ord.cancel": { en: "Cancel order", ur: "آرڈر منسوخ", roman: "Order cancel" },
-  "ord.reopen": { en: "Re-open", ur: "دوبارہ کھولیں", roman: "Dobara kholein" },
-  "ord.status.open": { en: "Open", ur: "کھلا", roman: "Khula" },
-  "ord.status.done": { en: "Done", ur: "مکمل", roman: "Mukammal" },
-  "ord.status.cancelled": { en: "Cancelled", ur: "منسوخ", roman: "Cancel" },
+  "ord.cancel": { en: "Cancel order", ur: "آرڈر منسوخ", roman: "Cancel order" },
+  "ord.reopen": { en: "Re-open", ur: "دوبارہ کھولیں", roman: "Re-open" },
+  "ord.status.open": { en: "Open", ur: "کھلا", roman: "Open" },
+  "ord.status.done": { en: "Done", ur: "مکمل", roman: "Done" },
+  "ord.status.cancelled": { en: "Cancelled", ur: "منسوخ", roman: "Cancelled" },
   "ord.dirOut": {
     en: "I ordered (supplier)",
     ur: "میں نے آرڈر کیا (سپلائر)",
@@ -784,7 +784,7 @@ const DICT: Record<string, Entry> = {
     ur: "{n} چیزیں · {amt}",
     roman: "{n} items · {amt}",
   },
-  "ord.dueDate": { en: "Deliver by", ur: "اِس تاریخ تک", roman: "Is tareekh tak" },
+  "ord.dueDate": { en: "Deliver by", ur: "اِس تاریخ تک", roman: "Deliver by" },
   "ord.orderSlip": { en: "ORDER", ur: "آرڈر", roman: "ORDER" },
   "ord.sharePhoto": {
     en: "Share as photo (no prices)",
@@ -1292,6 +1292,30 @@ const DICT: Record<string, Entry> = {
   },
   "shopset.data": { en: "Data", ur: "ڈیٹا", roman: "Data" },
   "shopset.display": { en: "Display", ur: "نمائش", roman: "Namaish" },
+  "shopset.orders": { en: "Orders", ur: "آرڈر", roman: "Orders" },
+  "shopset.orderSoon": {
+    en: "Flag “due soon” this many days early",
+    ur: "اِتنے دن پہلے “جلد” دکھائیں",
+    roman: "Itne din pehle “due soon” dikhayein",
+  },
+  "shopset.orderOverdue": {
+    en: "Count as overdue after",
+    ur: "اِتنے بعد تاخیر شمار کریں",
+    roman: "Itne baad overdue count karein",
+  },
+  "shopset.onDueDate": {
+    en: "the due date",
+    ur: "مقررہ تاریخ",
+    roman: "due date par",
+  },
+  "shopset.orderHint": {
+    en: "Changes what the Order Book highlights. Background reminders still fire on the due date.",
+    ur: "آرڈر بک کی جھلک بدلتا ہے۔ بیک گراؤنڈ یاد دہانیاں مقررہ تاریخ پر آئیں گی۔",
+    roman:
+      "Order Book ki highlight badalta hai. Background reminders due date par hi aayenge.",
+  },
+  "c.day": { en: "day", ur: "دن", roman: "din" },
+  "c.days": { en: "days", ur: "دن", roman: "din" },
   "shopset.importDigikhata": {
     en: "Import from Digikhata",
     ur: "ڈیجی کھاتہ سے درآمد کریں",
