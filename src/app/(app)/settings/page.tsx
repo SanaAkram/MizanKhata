@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { serverT } from "@/lib/i18n-server";
+import { getProfile } from "@/lib/auth/profile";
 import SignOutButton from "./SignOutButton";
 import LanguagePicker from "./LanguagePicker";
+import ProfileSection from "./ProfileSection";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
   const t = await serverT();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [{ data: { user } }, profile] = await Promise.all([
+    supabase.auth.getUser(),
+    getProfile(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -18,7 +21,12 @@ export default async function SettingsPage() {
           {t("settings.account", "Account")}
         </h2>
         <p className="mt-2 text-sm text-ink">{user?.email ?? "—"}</p>
+        {profile?.is_premium ? (
+          <p className="mt-1 text-xs font-semibold text-gold">Premium</p>
+        ) : null}
       </section>
+
+      <ProfileSection profile={profile} />
 
       <LanguagePicker />
 

@@ -964,6 +964,11 @@ const DICT: Record<string, Entry> = {
     roman: "Profile — bill par nazar aata hai",
   },
   "shopset.noLogo": { en: "No logo", ur: "لوگو نہیں", roman: "Logo nahi" },
+  "shopset.logoPremium": {
+    en: "Bills show the MizanKhata logo. Upgrade to Premium to put your own logo on bills.",
+    ur: "بلوں پر میزان کھاتہ کا لوگو آتا ہے۔ اپنا لوگو لگانے کے لیے پریمیم لیں۔",
+    roman: "Billon par MizanKhata ka logo aata hai. Apna logo lagane ke liye Premium lein.",
+  },
   "shopset.uploadLogo": {
     en: "Upload logo",
     ur: "لوگو اپ لوڈ کریں",

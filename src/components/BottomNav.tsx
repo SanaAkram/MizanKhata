@@ -11,20 +11,33 @@ import {
 import { useT } from "@/lib/i18n";
 
 const TABS = [
-  { href: "/work", key: "nav.work", label: "Work", Icon: ClockIcon },
-  { href: "/routine", key: "nav.routine", label: "Routine", Icon: CalendarIcon },
-  { href: "/ledger", key: "nav.ledger", label: "Ledger", Icon: LedgerIcon },
-  { href: "/shop", key: "nav.shop", label: "Shop", Icon: ShopIcon },
+  { href: "/work", key: "nav.work", label: "Work", Icon: ClockIcon, biz: false },
+  {
+    href: "/routine",
+    key: "nav.routine",
+    label: "Routine",
+    Icon: CalendarIcon,
+    biz: false,
+  },
+  {
+    href: "/ledger",
+    key: "nav.ledger",
+    label: "Ledger",
+    Icon: LedgerIcon,
+    biz: true,
+  },
+  { href: "/shop", key: "nav.shop", label: "Shop", Icon: ShopIcon, biz: true },
 ] as const;
 
-export default function BottomNav() {
+export default function BottomNav({ personal }: { personal?: boolean }) {
   const pathname = usePathname();
   const t = useT();
+  const tabs = personal ? TABS.filter((x) => !x.biz) : TABS;
 
   return (
     <nav className="shrink-0 border-t border-line bg-paper">
       <div className="flex w-full pb-[env(safe-area-inset-bottom)]">
-        {TABS.map(({ href, key, label, Icon }) => {
+        {tabs.map(({ href, key, label, Icon }) => {
           const active =
             pathname === href || pathname.startsWith(href + "/");
           return (

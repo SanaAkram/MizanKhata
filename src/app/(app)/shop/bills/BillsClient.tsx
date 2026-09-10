@@ -37,6 +37,7 @@ export default function BillsClient({
   customers,
   khataTx,
   business,
+  premium = false,
 }: {
   businessId: string;
   sales: Sale[];
@@ -44,6 +45,7 @@ export default function BillsClient({
   customers: Cust[];
   khataTx: Ktx[];
   business: Business | null;
+  premium?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -61,7 +63,9 @@ export default function BillsClient({
   const [edNote, setEdNote] = useState("");
   const [edPaid, setEdPaid] = useState("");
 
-  const brand = business?.logo_color || "#2f4a34";
+  const brand = (premium && business?.logo_color) || "#2f4a34";
+  const billLogo =
+    premium && business?.logo_url ? business.logo_url : "/icon.svg";
   void businessId;
 
   const numbered = useMemo<Numbered[]>(() => {
@@ -411,17 +415,18 @@ export default function BillsClient({
         ) : open ? (
           <div className="flex flex-col gap-2">
             <div className="text-center">
-              {business?.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={business.logo_url}
-                  alt=""
-                  className="mx-auto mb-1 h-12 w-auto object-contain"
-                />
-              ) : null}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={billLogo}
+                alt=""
+                className="mx-auto mb-1 h-12 w-auto object-contain"
+              />
               <p className="text-sm font-semibold" style={{ color: brand }}>
                 {business?.name ?? "My Shop"}
               </p>
+              {!premium ? (
+                <p className="text-[10px] text-muted">made with MizanKhata</p>
+              ) : null}
               {business?.phone ? (
                 <p className="text-[11px] text-muted">{business.phone}</p>
               ) : null}

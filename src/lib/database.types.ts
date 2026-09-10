@@ -7,11 +7,43 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          account_type: string
+          created_at: string
+          full_name: string | null
+          id: string
+          is_premium: boolean
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_type?: string
+          created_at?: string
+          full_name?: string | null
+          id: string
+          is_premium?: boolean
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_type?: string
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_premium?: boolean
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shop_businesses: {
         Row: {
           address: string | null
@@ -279,9 +311,21 @@ export type Database = {
         ]
       }
       shop_push_sent: {
-        Row: { id: string; owner_id: string; sent_at: string }
-        Insert: { id: string; owner_id: string; sent_at?: string }
-        Update: { id?: string; owner_id?: string; sent_at?: string }
+        Row: {
+          id: string
+          owner_id: string
+          sent_at: string
+        }
+        Insert: {
+          id: string
+          owner_id: string
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          sent_at?: string
+        }
         Relationships: []
       }
       shop_push_subscriptions: {

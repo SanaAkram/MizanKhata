@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
+import { isPremium } from "@/lib/auth/profile";
 import type { Business } from "@/lib/khata/business";
 import { fetchCustomers, fetchKhataTx } from "@/lib/khata/db";
 import {
@@ -14,7 +15,10 @@ export const dynamic = "force-dynamic";
 
 export default async function BillsPage() {
   const db = await createClient();
-  const { active } = await resolveBusiness(db);
+  const [{ active }, premium] = await Promise.all([
+    resolveBusiness(db),
+    isPremium(),
+  ]);
   const bid = active?.id ?? "";
 
   let sales: Sale[] = [];
@@ -48,6 +52,7 @@ export default async function BillsPage() {
       customers={customers}
       khataTx={khataTx}
       business={(active as Business) ?? null}
+      premium={premium}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getProfile } from "@/lib/auth/profile";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
@@ -21,6 +22,8 @@ export default async function AppLayout({
 
   if (!session) redirect("/login");
 
+  const personal = (await getProfile())?.account_type === "personal";
+
   return (
     // App shell: fixed-height column, only <main> scrolls. This avoids iOS
     // position:fixed bugs (floating nav, un-tappable footer bars).
@@ -29,7 +32,7 @@ export default async function AppLayout({
       <main className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-8 pt-4">
         {children}
       </main>
-      <BottomNav />
+      <BottomNav personal={personal} />
       <ServiceWorkerRegister />
       <Toaster />
       <HtmlLang />

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
+import { isPremium } from "@/lib/auth/profile";
 import { serverT } from "@/lib/i18n-server";
 import {
   customerBalance,
@@ -19,8 +20,11 @@ export default async function BillPrintPage({
 }) {
   const { id } = await params;
   const db = await createClient();
-  const { active } = await resolveBusiness(db);
-  const t = await serverT();
+  const [{ active }, t, premium] = await Promise.all([
+    resolveBusiness(db),
+    serverT(),
+    isPremium(),
+  ]);
   const bid = active?.id ?? "";
   const [sales, items, customers, khataTx] = await Promise.all([
     fetchSales(db, bid).catch(() => []),
@@ -44,7 +48,9 @@ export default async function BillPrintPage({
     );
   }
 
-  const brand = active?.logo_color || "#2f4a34";
+  // Non-premium bills carry the MizanKhata logo + default colour.
+  const logoSrc = premium && active?.logo_url ? active.logo_url : "/icon.svg";
+  const brand = (premium && active?.logo_color) || "#2f4a34";
   const muted = "#6b7266";
   const customer = sale.customer_id
     ? customers.find((c) => c.id === sale.customer_id)
@@ -68,17 +74,20 @@ export default async function BillPrintPage({
       <AutoPrint />
 
       <div style={{ textAlign: "center", marginBottom: 12 }}>
-        {active?.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={active.logo_url}
-            alt=""
-            style={{ height: 64, margin: "0 auto 6px", objectFit: "contain" }}
-          />
-        ) : null}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoSrc}
+          alt=""
+          style={{ height: 56, margin: "0 auto 6px", objectFit: "contain" }}
+        />
         <div style={{ fontSize: 20, fontWeight: 800, color: brand }}>
           {active?.name ?? "My Shop"}
         </div>
+        {!premium ? (
+          <div style={{ fontSize: 10, color: muted, letterSpacing: 0.3 }}>
+            made with MizanKhata
+          </div>
+        ) : null}
         {active?.phone ? (
           <div style={{ fontSize: 12, color: muted }}>{active.phone}</div>
         ) : null}

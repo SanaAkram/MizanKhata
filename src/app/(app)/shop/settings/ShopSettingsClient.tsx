@@ -18,9 +18,11 @@ import Sheet from "@/components/Sheet";
 export default function ShopSettingsClient({
   list,
   activeId,
+  premium = false,
 }: {
   list: Business[];
   activeId: string;
+  premium?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -272,7 +274,7 @@ export default function ShopSettingsClient({
 
         <div className="flex items-center gap-3">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-card">
-            {logoUrl ? (
+            {premium && logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logoUrl}
@@ -280,33 +282,47 @@ export default function ShopSettingsClient({
                 className="h-full w-full object-contain"
               />
             ) : (
-              <span className="text-xs text-muted">
-                {t("shopset.noLogo", "No logo")}
-              </span>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/icon.svg"
+                alt="MizanKhata"
+                className="h-10 w-10 object-contain"
+              />
             )}
           </div>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-forest disabled:opacity-50"
-          >
-            {uploading
-              ? t("c.saving", "Uploading…")
-              : logoUrl
-                ? t("shopset.changeLogo", "Change logo")
-                : t("shopset.uploadLogo", "Upload logo")}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onLogo(f);
-              e.target.value = "";
-            }}
-          />
+          {premium ? (
+            <>
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-forest disabled:opacity-50"
+              >
+                {uploading
+                  ? t("c.saving", "Uploading…")
+                  : logoUrl
+                    ? t("shopset.changeLogo", "Change logo")
+                    : t("shopset.uploadLogo", "Upload logo")}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onLogo(f);
+                  e.target.value = "";
+                }}
+              />
+            </>
+          ) : (
+            <p className="text-xs text-muted">
+              {t(
+                "shopset.logoPremium",
+                "Bills show the MizanKhata logo. Upgrade to Premium to put your own logo on bills.",
+              )}
+            </p>
+          )}
         </div>
 
         <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
