@@ -292,6 +292,11 @@ const DICT: Record<string, Entry> = {
     ur: "یہ چیزیں خریداری کے طور پر درج ہوں گی اور اسٹاک میں شامل ہوں گی۔",
     roman: "Ye items khareedari ke tor par darj hongi aur stock mein add hongi.",
   },
+  "party.itemsOnPayment": {
+    en: "Items are listed on this entry. Stock is not changed.",
+    ur: "چیزیں اس اندراج میں لکھی جائیں گی۔ اسٹاک نہیں بدلے گا۔",
+    roman: "Items is entry mein likhi jayengi. Stock change nahi hoga.",
+  },
   "party.itemsCount": {
     en: "{n} item(s)",
     ur: "{n} چیزیں",

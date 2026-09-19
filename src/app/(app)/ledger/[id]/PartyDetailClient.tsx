@@ -535,7 +535,7 @@ export default function PartyDetailClient({
           <EntryForm
             products={products}
             showMethod={addType === "payment"}
-            allowItems={addType === "credit"}
+            allowItems
             hideRate
             rateFrom={isCust ? "sale" : "purchase"}
             billNote={
@@ -549,7 +549,11 @@ export default function PartyDetailClient({
                       "party.itemsMakePurchase",
                       "These items are recorded as a purchase and added to stock.",
                     )
-                : undefined
+                : // "You got" — a payment: items are just listed on the entry
+                  t(
+                    "party.itemsOnPayment",
+                    "Items are listed on this entry. Stock is not changed.",
+                  )
             }
             submitLabel={t("c.save", "Save")}
             onSubmit={(a, n, d, m, lines) => saveAdd(addType, a, n, d, m, lines)}
