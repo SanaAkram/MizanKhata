@@ -106,7 +106,7 @@ npm run dev            # http://localhost:3000  → redirected to /login
 
 ### Database
 
-The app expects the `shop_*` tables above with row-level security policies (`owner_id = auth.uid()`), a `profiles` table with an `is_premium` flag, and a Storage bucket for logos. The SQL migrations are not stored in this repository — they were applied directly in Supabase — so to reproduce the schema on a new project, dump it from the existing one (`supabase db pull`) or recreate it from `src/lib/database.types.ts`. Auth settings: enable e-mail sign-in with confirmation, and paste `supabase/email-templates/confirm-signup.html` as the "Confirm signup" template (it shows the one-time code).
+The app expects the `shop_*` tables above with row-level security policies (`owner_id = auth.uid()`), a `profiles` table with an `is_premium` flag, and a Storage bucket named `business-logos` for business logos. The SQL migrations are not stored in this repository — they were applied directly in Supabase — so to reproduce the schema on a new project, dump it from the existing one (`supabase db pull`) or recreate it from `src/lib/database.types.ts`. Auth settings: enable e-mail sign-in with confirmation, and paste `supabase/email-templates/confirm-signup.html` as the "Confirm signup" template (it shows the one-time code).
 
 ### Web push (optional)
 
