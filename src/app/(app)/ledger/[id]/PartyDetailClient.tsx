@@ -42,6 +42,7 @@ import ItemLinePicker, {
 } from "@/components/ItemLinePicker";
 import { shareBill } from "@/lib/khata/bill-share";
 import { BILL_CREDIT } from "@/lib/brand";
+import { WhatsAppIcon } from "@/components/icons";
 
 type Row = {
   id: string;
@@ -311,17 +312,23 @@ export default function PartyDetailClient({
 
       {/* 3-column lifetime header */}
       <section className="rounded-2xl border border-line bg-card p-4">
-        <h1 className="numeric text-xl font-semibold text-ink">{party.name}</h1>
-        {party.phone ? (
-          <a
-            href={waLink(party.phone, waText)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 inline-block text-xs font-semibold text-ok underline underline-offset-2"
-          >
-            WhatsApp {party.phone}
-          </a>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <h1 className="numeric text-xl font-semibold text-ink">
+            {party.name}
+          </h1>
+          {party.phone ? (
+            <a
+              href={waLink(party.phone, waText)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t("party.whatsapp", "WhatsApp")}
+              title={`${t("party.whatsapp", "WhatsApp")} ${party.phone}`}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ok/10 text-ok active:scale-95"
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+            </a>
+          ) : null}
+        </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div>
             <p className="text-[11px] font-semibold uppercase text-muted">
