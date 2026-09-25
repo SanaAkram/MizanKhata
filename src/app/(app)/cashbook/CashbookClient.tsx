@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { newId } from "@/lib/ids";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
-import { addCash, cashInHand, deleteCash, type Cash } from "@/lib/khata/db";
+import {
+  addCash,
+  addPartyTx,
+  cashInHand,
+  deleteCash,
+  type Cash,
+} from "@/lib/khata/db";
 import Sheet from "@/components/Sheet";
 import CalcField from "@/components/CalcField";
 import DateRangeFilter from "@/components/DateRangeFilter";
@@ -37,26 +43,17 @@ export default function CashbookClient({
   const layout = useEntryLayout();
   const [adding, setAdding] = useState(false);
   const [detail, setDetail] = useState<Cash | null>(null);
-  const [tab, setTab] = useState<"all" | "cash" | "bank">("all");
   const [range, setRange] = useState<DateRange>(ALL_TIME);
 
-  const cashBal = useMemo(
-    () => cashInHand(cash.filter((c) => (c.method ?? "cash") === "cash")),
-    [cash],
-  );
-  const bankBal = useMemo(
-    () => cashInHand(cash.filter((c) => c.method === "bank")),
-    [cash],
-  );
+  const cashBal = useMemo(() => cashInHand(cash), [cash]);
   const rows = useMemo(
     () =>
       [...cash]
-        .filter((c) => tab === "all" || (c.method ?? "cash") === tab)
         .filter((c) => inRange(c.date, range))
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         ),
-    [cash, tab, range],
+    [cash, range],
   );
 
   const periodIn = rows
@@ -67,6 +64,14 @@ export default function CashbookClient({
     .reduce((s, r) => s + Number(r.amount || 0), 0);
 
   async function remove(row: Cash) {
+    // Undo the ledger mirror too, if this entry was tagged to a party —
+    // otherwise their balance would stay "paid" after the cash entry
+    // recording that payment is gone.
+    if (row.party_type === "customer" || row.party_type === "supplier") {
+      const table =
+        row.party_type === "customer" ? "shop_khata_tx" : "shop_supplier_tx";
+      await supabase.from(table).delete().eq("ref", row.id);
+    }
     await deleteCash(supabase, row.id);
     setDetail(null);
     router.refresh();
@@ -74,46 +79,18 @@ export default function CashbookClient({
 
   return (
     <div className="flex min-h-full flex-col gap-4">
-      <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-line bg-card p-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {t("cash.inHand", "Cash in hand")}
-          </p>
-          <p
-            className={`numeric mt-1 text-2xl font-semibold ${
-              cashBal < 0 ? "text-danger" : "text-ink"
-            }`}
-          >
-            {fmtRs(cashBal)}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-line bg-card p-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {t("cash.bankBal", "Bank balance")}
-          </p>
-          <p
-            className={`numeric mt-1 text-2xl font-semibold ${
-              bankBal < 0 ? "text-danger" : "text-ink"
-            }`}
-          >
-            {fmtRs(bankBal)}
-          </p>
-        </div>
+      <section className="rounded-2xl border border-line bg-card p-4 text-center">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          {t("cash.inHand", "Cash in hand")}
+        </p>
+        <p
+          className={`numeric mt-1 text-2xl font-semibold ${
+            cashBal < 0 ? "text-danger" : "text-ink"
+          }`}
+        >
+          {fmtRs(cashBal)}
+        </p>
       </section>
-
-      <div className="flex gap-1 rounded-xl border border-line bg-card p-1">
-        {(["all", "cash", "bank"] as const).map((tk) => (
-          <button
-            key={tk}
-            onClick={() => setTab(tk)}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-              tab === tk ? "bg-forest text-paper" : "text-muted"
-            }`}
-          >
-            {tk === "all" ? t("ledger.all", "All") : t(`c.${tk}`, tk)}
-          </button>
-        ))}
-      </div>
 
       <DateRangeFilter onChange={setRange} />
 
@@ -182,9 +159,6 @@ export default function CashbookClient({
                       {e.party_name ? (
                         <span className="text-muted"> — {e.party_name}</span>
                       ) : null}
-                    </span>
-                    <span className="numeric mt-1 inline-block rounded bg-line/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                      {t(`c.${e.method ?? "cash"}`, e.method ?? "cash")}
                     </span>
                   </span>
                   <span
@@ -311,7 +285,6 @@ function AddCashForm({
 }) {
   const t = useT();
   const [type, setType] = useState<"in" | "out">("in");
-  const [method, setMethod] = useState<"cash" | "bank">("cash");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -328,13 +301,16 @@ function AddCashForm({
     "other",
   ];
 
+  const selectedParty = parties.find((x) => `${x.kind}:${x.id}` === partyVal);
+
   async function save() {
     if (amt <= 0) return;
     setBusy(true);
     try {
-      const p = parties.find((x) => `${x.kind}:${x.id}` === partyVal);
+      const p = selectedParty;
+      const id = newId("cb_");
       await addCash(supabase, businessId, {
-        id: newId("cb_"),
+        id,
         type,
         amount: amt,
         note: note.trim() || null,
@@ -342,9 +318,22 @@ function AddCashForm({
         partyId: p ? p.id : null,
         partyName: p ? p.name : null,
         date: new Date().toISOString(),
-        method,
+        method: "cash",
         category: type === "out" ? category || "expense" : "income",
       });
+      // Mirror into that party's own ledger too — a cash entry tagged to a
+      // customer/supplier is a real payment settling their balance, not
+      // just a note on the cashbook side.
+      if (p) {
+        await addPartyTx(supabase, businessId, p.kind, p.id, {
+          id: newId(p.kind === "customer" ? "kt_" : "st_"),
+          type: "payment",
+          amount: amt,
+          note: note.trim() || (type === "in" ? "Cash received" : "Cash paid"),
+          ref: id,
+          date: new Date().toISOString(),
+        });
+      }
       onDone();
     } catch {
       toast("Could not save the entry.", "error");
@@ -355,17 +344,23 @@ function AddCashForm({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1 rounded-xl border border-line p-1">
-        {(["in", "out"] as const).map((tk) => (
-          <button
-            key={tk}
-            onClick={() => setType(tk)}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-              type === tk ? "bg-forest text-paper" : "text-muted"
-            }`}
-          >
-            {tk === "in" ? t("cash.in", "Cash in") : t("cash.out", "Cash out")}
-          </button>
-        ))}
+        {(["in", "out"] as const).map((tk) => {
+          const locked =
+            selectedParty &&
+            tk !== (selectedParty.kind === "customer" ? "in" : "out");
+          return (
+            <button
+              key={tk}
+              onClick={() => !locked && setType(tk)}
+              disabled={!!locked}
+              className={`flex-1 rounded-lg py-2 text-xs font-semibold disabled:opacity-40 ${
+                type === tk ? "bg-forest text-paper" : "text-muted"
+              }`}
+            >
+              {tk === "in" ? t("cash.in", "Cash in") : t("cash.out", "Cash out")}
+            </button>
+          );
+        })}
       </div>
       <CalcField
         big
@@ -374,38 +369,28 @@ function AddCashForm({
         onChange={setAmount}
         placeholder={t("c.amount", "Amount")}
       />
-      <div className="flex gap-2">
-        <div className="flex flex-1 gap-1 rounded-xl border border-line p-1">
-          {(["cash", "bank"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMethod(m)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-semibold ${
-                method === m ? "bg-forest text-paper" : "text-muted"
-              }`}
-            >
-              {t(`c.${m}`, m)}
-            </button>
+      {type === "out" && !selectedParty ? (
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-forest"
+        >
+          <option value="">{t("cash.category", "category…")}</option>
+          {OUT_CATS.map((c) => (
+            <option key={c} value={c}>
+              {t(`cat.${c}`, c)}
+            </option>
           ))}
-        </div>
-        {type === "out" ? (
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-forest"
-          >
-            <option value="">{t("cash.category", "category…")}</option>
-            {OUT_CATS.map((c) => (
-              <option key={c} value={c}>
-                {t(`cat.${c}`, c)}
-              </option>
-            ))}
-          </select>
-        ) : null}
-      </div>
+        </select>
+      ) : null}
       <select
         value={partyVal}
-        onChange={(e) => setPartyVal(e.target.value)}
+        onChange={(e) => {
+          const val = e.target.value;
+          setPartyVal(val);
+          const p = parties.find((x) => `${x.kind}:${x.id}` === val);
+          if (p) setType(p.kind === "customer" ? "in" : "out");
+        }}
         className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest"
       >
         <option value="">{t("cash.noParty", "No party — general")}</option>
@@ -419,6 +404,15 @@ function AddCashForm({
           </option>
         ))}
       </select>
+      {selectedParty ? (
+        <p className="text-xs text-muted">
+          {t(
+            "cash.alsoUpdatesParty",
+            "This also records a payment on {name}'s ledger.",
+            { name: selectedParty.name },
+          )}
+        </p>
+      ) : null}
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}

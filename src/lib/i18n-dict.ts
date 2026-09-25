@@ -45,7 +45,6 @@ const DICT: Record<string, Entry> = {
   "c.amount": { en: "Amount", ur: "رقم", roman: "Raqam" },
   "c.total": { en: "Total", ur: "کل", roman: "Kul" },
   "c.cash": { en: "cash", ur: "نقد", roman: "Naqad" },
-  "c.bank": { en: "bank", ur: "بینک", roman: "bank" },
   "c.customer": { en: "Customer", ur: "گاہک", roman: "Customer" },
   "c.supplier": { en: "Supplier", ur: "سپلائر", roman: "Supplier" },
   "c.customers": { en: "Customers", ur: "گاہک", roman: "Customers" },
@@ -383,6 +382,11 @@ const DICT: Record<string, Entry> = {
     en: "No party — general",
     ur: "کوئی پارٹی نہیں — عام",
     roman: "Koi party nahi — aam",
+  },
+  "cash.alsoUpdatesParty": {
+    en: "This also records a payment on {name}'s ledger.",
+    ur: "یہ {name} کے کھاتے میں بھی ادائیگی کے طور پر درج ہوگا۔",
+    roman: "Yeh {name} ke khaty mein bhi payment ke tor par likh jayega.",
   },
   "cash.notePh": {
     en: "Note (e.g. shop rent)",

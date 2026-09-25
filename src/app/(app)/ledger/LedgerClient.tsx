@@ -29,7 +29,6 @@ type Props = {
   khataTx: KhataTx[];
   supplierTx: SupplierTx[];
   cashHand: number;
-  bankBal: number;
 };
 
 type Filter = "all" | "customer" | "supplier";
@@ -41,7 +40,6 @@ export default function LedgerClient({
   khataTx,
   supplierTx,
   cashHand,
-  bankBal,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -62,8 +60,8 @@ export default function LedgerClient({
   const willGive = parties
     .filter((p) => p.kind === "supplier" && p.balance > 0)
     .reduce((s, p) => s + p.balance, 0);
-  const liquid = cashHand + bankBal;
-  // Net worth on the books: what customers owe − what you owe suppliers + cash/bank.
+  const liquid = cashHand;
+  // Net worth on the books: what customers owe − what you owe suppliers + cash.
   const net = willGet - willGive + liquid;
 
   const shown = parties.filter((p) => {

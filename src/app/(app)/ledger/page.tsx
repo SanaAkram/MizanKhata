@@ -39,8 +39,7 @@ export default async function LedgerPage() {
     /* render empty */
   }
 
-  const cashHand = cashInHand(cash.filter((c) => (c.method ?? "cash") === "cash"));
-  const bankBal = cashInHand(cash.filter((c) => c.method === "bank"));
+  const cashHand = cashInHand(cash);
 
   return (
     <LedgerClient
@@ -50,7 +49,6 @@ export default async function LedgerPage() {
       khataTx={khataTx}
       supplierTx={supplierTx}
       cashHand={cashHand}
-      bankBal={bankBal}
     />
   );
 }

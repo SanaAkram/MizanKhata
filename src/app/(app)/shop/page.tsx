@@ -89,8 +89,7 @@ export default async function ShopDashboardPage() {
     .sort((a, b) => Number(a.stock) - Number(b.stock));
   const restock = restockAll.slice(0, 8);
 
-  const cashHand = cashInHand(cash.filter((c) => (c.method ?? "cash") === "cash"));
-  const bankBal = cashInHand(cash.filter((c) => c.method === "bank"));
+  const cashHand = cashInHand(cash);
 
   // last 6 months income vs expense
   const parts = new Date().toISOString().slice(0, 7).split("-").map(Number);
@@ -197,7 +196,6 @@ export default async function ShopDashboardPage() {
           tone="danger"
         />
         <MiniCard label={t("cash.inHand", "Cash in hand")} value={fmtRs(cashHand)} />
-        <MiniCard label={t("cash.bankBal", "Bank balance")} value={fmtRs(bankBal)} />
         <MiniCard
           label={t("stock.totalValue", "Stock value")}
           value={fmtRs(stockVal)}

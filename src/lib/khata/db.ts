@@ -225,7 +225,7 @@ export async function addCash(
     partyId?: string | null;
     partyName?: string | null;
     date: string;
-    method?: "cash" | "bank";
+    method?: "cash";
     category?: string | null;
   },
 ): Promise<void> {

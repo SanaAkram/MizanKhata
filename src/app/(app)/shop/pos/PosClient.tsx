@@ -101,7 +101,7 @@ export default function PosClient({ businessId, products, parties }: Props) {
     discount: number;
     tax: number;
     note: string | null;
-    method: "cash" | "bank";
+    method: "cash";
   }) {
     const party = parties.find((p) => p.id === args.partyId) ?? null;
     await completeSale(supabase, businessId, {
@@ -289,14 +289,13 @@ function CheckoutForm({
     discount: number;
     tax: number;
     note: string | null;
-    method: "cash" | "bank";
+    method: "cash";
   }) => void;
 }) {
   const t = useT();
   const customers = parties.filter((p) => p.kind === "customer");
   const suppliers = parties.filter((p) => p.kind === "supplier");
   const [mode, setMode] = useState<"cash" | "credit">("cash");
-  const [pmethod, setPmethod] = useState<"cash" | "bank">("cash");
   const [customerId, setCustomerId] = useState("");
   const [discount, setDiscount] = useState("");
   const [taxPct, setTaxPct] = useState("");
@@ -370,22 +369,6 @@ function CheckoutForm({
         ))}
       </div>
 
-      {mode === "cash" ? (
-        <div className="flex gap-1 rounded-xl border border-line p-1">
-          {(["cash", "bank"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setPmethod(m)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-semibold ${
-                pmethod === m ? "bg-forest text-paper" : "text-muted"
-              }`}
-            >
-              {t(`c.${m}`, m)}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
       {needsCustomer ? (
         <select
           value={customerId}
@@ -435,7 +418,7 @@ function CheckoutForm({
             discount: disc,
             tax,
             note: note.trim() || null,
-            method: pmethod,
+            method: "cash",
           });
         }}
         disabled={!canSubmit}

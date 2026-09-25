@@ -307,7 +307,7 @@ export async function completeSale(
     discount?: number;
     tax?: number;
     note?: string | null;
-    method?: "cash" | "bank";
+    method?: "cash";
   },
 ): Promise<string> {
   const { lines, paidCash, creditAmount, customerId, customerName } = args;

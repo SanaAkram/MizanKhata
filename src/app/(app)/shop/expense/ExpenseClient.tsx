@@ -181,7 +181,6 @@ function AddExpenseForm({
   const [category, setCategory] = useState(options[0] ?? "general");
   const [customCat, setCustomCat] = useState("");
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<"cash" | "bank">("cash");
   const [note, setNote] = useState("");
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -206,7 +205,7 @@ function AddExpenseForm({
         amount: amt,
         note: note.trim() || null,
         date: new Date(`${date}T12:00:00`).toISOString(),
-        method,
+        method: "cash",
         category: cat,
       });
       onDone();
@@ -250,20 +249,6 @@ function AddExpenseForm({
           autoFocus
         />
       ) : null}
-
-      <div className="flex gap-1 rounded-xl border border-line p-1">
-        {(["cash", "bank"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMethod(m)}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-              method === m ? "bg-forest text-paper" : "text-muted"
-            }`}
-          >
-            {t(`c.${m}`, m)}
-          </button>
-        ))}
-      </div>
 
       <input
         type="date"
