@@ -116,7 +116,12 @@ export default function CalcField({
       <div className="flex items-stretch gap-1.5">
         <input
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          readOnly
+          onFocus={(e) => {
+            e.target.blur();
+            setExpr(value || "");
+            setOpen(true);
+          }}
           placeholder={placeholder}
           inputMode="decimal"
           autoFocus={autoFocus}

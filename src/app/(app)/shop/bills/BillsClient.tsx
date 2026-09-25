@@ -201,9 +201,12 @@ export default function BillsClient({
           cust?.name ||
           t("bills.walkinFull", "Walk-in / cash customer"),
         dateText: fmtEntryDate(s.time),
-        rows: its.map((it) => ({
-          left: `${Math.round(Number(it.qty))} × ${it.name}`,
-          right: fmtRs(Number(it.price) * Number(it.qty)),
+        rows: [],
+        items: its.map((it) => ({
+          name: it.name,
+          qty: String(Number(it.qty)),
+          rate: String(Number(it.price)),
+          amount: String(Math.round(Number(it.price) * Number(it.qty) * 100) / 100),
         })),
         totals,
         note: s.note,

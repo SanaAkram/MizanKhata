@@ -43,7 +43,7 @@ import ItemLinePicker, {
 import {
   receiptImage,
   shareImage,
-  type ReceiptRow,
+  type ReceiptItemRow,
 } from "@/lib/khata/receipt-image";
 import type { Business } from "@/lib/khata/business";
 import { toast } from "@/lib/toast";
@@ -64,10 +64,47 @@ type Row = {
  *  sheet's "Send on WhatsApp" button. */
 type MadeBillSpec = {
   heading: string;
-  rows: ReceiptRow[];
+  items: ReceiptItemRow[];
   totals: { label: string; value: string; bold?: boolean }[];
   filename: string;
 };
+
+/** A "+ Add item from stock" note is lines of "<qty> <name> <rate>Rs"
+ *  (see linesToText() in ItemLinePicker.tsx) — same shape a Digikhata
+ *  import produces. Split those back into a proper item table; anything
+ *  that doesn't parse (a typed note, "Paid cash Rs …", …) is left as plain
+ *  text below the table. */
+const NOTE_ITEM_RE = /^(\d+(?:\.\d+)?)\s+(.+?)\s+([\d.]+)Rs$/i;
+
+function numStr(n: number): string {
+  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function parseNoteItems(note: string | null): {
+  items: ReceiptItemRow[];
+  extra: string;
+} {
+  const items: ReceiptItemRow[] = [];
+  const extra: string[] = [];
+  for (const raw of (note ?? "").split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = line.match(NOTE_ITEM_RE);
+    if (m) {
+      const qty = Number(m[1]);
+      const rate = Number(m[3]);
+      items.push({
+        name: m[2],
+        qty: numStr(qty),
+        rate: numStr(rate),
+        amount: numStr(Math.round(qty * rate * 100) / 100),
+      });
+    } else {
+      extra.push(line);
+    }
+  }
+  return { items, extra: extra.join("\n") };
+}
 
 type Props = {
   businessId: string;
@@ -164,7 +201,7 @@ export default function PartyDetailClient({
     note: string,
     dateIso: string,
     lines: ItemLine[],
-    cash: { dir: "in" | "out"; method: "cash" | "bank" } | null,
+    cash: { dir: "in" | "out" } | null,
   ) {
     // Mirrors this entry into the Cash Book when the "cash in/out" toggle was
     // on — a "You got" (payment) entry defaults to this on, since it's
@@ -189,7 +226,7 @@ export default function PartyDetailClient({
         partyId: party.id,
         partyName: party.name,
         date: dateIso,
-        method: cash.method,
+        method: "cash",
         category: "payment",
       });
     }
@@ -248,9 +285,11 @@ export default function PartyDetailClient({
       totals.push({ label: t("bills.total", "Total"), value: fmtRs(wanted), bold: true });
       setMadeBill({
         heading: creditLabel,
-        rows: lines.map((l) => ({
-          left: `${Math.round(l.qty)} × ${l.name}`,
-          right: fmtRs(Math.round(l.qty * l.rate * 100) / 100),
+        items: lines.map((l) => ({
+          name: l.name,
+          qty: numStr(l.qty),
+          rate: numStr(l.rate),
+          amount: numStr(Math.round(l.qty * l.rate * 100) / 100),
         })),
         totals,
         filename: `bill-${billId.slice(-6)}.png`,
@@ -335,6 +374,7 @@ export default function PartyDetailClient({
   async function shareEntryImage(row: Row) {
     setImgBusy(true);
     try {
+      const { items, extra } = parseNoteItems(row.note);
       const blob = await receiptImage({
         shopName: business?.name || "MizanKhata",
         shopSub: business?.phone || undefined,
@@ -342,11 +382,12 @@ export default function PartyDetailClient({
         party: party.name,
         dateText: fmtEntryDate(row.date),
         rows: [],
+        items,
         totals: [
           { label: t("c.amount", "Amount"), value: fmtRs(row.amount), bold: true },
           { label: t("party.balance", "Balance"), value: fmtRs(Math.abs(balance)) },
         ],
-        note: row.note,
+        note: extra || null,
         brand,
         logoUrl,
       });
@@ -369,7 +410,8 @@ export default function PartyDetailClient({
         heading: spec.heading,
         party: party.name,
         dateText: fmtEntryDate(new Date().toISOString()),
-        rows: spec.rows,
+        rows: [],
+        items: spec.items,
         totals: spec.totals,
         brand,
         logoUrl,
@@ -873,7 +915,7 @@ function EntryForm({
     note: string,
     dateIso: string,
     lines: ItemLine[],
-    cash: { dir: "in" | "out"; method: "cash" | "bank" } | null,
+    cash: { dir: "in" | "out" } | null,
   ) => void;
 }) {
   const t = useT();
@@ -891,7 +933,6 @@ function EntryForm({
       start.getMinutes(),
     ).padStart(2, "0")}`,
   );
-  const [method, setMethod] = useState<"cash" | "bank">("cash");
   const [cashOn, setCashOn] = useState(cashDefaultOn);
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1005,22 +1046,6 @@ function EntryForm({
         </button>
       ) : null}
 
-      {allowCash && cashOn ? (
-        <div className="flex gap-1 rounded-xl border border-line p-1">
-          {(["cash", "bank"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMethod(m)}
-              className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-                method === m ? "bg-forest text-paper" : "text-muted"
-              }`}
-            >
-              {t(`c.${m}`, m)}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
       <button
         onClick={() => {
           if (amt <= 0 || busy) return;
@@ -1031,7 +1056,7 @@ function EntryForm({
             note.trim(),
             iso,
             lines,
-            allowCash && cashOn ? { dir: cashDirection, method } : null,
+            allowCash && cashOn ? { dir: cashDirection } : null,
           );
         }}
         disabled={amt <= 0 || busy}

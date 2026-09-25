@@ -4,13 +4,24 @@ import { APP_NAME, APP_URL } from "@/lib/brand";
 
 export type ReceiptRow = { left: string; right?: string };
 
+/** One line of an itemised ITEM / QTY / RATE / AMOUNT table. Numbers come
+ *  in pre-formatted (the caller decides rounding/decimals/commas) — same
+ *  convention as ReceiptRow.right and totals[].value below. */
+export type ReceiptItemRow = {
+  name: string;
+  qty: string;
+  rate: string;
+  amount: string;
+};
+
 export type ReceiptSpec = {
   shopName: string;
   shopSub?: string; // phone / address line
   heading: string; // "ORDER" or "BILL #12"
   party?: string; // customer / supplier name (omit for supplier-facing order slips)
   dateText?: string;
-  rows: ReceiptRow[]; // item lines
+  rows: ReceiptRow[]; // plain item lines (no rate/amount columns — e.g. order slips)
+  items?: ReceiptItemRow[]; // itemised table with a header row; takes over from `rows` when set
   totals?: { label: string; value: string; bold?: boolean }[];
   note?: string | null;
   brand?: string; // hex accent
@@ -207,40 +218,113 @@ export async function receiptImage(spec: ReceiptSpec): Promise<Blob> {
   });
   steps.push({ h: 10, paint: () => {} });
 
-  // item rows
-  const rowFont = FONT("15px");
-  const rows = spec.rows.slice(0, MAX_ROWS);
-  for (const r of rows) {
-    const rightW = r.right ? textWidth(m, rowFont, r.right) + 14 : 0;
-    const lines = wrapLines(m, rowFont, r.left, BODY - rightW);
+  if (spec.items && spec.items.length) {
+    // ITEM / QTY / RATE / AMOUNT table.
+    const qtyW = Math.round(BODY * 0.16);
+    const rateW = Math.round(BODY * 0.22);
+    const amtW = Math.round(BODY * 0.24);
+    const itemW = BODY - qtyW - rateW - amtW;
+    const qtyRight = PAD + itemW + qtyW;
+    const rateRight = qtyRight + rateW;
+    const amtRight = W - PAD;
+    const headFont = FONT("700 10px");
+    const nameFont = FONT("14px");
+    const numFont = FONT("13px");
+
     steps.push({
-      h: lines.length * 20 + 6,
+      h: 24,
       paint: (ctx, y) => {
-        ctx.font = rowFont;
-        ctx.fillStyle = INK;
-        if (r.right) {
-          ctx.textAlign = "right";
-          ctx.fillText(r.right, W - PAD, y + 15);
-        }
-        ctx.textAlign = "left";
-        let ly = y + 15;
-        for (const ln of lines) {
-          ctx.fillText(ln, PAD, ly);
-          ly += 20;
-        }
-      },
-    });
-  }
-  if (spec.rows.length > MAX_ROWS) {
-    steps.push({
-      h: 20,
-      paint: (ctx, y) => {
-        ctx.font = FONT("12px");
+        ctx.fillStyle = "#f2f1ec";
+        ctx.fillRect(PAD - 8, y, BODY + 16, 24);
+        ctx.font = headFont;
         ctx.fillStyle = MUTED;
         ctx.textAlign = "left";
-        ctx.fillText(`+ ${spec.rows.length - MAX_ROWS} more…`, PAD, y + 14);
+        ctx.fillText("ITEM", PAD, y + 15);
+        ctx.textAlign = "right";
+        ctx.fillText("QTY", qtyRight, y + 15);
+        ctx.fillText("RATE", rateRight, y + 15);
+        ctx.fillText("AMOUNT", amtRight, y + 15);
       },
     });
+
+    const items = spec.items.slice(0, MAX_ROWS);
+    for (const it of items) {
+      const lines = wrapLines(m, nameFont, it.name, itemW - 10);
+      const h = Math.max(lines.length * 19, 19) + 14;
+      steps.push({
+        h,
+        paint: (ctx, y) => {
+          ctx.font = nameFont;
+          ctx.fillStyle = INK;
+          ctx.textAlign = "left";
+          let ly = y + 16;
+          for (const ln of lines) {
+            ctx.fillText(ln, PAD, ly);
+            ly += 19;
+          }
+          ctx.font = numFont;
+          ctx.fillStyle = MUTED;
+          ctx.textAlign = "right";
+          ctx.fillText(it.qty, qtyRight, y + 16);
+          ctx.fillText(it.rate, rateRight, y + 16);
+          ctx.fillStyle = INK;
+          ctx.fillText(it.amount, amtRight, y + 16);
+          ctx.strokeStyle = "#e8e7e1";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(PAD, y + h - 1);
+          ctx.lineTo(W - PAD, y + h - 1);
+          ctx.stroke();
+        },
+      });
+    }
+    if (spec.items.length > MAX_ROWS) {
+      steps.push({
+        h: 20,
+        paint: (ctx, y) => {
+          ctx.font = FONT("12px");
+          ctx.fillStyle = MUTED;
+          ctx.textAlign = "left";
+          ctx.fillText(`+ ${spec.items!.length - MAX_ROWS} more…`, PAD, y + 14);
+        },
+      });
+    }
+  } else {
+    // Plain item lines — no rate/amount columns (e.g. a no-price order slip).
+    const rowFont = FONT("15px");
+    const rows = spec.rows.slice(0, MAX_ROWS);
+    for (const r of rows) {
+      const rightW = r.right ? textWidth(m, rowFont, r.right) + 14 : 0;
+      const lines = wrapLines(m, rowFont, r.left, BODY - rightW);
+      steps.push({
+        h: lines.length * 20 + 6,
+        paint: (ctx, y) => {
+          ctx.font = rowFont;
+          ctx.fillStyle = INK;
+          if (r.right) {
+            ctx.textAlign = "right";
+            ctx.fillText(r.right, W - PAD, y + 15);
+          }
+          ctx.textAlign = "left";
+          let ly = y + 15;
+          for (const ln of lines) {
+            ctx.fillText(ln, PAD, ly);
+            ly += 20;
+          }
+        },
+      });
+    }
+    if (spec.rows.length > MAX_ROWS) {
+      steps.push({
+        h: 20,
+        paint: (ctx, y) => {
+          ctx.font = FONT("12px");
+          ctx.fillStyle = MUTED;
+          ctx.textAlign = "left";
+          ctx.fillText(`+ ${spec.rows.length - MAX_ROWS} more…`, PAD, y + 14);
+        },
+      });
+    }
   }
 
   steps.push({ h: 8, paint: () => {} });
