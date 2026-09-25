@@ -200,6 +200,16 @@ const DICT: Record<string, Entry> = {
     ur: "واٹس ایپ",
     roman: "WhatsApp",
   },
+  "party.alsoCashIn": {
+    en: "Also add to Cash Book (cash in)",
+    ur: "کیش بک میں بھی شامل کریں (کیش ان)",
+    roman: "Cashbook mein bhi Cash in likh dein",
+  },
+  "party.alsoCashOut": {
+    en: "Also add to Cash Book (cash out)",
+    ur: "کیش بک میں بھی شامل کریں (کیش آؤٹ)",
+    roman: "Cashbook mein bhi Cash out likh dein",
+  },
   "party.creditCust": {
     en: "You gave (credit)",
     ur: "اُدھار دیا",
@@ -272,15 +282,20 @@ const DICT: Record<string, Entry> = {
     roman: "Order Book kholein",
   },
   "party.billReadyHint": {
-    en: "The bill is saved and stock is updated. Open it to print, save as PDF or share.",
-    ur: "بل محفوظ ہوگیا اور اسٹاک اپڈیٹ ہوگیا۔ پرنٹ، پی ڈی ایف یا شیئر کرنے کے لیے کھولیں۔",
+    en: "The bill is saved and stock is updated. Send it on WhatsApp, or edit it from the entry later.",
+    ur: "بل محفوظ ہوگیا اور اسٹاک اپڈیٹ ہوگیا۔ واٹس ایپ پر بھیجیں، یا بعد میں انٹری سے ایڈٹ کریں۔",
     roman:
-      "Bill save hogaya aur stock update hogaya. Print, PDF ya share karne ke liye kholein.",
+      "Bill save hogaya aur stock update hogaya. WhatsApp par bhej dein, ya baad mein entry se edit karein.",
   },
   "party.shareWa": {
-    en: "Share on WhatsApp",
+    en: "Send on WhatsApp",
     ur: "واٹس ایپ پر بھیجیں",
     roman: "WhatsApp par bhejein",
+  },
+  "party.imageFailed": {
+    en: "Could not make the image.",
+    ur: "تصویر نہیں بن سکی۔",
+    roman: "Tasveer nahi ban saki.",
   },
   "party.addItem": {
     en: "+ Add item from stock",

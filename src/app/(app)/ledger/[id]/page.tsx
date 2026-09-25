@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
+import { isPremium } from "@/lib/auth/profile";
+import type { Business } from "@/lib/khata/business";
 import type { KhataTx, SupplierTx } from "@/lib/khata/db";
 import { fetchProducts, type Product } from "@/lib/khata/shop-db";
 import { serverT } from "@/lib/i18n-server";
@@ -19,7 +21,10 @@ export default async function PartyPage({
   const { kind: kindHint } = await searchParams;
 
   const supabase = await createClient();
-  const { active } = await resolveBusiness(supabase);
+  const [{ active }, premium] = await Promise.all([
+    resolveBusiness(supabase),
+    isPremium(),
+  ]);
   const bid = active?.id ?? "";
 
   // Look the party up on the hinted side first, then the other.
@@ -91,6 +96,8 @@ export default async function PartyPage({
       party={{ id: party.id, name: party.name, phone: party.phone }}
       products={products}
       txs={txs}
+      business={(active as Business) ?? null}
+      premium={premium}
     />
   );
 }

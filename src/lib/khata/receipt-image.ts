@@ -14,6 +14,7 @@ export type ReceiptSpec = {
   totals?: { label: string; value: string; bold?: boolean }[];
   note?: string | null;
   brand?: string; // hex accent
+  logoUrl?: string | null; // Premium shop logo — falls back to the app icon
 };
 
 const W = 480;
@@ -88,19 +89,25 @@ function ellipsize(
   return out + "…";
 }
 
-function loadIcon(): Promise<HTMLImageElement | null> {
+function loadIcon(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
+    // A premium logo comes from Supabase Storage (a different origin); ask
+    // for a CORS-clean copy so it doesn't taint the canvas and block
+    // toBlob(). The default /icon.svg is same-origin and unaffected.
+    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
-    img.src = "/icon.svg"; // same-origin — safe for toBlob
+    img.src = src;
   });
 }
 
 /** Build a shop receipt / order slip and return it as a PNG blob (2x). */
 export async function receiptImage(spec: ReceiptSpec): Promise<Blob> {
   const accent = spec.brand || ACCENT;
-  const icon = await loadIcon();
+  const icon =
+    (spec.logoUrl ? await loadIcon(spec.logoUrl) : null) ??
+    (await loadIcon("/icon.svg"));
   const m = document.createElement("canvas").getContext("2d");
   if (!m) throw new Error("canvas unavailable");
 

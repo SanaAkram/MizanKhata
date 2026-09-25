@@ -208,6 +208,7 @@ export default function BillsClient({
         totals,
         note: s.note,
         brand,
+        logoUrl: billLogo === "/icon.svg" ? undefined : billLogo,
       });
       await shareImage(blob, `bill-${s.no}.png`, `Bill #${s.no}`);
     } catch {

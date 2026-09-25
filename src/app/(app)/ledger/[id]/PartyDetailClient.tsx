@@ -40,8 +40,13 @@ import ItemLinePicker, {
   linesTotal,
   type ItemLine,
 } from "@/components/ItemLinePicker";
-import { shareBill } from "@/lib/khata/bill-share";
-import { BILL_CREDIT } from "@/lib/brand";
+import {
+  receiptImage,
+  shareImage,
+  type ReceiptRow,
+} from "@/lib/khata/receipt-image";
+import type { Business } from "@/lib/khata/business";
+import { toast } from "@/lib/toast";
 import { WhatsAppIcon } from "@/components/icons";
 
 type Row = {
@@ -54,12 +59,24 @@ type Row = {
   bill_id?: string | null;
 };
 
+/** What's needed to picture the bill just created from a "You gave" + items
+ *  entry — enough to build a receipt image on demand from the "Bill ready"
+ *  sheet's "Send on WhatsApp" button. */
+type MadeBillSpec = {
+  heading: string;
+  rows: ReceiptRow[];
+  totals: { label: string; value: string; bold?: boolean }[];
+  filename: string;
+};
+
 type Props = {
   businessId: string;
   kind: PartyKind;
   party: { id: string; name: string; phone: string | null };
   products: Product[];
   txs: Row[];
+  business: Business | null;
+  premium: boolean;
 };
 
 function waLink(phone: string, text: string) {
@@ -77,11 +94,15 @@ export default function PartyDetailClient({
   party,
   products,
   txs,
+  business,
+  premium,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const t = useT();
   const isCust = kind === "customer";
+  const brand = (premium && business?.logo_color) || undefined;
+  const logoUrl = premium && business?.logo_url ? business.logo_url : null;
 
   const [q, setQ] = useState("");
   const [range, setRange] = useState<DateRange>(ALL_TIME);
@@ -90,7 +111,8 @@ export default function PartyDetailClient({
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [menu, setMenu] = useState(false);
   const [armDel, setArmDel] = useState(false);
-  const [madeBill, setMadeBill] = useState<string | null>(null);
+  const [madeBill, setMadeBill] = useState<MadeBillSpec | null>(null);
+  const [imgBusy, setImgBusy] = useState(false);
   const [ordering, setOrdering] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
   const layout = useEntryLayout();
@@ -141,9 +163,37 @@ export default function PartyDetailClient({
     amount: number,
     note: string,
     dateIso: string,
-    method: "cash" | "bank",
     lines: ItemLine[],
+    cash: { dir: "in" | "out"; method: "cash" | "bank" } | null,
   ) {
+    // Mirrors this entry into the Cash Book when the "cash in/out" toggle was
+    // on — a "You got" (payment) entry defaults to this on, since it's
+    // always real money changing hands; a "You gave" (credit) entry defaults
+    // it off, but the shopkeeper can turn it on when cash also moved (e.g. a
+    // cash loan recorded as a credit note, or a part-cash purchase).
+    async function logCash() {
+      if (!cash) return;
+      await addCash(supabase, businessId, {
+        id: newId("cb_"),
+        type: cash.dir,
+        amount,
+        note:
+          type === "payment"
+            ? isCust
+              ? "Payment received"
+              : "Payment made"
+            : cash.dir === "in"
+              ? "Cash received (with ledger entry)"
+              : "Cash given (with ledger entry)",
+        partyType: kind,
+        partyId: party.id,
+        partyName: party.name,
+        date: dateIso,
+        method: cash.method,
+        category: "payment",
+      });
+    }
+
     // "You gave" built from stock items is always a real document, never a
     // plain note: a customer sale on credit (numbered bill + stock out) or a
     // supplier purchase on credit (stock in). Both write their own itemised
@@ -157,8 +207,9 @@ export default function PartyDetailClient({
         Math.round(lines.reduce((s, l) => s + l.qty * l.rate, 0) * 100) / 100;
       const wanted = amount > 0 ? amount : linesSum;
       const gap = Math.round((wanted - linesSum) * 100) / 100;
+      let billId: string;
       if (isCust) {
-        const saleId = await completeSale(supabase, businessId, {
+        billId = await completeSale(supabase, businessId, {
           lines: lines.map((l) => ({
             productId: l.productId,
             name: l.name,
@@ -175,9 +226,8 @@ export default function PartyDetailClient({
           partyKind: "customer",
           note: null,
         });
-        setMadeBill(`/print/bill/${saleId}`);
       } else {
-        const stId = await recordPurchase(supabase, businessId, {
+        billId = await recordPurchase(supabase, businessId, {
           supplierId: party.id,
           supplierName: party.name,
           lines: lines.map((l) => ({
@@ -189,8 +239,23 @@ export default function PartyDetailClient({
           amountOverride: wanted,
           date: dateIso,
         });
-        setMadeBill(`/print/purchase/${stId}`);
       }
+      const totals: { label: string; value: string; bold?: boolean }[] = [];
+      if (gap < 0)
+        totals.push({ label: t("pos.discount", "Discount"), value: `− ${fmtRs(-gap)}` });
+      if (gap > 0)
+        totals.push({ label: t("bills.tax", "Tax"), value: `+ ${fmtRs(gap)}` });
+      totals.push({ label: t("bills.total", "Total"), value: fmtRs(wanted), bold: true });
+      setMadeBill({
+        heading: creditLabel,
+        rows: lines.map((l) => ({
+          left: `${Math.round(l.qty)} × ${l.name}`,
+          right: fmtRs(Math.round(l.qty * l.rate * 100) / 100),
+        })),
+        totals,
+        filename: `bill-${billId.slice(-6)}.png`,
+      });
+      await logCash();
       setAddType(null);
       router.refresh();
       return;
@@ -204,20 +269,7 @@ export default function PartyDetailClient({
       note,
       date: dateIso,
     });
-    if (type === "payment") {
-      await addCash(supabase, businessId, {
-        id: newId("cb_"),
-        type: isCust ? "in" : "out",
-        amount,
-        note: isCust ? "Payment received" : "Payment made",
-        partyType: kind,
-        partyId: party.id,
-        partyName: party.name,
-        date: dateIso,
-        method,
-        category: "payment",
-      });
-    }
+    await logCash();
     setAddType(null);
     router.refresh();
   }
@@ -278,21 +330,56 @@ export default function PartyDetailClient({
     router.refresh();
   }
 
-  // Plain-text bill for the entry sheet's Share button (the printable one
-  // lives at /print/bill/<bill_id>).
-  function billTextFor(row: Row): string {
-    return [
-      `${party.name} — ${creditLabel} ${fmtRs(row.amount)}`,
-      new Date(row.date).toLocaleDateString(),
-      "",
-      row.note ?? "",
-      "",
-      `${t("party.balance", "Balance")}: ${fmtRs(Math.abs(balance))}`,
-      "",
-      BILL_CREDIT,
-    ]
-      .join("\n")
-      .replace(/\n{3,}/g, "\n\n");
+  // Picture of a single entry for the "Send on WhatsApp" button — the OS
+  // share sheet opens with the image already attached, WhatsApp included.
+  async function shareEntryImage(row: Row) {
+    setImgBusy(true);
+    try {
+      const blob = await receiptImage({
+        shopName: business?.name || "MizanKhata",
+        shopSub: business?.phone || undefined,
+        heading: row.type === "credit" ? creditLabel : paymentLabel,
+        party: party.name,
+        dateText: fmtEntryDate(row.date),
+        rows: [],
+        totals: [
+          { label: t("c.amount", "Amount"), value: fmtRs(row.amount), bold: true },
+          { label: t("party.balance", "Balance"), value: fmtRs(Math.abs(balance)) },
+        ],
+        note: row.note,
+        brand,
+        logoUrl,
+      });
+      await shareImage(blob, `entry-${row.id.slice(-6)}.png`, party.name);
+    } catch {
+      toast(t("party.imageFailed", "Could not make the image."), "error");
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
+  // Same idea for the bill/purchase just created from a "You gave" + items
+  // entry (the "Bill ready" sheet).
+  async function shareMadeBill(spec: MadeBillSpec) {
+    setImgBusy(true);
+    try {
+      const blob = await receiptImage({
+        shopName: business?.name || "MizanKhata",
+        shopSub: business?.phone || undefined,
+        heading: spec.heading,
+        party: party.name,
+        dateText: fmtEntryDate(new Date().toISOString()),
+        rows: spec.rows,
+        totals: spec.totals,
+        brand,
+        logoUrl,
+      });
+      await shareImage(blob, spec.filename, party.name);
+    } catch {
+      toast(t("party.imageFailed", "Could not make the image."), "error");
+    } finally {
+      setImgBusy(false);
+    }
   }
 
   return (
@@ -541,9 +628,11 @@ export default function PartyDetailClient({
         {addType ? (
           <EntryForm
             products={products}
-            showMethod={addType === "payment"}
             allowItems
             hideRate
+            allowCash
+            cashDirection={addType === "payment" ? (isCust ? "in" : "out") : "out"}
+            cashDefaultOn={addType === "payment"}
             rateFrom={isCust ? "sale" : "purchase"}
             billNote={
               addType === "credit"
@@ -563,7 +652,7 @@ export default function PartyDetailClient({
                   )
             }
             submitLabel={t("c.save", "Save")}
-            onSubmit={(a, n, d, m, lines) => saveAdd(addType, a, n, d, m, lines)}
+            onSubmit={(a, n, d, lines, cash) => saveAdd(addType, a, n, d, lines, cash)}
           />
         ) : null}
       </Sheet>
@@ -578,17 +667,17 @@ export default function PartyDetailClient({
           <p className="text-sm text-muted">
             {t(
               "party.billReadyHint",
-              "The bill is saved and stock is updated. Open it to print, save as PDF or share.",
+              "The bill is saved and stock is updated. Send it on WhatsApp, or edit it from the entry later.",
             )}
           </p>
-          <a
-            href={madeBill ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-xl bg-forest px-4 py-3 text-center text-sm font-semibold text-paper"
+          <button
+            onClick={() => madeBill && void shareMadeBill(madeBill)}
+            disabled={imgBusy || !madeBill}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
           >
-            {t("bills.printPdf", "Print / PDF")}
-          </a>
+            <WhatsAppIcon className="h-4 w-4" />
+            {imgBusy ? t("c.loading", "Loading…") : t("party.shareWa", "Send on WhatsApp")}
+          </button>
           <button
             onClick={() => setMadeBill(null)}
             className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted"
@@ -672,37 +761,15 @@ export default function PartyDetailClient({
               </p>
             ) : null}
 
-            {billHref || detail.type === "credit" ? (
-              <div
-                className={`grid gap-2 ${
-                  billHref ? "grid-cols-2" : "grid-cols-1"
-                }`}
-              >
-                {billHref ? (
-                  <a
-                    href={billHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-center text-sm font-semibold text-forest"
-                  >
-                    {t("bills.printPdf", "Print / PDF")}
-                  </a>
-                ) : null}
-                <button
-                  onClick={() =>
-                    void shareBill(
-                      billTextFor(detail),
-                      party.phone ?? undefined,
-                    )
-                  }
-                  className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-sm font-semibold text-forest"
-                >
-                  {t("bills.share", "Share")}
-                </button>
-              </div>
-            ) : null}
-
             <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => void shareEntryImage(detail)}
+                disabled={imgBusy}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-ok/40 bg-ok/10 px-4 py-3 text-sm font-semibold text-ok disabled:opacity-50"
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                {imgBusy ? t("c.loading", "Loading…") : t("party.shareWa", "Send on WhatsApp")}
+              </button>
               <button
                 onClick={() => {
                   setEditRow(detail);
@@ -712,28 +779,13 @@ export default function PartyDetailClient({
               >
                 {t("c.edit", "Edit")}
               </button>
-              <button
-                onClick={() => void removeRow(detail)}
-                className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-semibold text-danger"
-              >
-                {t("c.delete", "Delete")}
-              </button>
             </div>
-            {!billHref && party.phone ? (
-              <a
-                href={waLink(
-                  party.phone,
-                  `${party.name}: ${fmtRs(detail.amount)} (${
-                    detail.type === "credit" ? creditLabel : paymentLabel
-                  }) — ${new Date(detail.date).toLocaleDateString()}. Balance Rs ${Math.round(Math.abs(balance))}.`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl border border-ok/40 bg-ok/10 px-4 py-2.5 text-center text-sm font-semibold text-ok"
-              >
-                {t("party.shareWa", "Share on WhatsApp")}
-              </a>
-            ) : null}
+            <button
+              onClick={() => void removeRow(detail)}
+              className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-sm font-semibold text-danger"
+            >
+              {t("c.delete", "Delete")}
+            </button>
           </div>
             );
           })()
@@ -749,7 +801,6 @@ export default function PartyDetailClient({
         {editRow ? (
           <EntryForm
             products={products}
-            showMethod={false}
             allowItems
             hideRate
             rateFrom={isCust ? "sale" : "purchase"}
@@ -791,9 +842,11 @@ export default function PartyDetailClient({
 
 function EntryForm({
   products,
-  showMethod,
   allowItems = false,
   hideRate = false,
+  allowCash = false,
+  cashDirection = "in",
+  cashDefaultOn = false,
   submitLabel,
   rateFrom = "sale",
   billNote,
@@ -801,9 +854,16 @@ function EntryForm({
   onSubmit,
 }: {
   products: Product[];
-  showMethod: boolean;
   allowItems?: boolean;
   hideRate?: boolean;
+  /** Show the "also add to Cash Book" toggle at all. */
+  allowCash?: boolean;
+  /** Which way the mirrored Cash Book row moves — fixed by context (party
+   *  kind + entry type), not something the user picks freely. */
+  cashDirection?: "in" | "out";
+  /** Starts the toggle on ("You got" is always real money moving — this
+   *  keeps that automatic today) or off ("You gave" usually isn't). */
+  cashDefaultOn?: boolean;
   submitLabel: string;
   rateFrom?: "sale" | "purchase";
   billNote?: string;
@@ -812,8 +872,8 @@ function EntryForm({
     amount: number,
     note: string,
     dateIso: string,
-    method: "cash" | "bank",
     lines: ItemLine[],
+    cash: { dir: "in" | "out"; method: "cash" | "bank" } | null,
   ) => void;
 }) {
   const t = useT();
@@ -832,6 +892,7 @@ function EntryForm({
     ).padStart(2, "0")}`,
   );
   const [method, setMethod] = useState<"cash" | "bank">("cash");
+  const [cashOn, setCashOn] = useState(cashDefaultOn);
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -915,7 +976,36 @@ function EntryForm({
         />
       </div>
 
-      {showMethod ? (
+      {allowCash ? (
+        <button
+          type="button"
+          onClick={() => setCashOn((v) => !v)}
+          className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm font-semibold ${
+            cashOn
+              ? "border-forest bg-forest/10 text-forest"
+              : "border-line text-muted"
+          }`}
+        >
+          <span>
+            {cashDirection === "in"
+              ? t("party.alsoCashIn", "Also add to Cash Book (cash in)")
+              : t("party.alsoCashOut", "Also add to Cash Book (cash out)")}
+          </span>
+          <span
+            className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+              cashOn ? "bg-forest" : "bg-line"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-paper transition-transform ${
+                cashOn ? "translate-x-4" : "translate-x-0.5"
+              }`}
+            />
+          </span>
+        </button>
+      ) : null}
+
+      {allowCash && cashOn ? (
         <div className="flex gap-1 rounded-xl border border-line p-1">
           {(["cash", "bank"] as const).map((m) => (
             <button
@@ -936,7 +1026,13 @@ function EntryForm({
           if (amt <= 0 || busy) return;
           setBusy(true);
           const iso = new Date(`${date}T${time || "12:00"}:00`).toISOString();
-          onSubmit(amt, note.trim(), iso, method, lines);
+          onSubmit(
+            amt,
+            note.trim(),
+            iso,
+            lines,
+            allowCash && cashOn ? { dir: cashDirection, method } : null,
+          );
         }}
         disabled={amt <= 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
