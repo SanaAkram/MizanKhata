@@ -57,6 +57,10 @@ type Row = {
   date: string;
   ref?: string | null;
   bill_id?: string | null;
+  /** Running balance right after this entry — present on rows that came
+   *  from the `rows` list (withRunningBalance), which is every row this
+   *  component ever hands to setDetail()/setEditRow(). */
+  running?: number;
 };
 
 /** What's needed to picture the bill just created from a "You gave" + items
@@ -385,7 +389,10 @@ export default function PartyDetailClient({
         items,
         totals: [
           { label: t("c.amount", "Amount"), value: fmtRs(row.amount), bold: true },
-          { label: t("party.balance", "Balance"), value: fmtRs(Math.abs(balance)) },
+          {
+            label: t("party.balance", "Balance"),
+            value: fmtRs(Math.abs(row.running ?? balance)),
+          },
         ],
         note: extra || null,
         brand,
