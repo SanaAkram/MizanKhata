@@ -841,16 +841,6 @@ const DICT: Record<string, Entry> = {
     ur: "کسٹمرز کو ان کا انتظار ہے",
     roman: "Customers ko in ka intezaar hai",
   },
-  "ord.reportOut": {
-    en: "Still to order from suppliers",
-    ur: "سپلائرز سے ابھی منگوانا ہے",
-    roman: "Suppliers se abhi mangwana hai",
-  },
-  "ord.reportFrom": {
-    en: "from {n} order{s}",
-    ur: "{n} آرڈرز سے",
-    roman: "{n} order{s} se",
-  },
   "ord.aParty": { en: "someone", ur: "کوئی", roman: "koi" },
   "ord.orderedOfTotal": {
     en: "{done} of {total} {unit} ordered",
@@ -876,11 +866,6 @@ const DICT: Record<string, Entry> = {
     en: "{n} item{s} selected",
     ur: "{n} چیزیں منتخب",
     roman: "{n} item{s} select ki gayi",
-  },
-  "ord.viewHistory": {
-    en: "View order history",
-    ur: "آرڈر کی تاریخ دیکھیں",
-    roman: "Order ki history dekhein",
   },
   "ord.noHistory": {
     en: "No orders yet.",

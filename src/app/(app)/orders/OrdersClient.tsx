@@ -106,7 +106,6 @@ export default function OrdersClient({
   }, [open, prefs]);
 
   const reportIn = useMemo(() => buildOrderReport(open, items, "in"), [open, items]);
-  const reportOut = useMemo(() => buildOrderReport(open, items, "out"), [open, items]);
 
   // How much of each product has already been put on order with a supplier
   // (open or already received — either way it's in motion), so the "split
@@ -346,39 +345,30 @@ export default function OrdersClient({
           </ul>
         )
       ) : (
-        <div className="flex flex-col gap-4">
-          <DemandSection
-            rows={reportIn}
-            allocatedByKey={allocatedByKey}
-            selected={selected}
-            onToggle={(row, checked) =>
-              setSelected((s) => {
-                const next = { ...s };
-                if (checked) {
-                  const allocated = allocatedByKey.get(row.key) ?? 0;
-                  next[row.key] = Math.max(
-                    0,
-                    Math.round((row.totalQty - allocated) * 100) / 100,
-                  );
-                } else {
-                  delete next[row.key];
-                }
-                return next;
-              })
-            }
-            onQtyChange={(key, qty) => setSelected((s) => ({ ...s, [key]: qty }))}
-            onOpenOrder={openOrderFromReport}
-            onOpenHistory={setHistoryRow}
-            t={t}
-          />
-          <ReportSection
-            heading={t("ord.reportOut", "Still to order from suppliers")}
-            rows={reportOut}
-            onOpenOrder={openOrderFromReport}
-            onOpenHistory={setHistoryRow}
-            t={t}
-          />
-        </div>
+        <DemandSection
+          rows={reportIn}
+          allocatedByKey={allocatedByKey}
+          selected={selected}
+          onToggle={(row, checked) =>
+            setSelected((s) => {
+              const next = { ...s };
+              if (checked) {
+                const allocated = allocatedByKey.get(row.key) ?? 0;
+                next[row.key] = Math.max(
+                  0,
+                  Math.round((row.totalQty - allocated) * 100) / 100,
+                );
+              } else {
+                delete next[row.key];
+              }
+              return next;
+            })
+          }
+          onQtyChange={(key, qty) => setSelected((s) => ({ ...s, [key]: qty }))}
+          onOpenOrder={openOrderFromReport}
+          onOpenHistory={setHistoryRow}
+          t={t}
+        />
       )}
 
       {/* full history for one product: every order it's been on, who with, when */}
@@ -656,52 +646,6 @@ function PartyChips({
   );
 }
 
-/** Read-only report section — used for "still to order from suppliers",
- *  where there's nothing further to allocate, just orders to look up. */
-function ReportSection({
-  heading,
-  rows,
-  onOpenOrder,
-  onOpenHistory,
-  t,
-}: {
-  heading: string;
-  rows: ReturnType<typeof buildOrderReport>;
-  onOpenOrder: (orderId: string) => void;
-  onOpenHistory: (row: OrderReportRow) => void;
-  t: ReturnType<typeof useT>;
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <section>
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-        {heading}
-      </h2>
-      <ul className="flex flex-col gap-2">
-        {rows.map((r) => (
-          <li key={r.key} className="rounded-xl border border-line bg-card px-4 py-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
-              <p className="numeric shrink-0 text-sm font-semibold text-forest">
-                {r.totalQty} {r.unit}
-              </p>
-            </div>
-            <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
-            <button
-              type="button"
-              onClick={() => onOpenHistory(r)}
-              className="mt-1.5 flex w-full items-center justify-between text-[11px] font-semibold text-muted"
-            >
-              <span>{t("ord.viewHistory", "View order history")}</span>
-              <span aria-hidden>›</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 /** Customer-demand rows: checkable, with an editable quantity, so several
  *  products can be picked at once and bundled into one supplier order. */
 function DemandSection({
@@ -763,18 +707,15 @@ function DemandSection({
                 <button
                   type="button"
                   onClick={() => onOpenHistory(r)}
-                  className="mt-1 flex w-full items-center justify-between text-[11px] font-semibold text-muted"
+                  className="mt-1 block w-full text-left text-[11px] font-semibold text-muted"
                 >
-                  <span>
-                    {allocated > 0
-                      ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
-                          done: allocated,
-                          total: r.totalQty,
-                          unit: r.unit,
-                        })
-                      : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
-                  </span>
-                  <span aria-hidden>›</span>
+                  {allocated > 0
+                    ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
+                        done: allocated,
+                        total: r.totalQty,
+                        unit: r.unit,
+                      })
+                    : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
                 </button>
                 {checked ? (
                   <input
