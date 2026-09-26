@@ -781,7 +781,12 @@ function DemandSection({
       <ul className="flex flex-col gap-2">
         {rows.map((r) => {
           const allocated = allocatedByKey.get(r.key) ?? 0;
-          const remaining = Math.max(0, Math.round((r.totalQty - allocated) * 100) / 100);
+          // Signed: 0 means exactly, precisely covered (nothing left to
+          // do — lock it); negative means already over-ordered from
+          // before (a pre-existing mismatch, not something disabling the
+          // box here would fix, so leave it selectable to correct it).
+          const rawRemaining = Math.round((r.totalQty - allocated) * 100) / 100;
+          const remaining = Math.max(0, rawRemaining);
           const checked = r.key in selected;
           return (
             <li
@@ -794,7 +799,8 @@ function DemandSection({
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
-                  checked={checked}
+                  checked={rawRemaining === 0 ? true : checked}
+                  disabled={rawRemaining === 0}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => onToggle(r, e.target.checked)}
                   className="h-6 w-6 shrink-0 accent-forest"
@@ -843,12 +849,18 @@ function DemandSection({
                   <input
                     onClick={(e) => e.stopPropagation()}
                     value={String(selected[r.key])}
-                    onChange={(e) =>
-                      onQtyChange(
-                        r.key,
-                        Math.max(0, parseFloat(e.target.value.replace(/[^\d.]/g, "")) || 0),
-                      )
-                    }
+                    onChange={(e) => {
+                      const raw = Math.max(
+                        0,
+                        parseFloat(e.target.value.replace(/[^\d.]/g, "")) || 0,
+                      );
+                      // Cap at what's actually still needed — typing more
+                      // than that would over-order beyond the real
+                      // demand. Only applies while something's genuinely
+                      // left to place; an already fully/over-ordered
+                      // product has no such ceiling to enforce.
+                      onQtyChange(r.key, remaining > 0 ? Math.min(raw, remaining) : raw);
+                    }}
                     inputMode="decimal"
                     className="mt-2 w-24 rounded-lg border border-line bg-paper px-2 py-1.5 text-sm"
                   />
