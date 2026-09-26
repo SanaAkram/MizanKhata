@@ -114,6 +114,17 @@ export default function OrdersClient({
     return m;
   }, [open, prefs]);
 
+  // A stable, human-friendly "Order #N" — position in creation order,
+  // not the random id — for the order list rows.
+  const orderNumberById = useMemo(() => {
+    const sorted = [...orders].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    const m = new Map<string, number>();
+    sorted.forEach((o, i) => m.set(o.id, i + 1));
+    return m;
+  }, [orders]);
+
   const reportIn = useMemo(() => buildOrderReport(open, items, "in"), [open, items]);
 
   // How much of each product has already been put on order with a supplier
@@ -346,6 +357,8 @@ export default function OrdersClient({
                     <OrderRow
                       key={o.id}
                       o={o}
+                      number={orderNumberById.get(o.id) ?? 0}
+                      items={items}
                       t={t}
                       onClick={() => {
                         setEditing(false);
@@ -367,6 +380,8 @@ export default function OrdersClient({
               <OrderRow
                 key={o.id}
                 o={o}
+                number={orderNumberById.get(o.id) ?? 0}
+                items={items}
                 t={t}
                 onClick={() => {
                   setEditing(false);
@@ -861,15 +876,24 @@ function DueText({
 
 function OrderRow({
   o,
+  number,
+  items,
   t,
   onClick,
 }: {
   o: Order;
+  number: number;
+  items: OrderItem[];
   t: ReturnType<typeof useT>;
   onClick: () => void;
 }) {
   const days = daysUntil(o.due_date);
   const late = o.status === "open" && days != null && days < 0;
+  const orderItems = items.filter((it) => it.order_id === o.id);
+  const itemLines =
+    orderItems.length > 0
+      ? orderItems.map((it) => `${it.qty} ${it.name}`)
+      : [o.title || t("ord.order", "Order")];
   return (
     <li>
       <button
@@ -879,11 +903,20 @@ function OrderRow({
         }`}
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">
-              {o.title || t("ord.order", "Order")}
-            </p>
-            <p className="mt-0.5 truncate text-[11px] text-muted">
+          <div className="min-w-0 flex-1">
+            {number > 0 ? (
+              <p className="text-[11px] font-semibold text-muted">
+                {t("ord.orderNum", "Order #{n}", { n: number })}
+              </p>
+            ) : null}
+            <div className="mt-0.5">
+              {itemLines.map((line, i) => (
+                <p key={i} className="truncate text-sm font-semibold text-ink">
+                  {line}
+                </p>
+              ))}
+            </div>
+            <p className="mt-1 truncate text-[11px] text-muted">
               {o.direction === "in" ? "← " : "→ "}
               {o.party_name ||
                 (o.direction === "in"

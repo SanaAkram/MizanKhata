@@ -742,6 +742,7 @@ const DICT: Record<string, Entry> = {
   },
   "ord.add": { en: "Add order", ur: "آرڈر شامل کریں", roman: "Add order" },
   "ord.order": { en: "Order", ur: "آرڈر", roman: "Order" },
+  "ord.orderNum": { en: "Order #{n}", ur: "آرڈر #{n}", roman: "Order #{n}" },
   "ord.bucket.overdue": { en: "Overdue", ur: "تاخیر شدہ", roman: "Overdue" },
   "ord.bucket.today": { en: "Due today", ur: "آج مکمل کرنا ہے", roman: "Due today" },
   "ord.bucket.soon": {
