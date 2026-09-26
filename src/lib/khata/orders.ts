@@ -160,14 +160,16 @@ export type OrderReportRow = {
   name: string;
   unit: string;
   totalQty: number;
-  parties: { name: string; qty: number }[];
+  parties: { name: string; qty: number; orderId: string }[];
 };
 
 /** Adds up open orders' line items by product (falling back to a
  *  name+unit key for items with no product_id), one direction at a time —
  *  "in" = what customers are waiting on us for, "out" = what we still
  *  need to place with suppliers. Orders with no structured items (title
- *  typed free-hand, no picker used) don't contribute a row. */
+ *  typed free-hand, no picker used) don't contribute a row. Each
+ *  contributing party keeps its order_id so the report can link back to
+ *  that specific order (to re-open, edit, or re-send it). */
 export function buildOrderReport(
   openOrders: Order[],
   items: OrderItem[],
@@ -185,7 +187,7 @@ export function buildOrderReport(
       rows.get(key) ??
       ({ key, name: it.name, unit: it.unit, totalQty: 0, parties: [] } as OrderReportRow);
     row.totalQty = Math.round((row.totalQty + Number(it.qty)) * 100) / 100;
-    row.parties.push({ name: order.party_name || "", qty: Number(it.qty) });
+    row.parties.push({ name: order.party_name || "", qty: Number(it.qty), orderId: order.id });
     rows.set(key, row);
   }
   return [...rows.values()].sort((a, b) => b.totalQty - a.totalQty);

@@ -867,16 +867,15 @@ const DICT: Record<string, Entry> = {
     ur: "سپلائر سے منگوائیں",
     roman: "Supplier se mangwayein",
   },
-  "ord.allocHeading": {
-    en: "{name} — {n} {unit} left to place",
-    ur: "{name} — {n} {unit} ابھی منگوانا باقی ہے",
-    roman: "{name} — {n} {unit} abhi mangwana baqi hai",
-  },
-  "ord.allocQty": { en: "Quantity", ur: "مقدار", roman: "Quantity" },
   "ord.createAndShare": {
     en: "Create & share as photo",
     ur: "بنائیں اور تصویر کے طور پر بھیجیں",
     roman: "Banayein aur photo ke tor par bhejein",
+  },
+  "ord.itemsSelected": {
+    en: "{n} item{s} selected",
+    ur: "{n} چیزیں منتخب",
+    roman: "{n} item{s} select ki gayi",
   },
   "dash.stockValue": {
     en: "Stock value",

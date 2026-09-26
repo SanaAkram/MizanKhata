@@ -73,7 +73,10 @@ export default function OrdersClient({
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [imgBusy, setImgBusy] = useState(false);
-  const [allocating, setAllocating] = useState<OrderReportRow | null>(null);
+  // Report tab: which demand rows are picked to bundle into one supplier
+  // order (key -> quantity), and whether the "pick a supplier" sheet is open.
+  const [selected, setSelected] = useState<Record<string, number>>({});
+  const [allocSheet, setAllocSheet] = useState(false);
 
   const open = useMemo(
     () => orders.filter((o) => o.status === "open"),
@@ -169,23 +172,35 @@ export default function OrdersClient({
     }
   }
 
-  // Splits a customer-demand row (from the Report tab) off to a supplier:
-  // makes a new "out" order carrying just that quantity of that one
-  // product, then shares it as a no-price photo — same "Order Book" shape
-  // as a manually-created order, just pre-filled from the report row.
+  // Splits one or more customer-demand rows (from the Report tab) off to a
+  // single supplier: makes one new "out" order carrying all the picked
+  // products at their picked quantities, then shares it as one no-price
+  // photo — same "Order Book" shape as a manually-created multi-item
+  // order, just pre-filled from the report rows.
   async function allocateToSupplier(
-    row: OrderReportRow,
+    picks: { row: OrderReportRow; qty: number }[],
     supplierId: string,
-    qty: number,
   ) {
     const supplier = parties.find((p) => p.id === supplierId && p.kind === "supplier");
-    if (!supplier || qty <= 0) return;
+    const valid = picks.filter((p) => p.qty > 0);
+    if (!supplier || valid.length === 0) return;
     setBusy(true);
     try {
-      const product = products.find((p) => p.id === row.key);
-      const rate = product?.purchase_price ?? 0;
+      const lines = valid.map(({ row, qty }) => {
+        const product = products.find((p) => p.id === row.key);
+        return {
+          productId: product?.id ?? null,
+          name: row.name,
+          unit: row.unit,
+          qty,
+          rate: product?.purchase_price ?? 0,
+        };
+      });
       const id = newId("ord_");
-      const heading = `${qty} ${row.name}`;
+      const heading = lines.map((l) => `${l.qty} ${l.name}`).join(", ").slice(0, 80);
+      const detailsText = lines.map((l) => `${l.qty} ${l.name}`).join("\n");
+      const amount =
+        Math.round(lines.reduce((s, l) => s + l.qty * l.rate, 0) * 100) / 100;
       await addOrder(supabase, businessId, {
         id,
         direction: "out",
@@ -193,21 +208,27 @@ export default function OrdersClient({
         partyId: supplier.id,
         partyName: supplier.name,
         title: heading,
-        details: heading,
-        amount: Math.round(qty * rate * 100) / 100,
+        details: detailsText,
+        amount,
         dueDate: null,
-        items: [
-          { productId: product?.id ?? null, name: row.name, unit: row.unit, qty, rate },
-        ],
+        items: lines,
       });
-      setAllocating(null);
-      await shareAsPhoto({ id, title: heading, details: heading, due_date: null });
+      setAllocSheet(false);
+      setSelected({});
+      await shareAsPhoto({ id, title: heading, details: detailsText, due_date: null });
       router.refresh();
     } catch {
       toast("Could not create the supplier order.", "error");
     } finally {
       setBusy(false);
     }
+  }
+
+  function openOrderFromReport(orderId: string) {
+    const o = orders.find((x) => x.id === orderId);
+    if (!o) return;
+    setEditing(false);
+    setDetail(o);
   }
 
   async function remove(o: Order) {
@@ -318,42 +339,69 @@ export default function OrdersClient({
         )
       ) : (
         <div className="flex flex-col gap-4">
-          <ReportSection
-            heading={t("ord.reportIn", "Customers are waiting for")}
+          <DemandSection
             rows={reportIn}
             allocatedByKey={allocatedByKey}
-            onAllocate={setAllocating}
+            selected={selected}
+            onToggle={(row, checked) =>
+              setSelected((s) => {
+                const next = { ...s };
+                if (checked) {
+                  const allocated = allocatedByKey.get(row.key) ?? 0;
+                  next[row.key] = Math.max(
+                    0,
+                    Math.round((row.totalQty - allocated) * 100) / 100,
+                  );
+                } else {
+                  delete next[row.key];
+                }
+                return next;
+              })
+            }
+            onQtyChange={(key, qty) => setSelected((s) => ({ ...s, [key]: qty }))}
+            onOpenOrder={openOrderFromReport}
             t={t}
           />
           <ReportSection
             heading={t("ord.reportOut", "Still to order from suppliers")}
             rows={reportOut}
+            onOpenOrder={openOrderFromReport}
             t={t}
           />
         </div>
       )}
 
-      {/* split a report row's demand off to a supplier, no-price photo */}
+      {tab === "report" && Object.keys(selected).length > 0 ? (
+        <div className="sticky bottom-20 z-20 flex items-center justify-between gap-3 rounded-xl border border-forest/30 bg-card px-4 py-3 shadow-lg">
+          <p className="text-xs font-semibold text-ink">
+            {t("ord.itemsSelected", "{n} item{s} selected", {
+              n: Object.keys(selected).length,
+              s: Object.keys(selected).length === 1 ? "" : "s",
+            })}
+          </p>
+          <button
+            onClick={() => setAllocSheet(true)}
+            className="shrink-0 rounded-lg bg-forest px-3 py-2 text-xs font-semibold text-paper"
+          >
+            {t("ord.orderFromSupplier", "Order from supplier")}
+          </button>
+        </div>
+      ) : null}
+
+      {/* bundle the picked demand rows into one supplier order, no-price photo */}
       <Sheet
-        open={allocating !== null}
-        title={allocating ? t("ord.orderFromSupplier", "Order from supplier") : ""}
-        onClose={() => setAllocating(null)}
+        open={allocSheet}
+        title={t("ord.orderFromSupplier", "Order from supplier")}
+        onClose={() => setAllocSheet(false)}
       >
-        {allocating ? (
-          <AllocateForm
-            row={allocating}
-            remaining={Math.max(
-              0,
-              Math.round(
-                (allocating.totalQty - (allocatedByKey.get(allocating.key) ?? 0)) *
-                  100,
-              ) / 100,
-            )}
+        {allocSheet ? (
+          <MultiAllocateForm
+            picks={reportIn
+              .filter((r) => r.key in selected)
+              .map((row) => ({ row, qty: selected[row.key] }))}
             suppliers={parties.filter((p) => p.kind === "supplier")}
             busy={busy || imgBusy}
-            onSubmit={(supplierId, qty) =>
-              void allocateToSupplier(allocating, supplierId, qty)
-            }
+            onSubmit={(supplierId, picks) => void allocateToSupplier(picks, supplierId)}
           />
         ) : null}
       </Sheet>
@@ -517,17 +565,45 @@ export default function OrdersClient({
   );
 }
 
+/** A chip per contributing order — tapping one opens that order's normal
+ *  detail sheet (Edit / Share as photo / Delete), so a report row is also
+ *  how you find a specific order again to resend or fix it. */
+function PartyChips({
+  parties,
+  onOpenOrder,
+  t,
+}: {
+  parties: OrderReportRow["parties"];
+  onOpenOrder: (orderId: string) => void;
+  t: ReturnType<typeof useT>;
+}) {
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {parties.map((p, i) => (
+        <button
+          key={`${p.orderId}-${i}`}
+          type="button"
+          onClick={() => onOpenOrder(p.orderId)}
+          className="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted underline-offset-2 active:bg-line"
+        >
+          {p.name || t("ord.aParty", "someone")} ({p.qty})
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Read-only report section — used for "still to order from suppliers",
+ *  where there's nothing further to allocate, just orders to look up. */
 function ReportSection({
   heading,
   rows,
-  allocatedByKey,
-  onAllocate,
+  onOpenOrder,
   t,
 }: {
   heading: string;
   rows: ReturnType<typeof buildOrderReport>;
-  allocatedByKey?: Map<string, number>;
-  onAllocate?: (row: OrderReportRow) => void;
+  onOpenOrder: (orderId: string) => void;
   t: ReturnType<typeof useT>;
 }) {
   if (rows.length === 0) return null;
@@ -537,33 +613,71 @@ function ReportSection({
         {heading}
       </h2>
       <ul className="flex flex-col gap-2">
-        {rows.map((r) => {
-          const allocated = allocatedByKey?.get(r.key) ?? 0;
-          const remaining = Math.max(0, Math.round((r.totalQty - allocated) * 100) / 100);
-          return (
-            <li
-              key={r.key}
-              className="rounded-xl border border-line bg-card px-4 py-3"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
-                <p className="numeric shrink-0 text-sm font-semibold text-forest">
-                  {r.totalQty} {r.unit}
-                </p>
-              </div>
-              <p className="mt-0.5 truncate text-[11px] text-muted">
-                {t("ord.reportFrom", "from {n} order{s}", {
-                  n: r.parties.length,
-                  s: r.parties.length === 1 ? "" : "s",
-                })}
-                {" · "}
-                {r.parties
-                  .map((p) => `${p.name || t("ord.aParty", "someone")} (${p.qty})`)
-                  .join(", ")}
+        {rows.map((r) => (
+          <li key={r.key} className="rounded-xl border border-line bg-card px-4 py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
+              <p className="numeric shrink-0 text-sm font-semibold text-forest">
+                {r.totalQty} {r.unit}
               </p>
-              {onAllocate ? (
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <p className="text-[11px] font-semibold text-muted">
+            </div>
+            <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Customer-demand rows: checkable, with an editable quantity, so several
+ *  products can be picked at once and bundled into one supplier order. */
+function DemandSection({
+  rows,
+  allocatedByKey,
+  selected,
+  onToggle,
+  onQtyChange,
+  onOpenOrder,
+  t,
+}: {
+  rows: ReturnType<typeof buildOrderReport>;
+  allocatedByKey: Map<string, number>;
+  selected: Record<string, number>;
+  onToggle: (row: OrderReportRow, checked: boolean) => void;
+  onQtyChange: (key: string, qty: number) => void;
+  onOpenOrder: (orderId: string) => void;
+  t: ReturnType<typeof useT>;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <section>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+        {t("ord.reportIn", "Customers are waiting for")}
+      </h2>
+      <ul className="flex flex-col gap-2">
+        {rows.map((r) => {
+          const allocated = allocatedByKey.get(r.key) ?? 0;
+          const remaining = Math.max(0, Math.round((r.totalQty - allocated) * 100) / 100);
+          const checked = r.key in selected;
+          return (
+            <li key={r.key} className="rounded-xl border border-line bg-card px-4 py-3">
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={remaining <= 0}
+                  onChange={(e) => onToggle(r, e.target.checked)}
+                  className="mt-1 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
+                    <p className="numeric shrink-0 text-sm font-semibold text-forest">
+                      {r.totalQty} {r.unit}
+                    </p>
+                  </div>
+                  <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
+                  <p className="mt-1 text-[11px] font-semibold text-muted">
                     {allocated > 0
                       ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
                           done: allocated,
@@ -572,16 +686,21 @@ function ReportSection({
                         })
                       : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
                   </p>
-                  {remaining > 0 ? (
-                    <button
-                      onClick={() => onAllocate(r)}
-                      className="shrink-0 rounded-lg border border-forest/30 bg-forest/5 px-2.5 py-1 text-[11px] font-semibold text-forest"
-                    >
-                      {t("ord.orderFromSupplier", "Order from supplier")}
-                    </button>
+                  {checked ? (
+                    <input
+                      value={String(selected[r.key])}
+                      onChange={(e) =>
+                        onQtyChange(
+                          r.key,
+                          Math.max(0, parseFloat(e.target.value.replace(/[^\d.]/g, "")) || 0),
+                        )
+                      }
+                      inputMode="decimal"
+                      className="mt-2 w-24 rounded-lg border border-line bg-paper px-2 py-1 text-sm"
+                    />
                   ) : null}
                 </div>
-              ) : null}
+              </div>
             </li>
           );
         })}
@@ -590,35 +709,34 @@ function ReportSection({
   );
 }
 
-function AllocateForm({
-  row,
-  remaining,
+function MultiAllocateForm({
+  picks,
   suppliers,
   busy,
   onSubmit,
 }: {
-  row: OrderReportRow;
-  remaining: number;
+  picks: { row: OrderReportRow; qty: number }[];
   suppliers: PartyOpt[];
   busy: boolean;
-  onSubmit: (supplierId: string, qty: number) => void;
+  onSubmit: (supplierId: string, picks: { row: OrderReportRow; qty: number }[]) => void;
 }) {
   const t = useT();
   const [supplierId, setSupplierId] = useState("");
-  const [qty, setQty] = useState(remaining > 0 ? String(remaining) : "");
-  const n = Math.max(0, parseFloat(qty) || 0);
   const cls =
     "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-ink">
-        {t("ord.allocHeading", "{name} — {n} {unit} left to place", {
-          name: row.name,
-          n: remaining,
-          unit: row.unit,
-        })}
-      </p>
+      <ul className="flex flex-col gap-1">
+        {picks.map(({ row, qty }) => (
+          <li key={row.key} className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="truncate text-ink">{row.name}</span>
+            <span className="numeric shrink-0 text-muted">
+              {qty} {row.unit}
+            </span>
+          </li>
+        ))}
+      </ul>
       <select
         value={supplierId}
         onChange={(e) => setSupplierId(e.target.value)}
@@ -632,19 +750,9 @@ function AllocateForm({
           </option>
         ))}
       </select>
-      <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-        {t("ord.allocQty", "Quantity")}
-        <input
-          value={qty}
-          onChange={(e) => setQty(e.target.value.replace(/[^\d.]/g, ""))}
-          inputMode="decimal"
-          placeholder="0"
-          className={cls}
-        />
-      </label>
       <button
-        onClick={() => onSubmit(supplierId, n)}
-        disabled={!supplierId || n <= 0 || busy}
+        onClick={() => onSubmit(supplierId, picks)}
+        disabled={!supplierId || picks.length === 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
         {busy
