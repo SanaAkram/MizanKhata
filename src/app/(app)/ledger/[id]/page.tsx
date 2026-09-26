@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
 import { isPremium } from "@/lib/auth/profile";
 import type { Business } from "@/lib/khata/business";
-import type { KhataTx, SupplierTx } from "@/lib/khata/db";
+import { fetchCustomers, fetchSuppliers, type KhataTx, type SupplierTx } from "@/lib/khata/db";
 import { fetchProducts, type Product } from "@/lib/khata/shop-db";
+import type { PartyOpt } from "./PartyDetailClient";
 import { serverT } from "@/lib/i18n-server";
 import PartyDetailClient from "./PartyDetailClient";
 
@@ -42,11 +43,14 @@ export default async function PartyPage({
     .eq("id", id)
     .maybeSingle();
 
-  const [{ data: customer }, { data: supplier }, products] = await Promise.all([
-    custQ,
-    suppQ,
-    fetchProducts(supabase, bid).catch(() => [] as Product[]),
-  ]);
+  const [{ data: customer }, { data: supplier }, products, customers, suppliers] =
+    await Promise.all([
+      custQ,
+      suppQ,
+      fetchProducts(supabase, bid).catch(() => [] as Product[]),
+      fetchCustomers(supabase, bid).catch(() => []),
+      fetchSuppliers(supabase, bid).catch(() => []),
+    ]);
 
   const kind: "customer" | "supplier" =
     wantSupplier || (!customer && supplier) ? "supplier" : "customer";
@@ -89,12 +93,24 @@ export default async function PartyPage({
     txs = data ?? [];
   }
 
+  // Every other party — for mirroring a settlement onto a different
+  // customer/supplier's ledger instead of (or as well as) the cashbook.
+  const parties: PartyOpt[] = [
+    ...customers
+      .filter((c) => !(kind === "customer" && c.id === party.id))
+      .map((c) => ({ id: c.id, name: c.name, kind: "customer" as const })),
+    ...suppliers
+      .filter((s) => !(kind === "supplier" && s.id === party.id))
+      .map((s) => ({ id: s.id, name: s.name, kind: "supplier" as const })),
+  ];
+
   return (
     <PartyDetailClient
       businessId={bid}
       kind={kind}
       party={{ id: party.id, name: party.name, phone: party.phone }}
       products={products}
+      parties={parties}
       txs={txs}
       business={(active as Business) ?? null}
       premium={premium}

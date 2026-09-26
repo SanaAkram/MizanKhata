@@ -217,6 +217,13 @@ const DICT: Record<string, Entry> = {
     ur: "کیش بک میں بھی شامل کریں (کیش آؤٹ)",
     roman: "Cashbook mein bhi Cash out likh dein",
   },
+  "party.settleCash": { en: "Cash", ur: "کیش", roman: "Cash" },
+  "party.settleParty": { en: "Party", ur: "پارٹی", roman: "Party" },
+  "party.pickOtherParty": {
+    en: "Which party settled this?",
+    ur: "یہ کس پارٹی نے ادا کیا؟",
+    roman: "Yeh kis party ne ada kiya?",
+  },
   "party.creditCust": {
     en: "You gave (credit)",
     ur: "اُدھار دیا",

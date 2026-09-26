@@ -65,6 +65,21 @@ type Row = {
   running?: number;
 };
 
+/** What an entry's amount settles as, alongside the ledger row itself:
+ *  either real cash (mirrored into the Cash Book), or a direct transfer
+ *  with a different party (mirrored onto THEIR ledger instead) — e.g.
+ *  "customer paid me, and I passed that straight on to a supplier",
+ *  with no cash ever actually changing hands. */
+type Settlement =
+  | { kind: "cash"; dir: "in" | "out" }
+  | {
+      kind: "party";
+      partyType: "customer" | "supplier";
+      partyId: string;
+      partyName: string;
+      txType: TxType;
+    };
+
 /** What's needed to picture the bill just created from a "You gave" + items
  *  entry — enough to build a receipt image on demand from the "Bill ready"
  *  sheet's "Send on WhatsApp" button. */
@@ -112,11 +127,18 @@ function parseNoteItems(note: string | null): {
   return { items, extra: extra.join("\n") };
 }
 
+export type PartyOpt = {
+  id: string;
+  name: string;
+  kind: "customer" | "supplier";
+};
+
 type Props = {
   businessId: string;
   kind: PartyKind;
   party: { id: string; name: string; phone: string | null };
   products: Product[];
+  parties: PartyOpt[];
   txs: Row[];
   business: Business | null;
   premium: boolean;
@@ -127,6 +149,7 @@ export default function PartyDetailClient({
   kind,
   party,
   products,
+  parties,
   txs,
   business,
   premium,
@@ -198,33 +221,44 @@ export default function PartyDetailClient({
     note: string,
     dateIso: string,
     lines: ItemLine[],
-    cash: { dir: "in" | "out" } | null,
+    settlement: Settlement | null,
   ) {
-    // Mirrors this entry into the Cash Book, but only when the shopkeeper
-    // explicitly turned the "cash in/out" toggle on — off by default for
-    // both entry types, since not every payment/credit entry is cash (a
-    // "You got" could be a bank transfer; a "You gave" could be plain
-    // credit with no cash involved at all).
-    async function logCash() {
-      if (!cash) return;
-      await addCash(supabase, businessId, {
-        id: newId("cb_"),
-        type: cash.dir,
+    // Mirrors this entry's amount onto whatever it settled as, but only
+    // when the shopkeeper explicitly picked Cash or Party — off by
+    // default for both entry types, since not every payment/credit entry
+    // moves real cash or comes from another party (a "You got" could be
+    // a bank transfer; a "You gave" could be plain credit).
+    async function logSettlement(txId: string) {
+      if (!settlement) return;
+      if (settlement.kind === "cash") {
+        await addCash(supabase, businessId, {
+          id: newId("cb_"),
+          type: settlement.dir,
+          amount,
+          note:
+            type === "payment"
+              ? isCust
+                ? "Payment received"
+                : "Payment made"
+              : settlement.dir === "in"
+                ? "Cash received (with ledger entry)"
+                : "Cash given (with ledger entry)",
+          partyType: kind,
+          partyId: party.id,
+          partyName: party.name,
+          date: dateIso,
+          method: "cash",
+          category: "payment",
+        });
+        return;
+      }
+      await addPartyTx(supabase, businessId, settlement.partyType, settlement.partyId, {
+        id: newId(settlement.partyType === "customer" ? "kt_" : "st_"),
+        type: settlement.txType,
         amount,
-        note:
-          type === "payment"
-            ? isCust
-              ? "Payment received"
-              : "Payment made"
-            : cash.dir === "in"
-              ? "Cash received (with ledger entry)"
-              : "Cash given (with ledger entry)",
-        partyType: kind,
-        partyId: party.id,
-        partyName: party.name,
+        note: note.trim() || `Via ${party.name}`,
+        ref: txId,
         date: dateIso,
-        method: "cash",
-        category: "payment",
       });
     }
 
@@ -291,7 +325,7 @@ export default function PartyDetailClient({
         totals,
         filename: `bill-${billId.slice(-6)}.png`,
       });
-      await logCash();
+      await logSettlement(billId);
       setAddType(null);
       router.refresh();
       return;
@@ -305,7 +339,7 @@ export default function PartyDetailClient({
       note,
       date: dateIso,
     });
-    await logCash();
+    await logSettlement(id);
     setAddType(null);
     router.refresh();
   }
@@ -714,6 +748,7 @@ export default function PartyDetailClient({
             allowItems
             allowCash
             cashDirection={addType === "payment" ? (isCust ? "in" : "out") : "out"}
+            parties={parties}
             rateFrom={isCust ? "sale" : "purchase"}
             billNote={
               addType === "credit"
@@ -926,6 +961,7 @@ function EntryForm({
   hideRate = false,
   allowCash = false,
   cashDirection = "in",
+  parties = [],
   submitLabel,
   rateFrom = "sale",
   billNote,
@@ -935,11 +971,15 @@ function EntryForm({
   products: Product[];
   allowItems?: boolean;
   hideRate?: boolean;
-  /** Show the "also add to Cash Book" toggle at all. */
+  /** Show the Cash / Party settlement picker at all. */
   allowCash?: boolean;
-  /** Which way the mirrored Cash Book row moves — fixed by context (party
-   *  kind + entry type), not something the user picks freely. */
+  /** Which way the mirrored amount moves — fixed by context (party kind +
+   *  entry type), not something the user picks freely. Cash uses it
+   *  directly; Party uses its opposite, since the amount passes through
+   *  this party to reach the other one. */
   cashDirection?: "in" | "out";
+  /** Every other customer/supplier, for the Party settlement option. */
+  parties?: PartyOpt[];
   submitLabel: string;
   rateFrom?: "sale" | "purchase";
   billNote?: string;
@@ -949,7 +989,7 @@ function EntryForm({
     note: string,
     dateIso: string,
     lines: ItemLine[],
-    cash: { dir: "in" | "out" } | null,
+    settlement: Settlement | null,
   ) => void;
 }) {
   const t = useT();
@@ -968,8 +1008,11 @@ function EntryForm({
     ).padStart(2, "0")}`,
   );
   // Off by default for both entry types — the shopkeeper opts in
-  // explicitly whenever real cash also moved.
-  const [cashOn, setCashOn] = useState(false);
+  // explicitly whenever this amount also settled as real cash or a
+  // transfer with another party.
+  const [settleMode, setSettleMode] = useState<"none" | "cash" | "party">("none");
+  const [settlePartyVal, setSettlePartyVal] = useState("");
+  const settleParty = parties.find((p) => `${p.kind}:${p.id}` === settlePartyVal);
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
   // The keypad is the amount field's own "keyboard" — shown while the
@@ -1009,17 +1052,31 @@ function EntryForm({
     setLines([]);
   }
 
+  function settlement(): Settlement | null {
+    if (!allowCash) return null;
+    if (settleMode === "cash") return { kind: "cash", dir: cashDirection };
+    if (settleMode === "party" && settleParty) {
+      // The amount passes THROUGH this party to reach the other one, so
+      // the other party's side of it moves the opposite way.
+      const otherDir = cashDirection === "in" ? "out" : "in";
+      const txType: TxType =
+        otherDir === "out" && settleParty.kind === "customer" ? "credit" : "payment";
+      return {
+        kind: "party",
+        partyType: settleParty.kind,
+        partyId: settleParty.id,
+        partyName: settleParty.name,
+        txType,
+      };
+    }
+    return null;
+  }
+
   function submit() {
     if (amt <= 0 || busy) return;
     setBusy(true);
     const iso = new Date(`${date}T${time || "12:00"}:00`).toISOString();
-    onSubmit(
-      amt,
-      note.trim(),
-      iso,
-      lines,
-      allowCash && cashOn ? { dir: cashDirection } : null,
-    );
+    onSubmit(amt, note.trim(), iso, lines, settlement());
   }
 
   return (
@@ -1129,34 +1186,69 @@ function EntryForm({
       </div>
 
       {allowCash ? (
-        <button
-          type="button"
-          onClick={() => setCashOn((v) => !v)}
-          className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm font-semibold ${
-            cashOn
-              ? "border-forest bg-forest/10 text-forest"
-              : "border-line text-muted"
-          }`}
-        >
-          <span className="min-w-0 flex-1 text-start">
-            {cashDirection === "in"
-              ? t("party.alsoCashIn", "Also add to Cash Book (cash in)")
-              : t("party.alsoCashOut", "Also add to Cash Book (cash out)")}
-          </span>
-          {/* A flex-based knob (justify-start/end) rather than absolute +
-              translate-x — translate-x is a physical transform that doesn't
-              flip for RTL, which pushed the knob outside the track in Urdu
-              (and, once the track itself sat further right under RTL flex
-              reordering, in the other layouts too). justify-end/-start are
-              logical and follow dir automatically. */}
-          <span
-            className={`flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ${
-              cashOn ? "justify-end bg-forest" : "justify-start bg-line"
-            }`}
-          >
-            <span className="h-4 w-4 shrink-0 rounded-full bg-paper" />
-          </span>
-        </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-1 rounded-xl border border-line p-1">
+            {(["cash", "party"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setSettleMode((cur) => (cur === m ? "none" : m))}
+                className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
+                  settleMode === m ? "bg-forest text-paper" : "text-muted"
+                }`}
+              >
+                {m === "cash"
+                  ? t("party.settleCash", "Cash")
+                  : t("party.settleParty", "Party")}
+              </button>
+            ))}
+          </div>
+          {settleMode === "cash" ? (
+            <p className="text-xs text-muted">
+              {cashDirection === "in"
+                ? t("party.alsoCashIn", "Also add to Cash Book (cash in)")
+                : t("party.alsoCashOut", "Also add to Cash Book (cash out)")}
+            </p>
+          ) : null}
+          {settleMode === "party" ? (
+            <>
+              <select
+                value={settlePartyVal}
+                onChange={(e) => setSettlePartyVal(e.target.value)}
+                className={cls}
+              >
+                <option value="">
+                  {t("party.pickOtherParty", "Which party settled this?")}
+                </option>
+                {parties.map((p) => (
+                  <option key={`${p.kind}:${p.id}`} value={`${p.kind}:${p.id}`}>
+                    {p.name} (
+                    {p.kind === "customer"
+                      ? t("c.customer", "customer")
+                      : t("c.supplier", "supplier")}
+                    )
+                  </option>
+                ))}
+              </select>
+              {settleParty ? (
+                <p className="text-xs text-muted">
+                  {(cashDirection === "in" ? "out" : "in") === "out" &&
+                  settleParty.kind === "customer"
+                    ? t(
+                        "cash.alsoUpdatesPartyCredit",
+                        "This also records a Purchase (they'll owe more) on {name}'s ledger.",
+                        { name: settleParty.name },
+                      )
+                    : t(
+                        "cash.alsoUpdatesParty",
+                        "This also records a Payment (settles some of what's owed) on {name}'s ledger.",
+                        { name: settleParty.name },
+                      )}
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       ) : null}
 
       <button
