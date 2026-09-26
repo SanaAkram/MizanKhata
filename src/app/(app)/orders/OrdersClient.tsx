@@ -31,6 +31,7 @@ import type { Product } from "@/lib/khata/shop-db";
 import { receiptImage, shareImage } from "@/lib/khata/receipt-image";
 import Sheet from "@/components/Sheet";
 import FullPage from "@/components/FullPage";
+import { WhatsAppIcon } from "@/components/icons";
 import ItemLinePicker, {
   linesToText,
   linesTotal,
@@ -145,19 +146,39 @@ export default function OrdersClient({
   async function shareAsPhoto(o: Pick<Order, "id" | "title" | "details" | "due_date">) {
     setImgBusy(true);
     try {
-      // details may be "qty name" lines (ledger) OR "qty name <rate>Rs" lines
-      // (Order Book form) OR free text. Split off a note after a blank line,
-      // then strip any trailing price so the supplier only sees qty + name.
-      const [itemsBlock, ...rest] = (o.details ?? "").split("\n\n");
-      const rows = (itemsBlock || o.title)
-        .split("\n")
-        .map((s) => s.trim().replace(/\s+[\d,.]+\s*Rs\.?$/i, ""))
-        .filter(Boolean)
-        .map((left) => ({ left }));
       const stem = (o.title || "list")
         .replace(/[^a-z0-9]+/gi, "-")
         .replace(/^-+|-+$/g, "")
         .slice(0, 24);
+
+      // Prefer this order's own structured lines — a proper ITEM/QTY table.
+      // Only an order from before that feature (or one typed free-hand)
+      // falls back to pulling qty + name lines out of the details text.
+      const orderItems = items.filter((it) => it.order_id === o.id);
+      let qtyItems: { name: string; qty: string }[] | undefined;
+      let rows: { left: string }[] = [];
+      let note: string | null = null;
+
+      if (orderItems.length) {
+        qtyItems = orderItems.map((it) => ({
+          name: it.name,
+          qty: `${Number(it.qty).toLocaleString("en-US", { maximumFractionDigits: 2 })}${
+            it.unit ? ` ${it.unit}` : ""
+          }`,
+        }));
+      } else {
+        // details may be "qty name" lines (ledger) OR "qty name <rate>Rs"
+        // lines (Order Book form) OR free text. Split off a note after a
+        // blank line, then strip any trailing price.
+        const [itemsBlock, ...rest] = (o.details ?? "").split("\n\n");
+        rows = (itemsBlock || o.title)
+          .split("\n")
+          .map((s) => s.trim().replace(/\s+[\d,.]+\s*Rs\.?$/i, ""))
+          .filter(Boolean)
+          .map((left) => ({ left }));
+        note = rest.join("\n\n").replace(/\s+[\d,.]+\s*Rs\.?/gi, "") || null;
+      }
+
       const blob = await receiptImage({
         shopName: businessName || "MizanKhata",
         heading: t("ord.orderSlip", "ORDER"),
@@ -166,7 +187,8 @@ export default function OrdersClient({
           ? `${t("ord.due", "Due")} ${o.due_date}`
           : undefined,
         rows,
-        note: rest.join("\n\n").replace(/\s+[\d,.]+\s*Rs\.?/gi, "") || null,
+        qtyItems,
+        note,
       });
       await shareImage(
         blob,
@@ -590,11 +612,10 @@ export default function OrdersClient({
             <button
               onClick={() => void shareAsPhoto(detail)}
               disabled={imgBusy}
-              className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-sm font-semibold text-forest disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
             >
-              {imgBusy
-                ? t("c.loading", "…")
-                : t("ord.sharePhoto", "Share as photo (no prices)")}
+              <WhatsAppIcon className="h-4 w-4" />
+              {imgBusy ? t("c.loading", "…") : t("party.shareWa", "Send on WhatsApp")}
             </button>
 
             <div className="grid grid-cols-2 gap-2">
@@ -785,11 +806,16 @@ function MultiAllocateForm({
       <button
         onClick={() => onSubmit(supplierId, picks)}
         disabled={!supplierId || picks.length === 0 || busy}
-        className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
-        {busy
-          ? t("c.saving", "Saving…")
-          : t("ord.createAndShare", "Create & share as photo")}
+        {busy ? (
+          t("c.saving", "Saving…")
+        ) : (
+          <>
+            <WhatsAppIcon className="h-4 w-4" />
+            {t("ord.createAndShare", "Create & send on WhatsApp")}
+          </>
+        )}
       </button>
     </div>
   );

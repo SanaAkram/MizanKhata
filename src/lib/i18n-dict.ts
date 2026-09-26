@@ -825,11 +825,6 @@ const DICT: Record<string, Entry> = {
   },
   "ord.dueDate": { en: "Deliver by", ur: "اِس تاریخ تک", roman: "Deliver by" },
   "ord.orderSlip": { en: "ORDER", ur: "آرڈر", roman: "ORDER" },
-  "ord.sharePhoto": {
-    en: "Share as photo (no prices)",
-    ur: "تصویر کے طور پر بھیجیں (بغیر قیمت)",
-    roman: "Photo ke tor par bhejein (bina price)",
-  },
   "ord.amountOpt": {
     en: "Value (optional)",
     ur: "رقم (اختیاری)",
@@ -858,9 +853,9 @@ const DICT: Record<string, Entry> = {
     roman: "Supplier se mangwayein",
   },
   "ord.createAndShare": {
-    en: "Create & share as photo",
-    ur: "بنائیں اور تصویر کے طور پر بھیجیں",
-    roman: "Banayein aur photo ke tor par bhejein",
+    en: "Create & send on WhatsApp",
+    ur: "بنائیں اور واٹس ایپ پر بھیجیں",
+    roman: "Banayein aur WhatsApp par bhejein",
   },
   "ord.itemsSelected": {
     en: "{n} item{s} selected",

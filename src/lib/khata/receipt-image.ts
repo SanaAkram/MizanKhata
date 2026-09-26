@@ -22,6 +22,7 @@ export type ReceiptSpec = {
   dateText?: string;
   rows: ReceiptRow[]; // plain item lines (no rate/amount columns — e.g. order slips)
   items?: ReceiptItemRow[]; // itemised table with a header row; takes over from `rows` when set
+  qtyItems?: { name: string; qty: string }[]; // ITEM/QTY table, no price — a no-price order slip; takes over from `rows` when set (and `items` isn't)
   totals?: { label: string; value: string; bold?: boolean }[];
   note?: string | null;
   brand?: string; // hex accent
@@ -286,6 +287,69 @@ export async function receiptImage(spec: ReceiptSpec): Promise<Blob> {
           ctx.fillStyle = MUTED;
           ctx.textAlign = "left";
           ctx.fillText(`+ ${spec.items!.length - MAX_ROWS} more…`, PAD, y + 14);
+        },
+      });
+    }
+  } else if (spec.qtyItems && spec.qtyItems.length) {
+    // ITEM / QTY table only — no rate or amount column, for a supplier-
+    // facing order slip that must not show any price.
+    const qtyW = Math.round(BODY * 0.24);
+    const itemW = BODY - qtyW;
+    const qtyRight = W - PAD;
+    const headFont = FONT("700 10px");
+    const nameFont = FONT("14px");
+    const numFont = FONT("13px");
+
+    steps.push({
+      h: 24,
+      paint: (ctx, y) => {
+        ctx.fillStyle = "#f2f1ec";
+        ctx.fillRect(PAD - 8, y, BODY + 16, 24);
+        ctx.font = headFont;
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = "left";
+        ctx.fillText("ITEM", PAD, y + 15);
+        ctx.textAlign = "right";
+        ctx.fillText("QTY", qtyRight, y + 15);
+      },
+    });
+
+    const qtyItems = spec.qtyItems.slice(0, MAX_ROWS);
+    for (const it of qtyItems) {
+      const lines = wrapLines(m, nameFont, it.name, itemW - 10);
+      const h = Math.max(lines.length * 19, 19) + 14;
+      steps.push({
+        h,
+        paint: (ctx, y) => {
+          ctx.font = nameFont;
+          ctx.fillStyle = INK;
+          ctx.textAlign = "left";
+          let ly = y + 16;
+          for (const ln of lines) {
+            ctx.fillText(ln, PAD, ly);
+            ly += 19;
+          }
+          ctx.font = numFont;
+          ctx.fillStyle = MUTED;
+          ctx.textAlign = "right";
+          ctx.fillText(it.qty, qtyRight, y + 16);
+          ctx.strokeStyle = "#e8e7e1";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(PAD, y + h - 1);
+          ctx.lineTo(W - PAD, y + h - 1);
+          ctx.stroke();
+        },
+      });
+    }
+    if (spec.qtyItems.length > MAX_ROWS) {
+      steps.push({
+        h: 20,
+        paint: (ctx, y) => {
+          ctx.font = FONT("12px");
+          ctx.fillStyle = MUTED;
+          ctx.textAlign = "left";
+          ctx.fillText(`+ ${spec.qtyItems!.length - MAX_ROWS} more…`, PAD, y + 14);
         },
       });
     }
