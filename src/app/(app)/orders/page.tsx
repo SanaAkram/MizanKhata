@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBusiness } from "@/lib/khata/business-active";
+import { isPremium } from "@/lib/auth/profile";
+import type { Business } from "@/lib/khata/business";
 import { fetchCustomers, fetchSuppliers } from "@/lib/khata/db";
 import { fetchProducts, type Product } from "@/lib/khata/shop-db";
 import { fetchOrderItems, fetchOrders, type Order, type OrderItem } from "@/lib/khata/orders";
@@ -9,7 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
   const db = await createClient();
-  const { active } = await resolveBusiness(db);
+  const [{ active }, premium] = await Promise.all([
+    resolveBusiness(db),
+    isPremium(),
+  ]);
   const bid = active?.id ?? "";
 
   let orders: Order[] = [];
@@ -39,6 +44,8 @@ export default async function OrdersPage() {
     <OrdersClient
       businessId={bid}
       businessName={active?.name ?? ""}
+      business={(active as Business) ?? null}
+      premium={premium}
       orders={orders}
       items={items}
       parties={parties}

@@ -28,6 +28,7 @@ import {
   type OrderReportRow,
 } from "@/lib/khata/orders";
 import type { Product } from "@/lib/khata/shop-db";
+import type { Business } from "@/lib/khata/business";
 import { receiptImage, shareImage } from "@/lib/khata/receipt-image";
 import Sheet from "@/components/Sheet";
 import FullPage from "@/components/FullPage";
@@ -55,6 +56,8 @@ const BUCKET_ORDER: OrderBucket[] = [
 export default function OrdersClient({
   businessId,
   businessName,
+  business,
+  premium,
   orders,
   items,
   parties,
@@ -62,11 +65,15 @@ export default function OrdersClient({
 }: {
   businessId: string;
   businessName: string;
+  business: Business | null;
+  premium: boolean;
   orders: Order[];
   items: OrderItem[];
   parties: PartyOpt[];
   products: Product[];
 }) {
+  const brand = (premium && business?.logo_color) || undefined;
+  const logoUrl = premium && business?.logo_url ? business.logo_url : null;
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const t = useT();
@@ -189,6 +196,8 @@ export default function OrdersClient({
         rows,
         qtyItems,
         note,
+        brand,
+        logoUrl,
       });
       await shareImage(
         blob,
