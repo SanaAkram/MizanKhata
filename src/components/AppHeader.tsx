@@ -18,6 +18,8 @@ const TITLE_PATHS = [
   "/shop/reports",
   "/shop",
   "/settings",
+  "/settings/account",
+  "/settings/business",
 ];
 
 const PREFIXES = ["/routine", "/work", "/ledger", "/orders", "/cashbook", "/shop"];
@@ -37,7 +39,7 @@ export default function AppHeader() {
           {title}
         </span>
       </div>
-      {pathname !== "/settings" ? (
+      {!pathname.startsWith("/settings") ? (
         <Link
           href="/settings"
           aria-label="Settings"

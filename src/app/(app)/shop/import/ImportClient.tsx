@@ -81,8 +81,8 @@ export default function ImportClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/settings" className="text-sm text-muted">
-        ‹ Shop details
+      <Link href="/settings/business" className="text-sm text-muted">
+        ‹ Business settings
       </Link>
 
       <div>

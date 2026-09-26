@@ -68,6 +68,16 @@ const DICT: Record<string, Entry> = {
   "title./shop/expense": { en: "Expenses", ur: "اخراجات", roman: "Kharchay" },
   "title./shop/reports": { en: "Reports", ur: "رپورٹس", roman: "Reportein" },
   "title./settings": { en: "Settings", ur: "ترتیبات", roman: "Tarteebat" },
+  "title./settings/account": {
+    en: "Account",
+    ur: "اکاؤنٹ",
+    roman: "Account",
+  },
+  "title./settings/business": {
+    en: "Business",
+    ur: "بزنس",
+    roman: "Business",
+  },
 
   // ---- bottom nav ------------------------------------------------------
   "nav.work": { en: "Work", ur: "کام", roman: "Kaam" },
@@ -850,11 +860,6 @@ const DICT: Record<string, Entry> = {
     ur: "زیادہ بکنے والی",
     roman: "Zyada bikne wali",
   },
-  "dash.shopDetails": {
-    en: "Shop details",
-    ur: "دکان کی تفصیل",
-    roman: "Dukaan ki tafseel",
-  },
   "dash.income": { en: "Income", ur: "آمدنی", roman: "Aamdani" },
   "dash.expense": { en: "Expense", ur: "خرچ", roman: "Kharcha" },
 
@@ -1241,7 +1246,7 @@ const DICT: Record<string, Entry> = {
 
   // ---- settings ---------------------------------------------------------
   "settings.account": { en: "Account", ur: "اکاؤنٹ", roman: "Account" },
-  "settings.shop": { en: "Shop", ur: "دکان", roman: "Dukaan" },
+  "settings.shop": { en: "Business", ur: "بزنس", roman: "Business" },
   "settings.language": { en: "Language", ur: "زبان", roman: "Zabaan" },
   "settings.languageHint": {
     en: "Changes labels across the app.",
@@ -1250,9 +1255,9 @@ const DICT: Record<string, Entry> = {
   },
   "settings.routine": { en: "Routine", ur: "روٹین", roman: "Mamool" },
   "settings.editRoutine": {
-    en: "Edit routine items & times",
-    ur: "روٹین کی چیزیں اور اوقات ترمیم کریں",
-    roman: "Routine ki cheezein aur auqaat edit karein",
+    en: "Items & times",
+    ur: "چیزیں اور اوقات",
+    roman: "Cheezein aur auqaat",
   },
   "settings.signOut": { en: "Sign out", ur: "سائن آؤٹ", roman: "Sign out karein" },
 

@@ -1,71 +1,72 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { serverT } from "@/lib/i18n-server";
-import { getProfile, isPremium } from "@/lib/auth/profile";
+import { getProfile } from "@/lib/auth/profile";
 import { resolveBusiness } from "@/lib/khata/business-active";
 import SignOutButton from "./SignOutButton";
 import LanguagePicker from "./LanguagePicker";
-import ProfileSection from "./ProfileSection";
-import AccountSecurity from "./AccountSecurity";
-import ShopSettingsClient from "./ShopSettingsClient";
 
 export const dynamic = "force-dynamic";
+
+function SettingsRow({
+  href,
+  title,
+  subtitle,
+}: {
+  href: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-card p-4"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        {subtitle ? (
+          <p className="mt-0.5 truncate text-xs text-muted">{subtitle}</p>
+        ) : null}
+      </div>
+      <span className="shrink-0 text-muted">›</span>
+    </Link>
+  );
+}
 
 export default async function SettingsPage() {
   const supabase = await createClient();
   const t = await serverT();
-  const [
-    { data: { user } },
-    profile,
-    { list: businesses, active: activeBusiness },
-    premium,
-  ] = await Promise.all([
+  const [{ data: { user } }, profile, { active }] = await Promise.all([
     supabase.auth.getUser(),
     getProfile(),
     resolveBusiness(supabase),
-    isPremium(),
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-2xl border border-line bg-card p-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t("settings.account", "Account")}
-        </h2>
-        <p className="mt-2 text-sm text-ink">{user?.email ?? "—"}</p>
-        {profile?.is_premium ? (
-          <p className="mt-1 text-xs font-semibold text-gold">Premium</p>
-        ) : null}
-      </section>
+    <div className="flex flex-col gap-3">
+      <SettingsRow
+        href="/settings/account"
+        title={t("settings.account", "Account")}
+        subtitle={
+          profile?.is_premium
+            ? `${user?.email ?? ""} · Premium`
+            : user?.email ?? ""
+        }
+      />
 
-      <ProfileSection profile={profile} />
-
-      <AccountSecurity email={user?.email ?? ""} />
+      <SettingsRow
+        href="/settings/business"
+        title={t("settings.shop", "Business")}
+        subtitle={active?.name ?? ""}
+      />
 
       <LanguagePicker />
 
-      <div className="flex flex-col gap-4 border-t border-line pt-6">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t("settings.shop", "Shop")}
-        </h2>
-        <ShopSettingsClient
-          list={businesses}
-          activeId={activeBusiness?.id ?? ""}
-          premium={premium}
-        />
-      </div>
-
-      <section className="rounded-2xl border border-line bg-card p-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t("settings.routine", "Routine")}
-        </h2>
-        <Link
-          href="/routine/settings"
-          className="mt-2 inline-block text-sm font-medium text-forest underline underline-offset-4"
-        >
-          {t("settings.editRoutine", "Edit routine items & times")}
-        </Link>
-      </section>
+      <SettingsRow
+        href="/routine/settings"
+        title={t("settings.routine", "Routine")}
+        subtitle={t("settings.editRoutine", "Items & times")}
+      />
 
       <SignOutButton />
 

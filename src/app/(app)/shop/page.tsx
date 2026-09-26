@@ -148,15 +148,6 @@ export default async function ShopDashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Link
-          href="/settings"
-          className="text-xs font-semibold text-muted underline underline-offset-4"
-        >
-          {t("dash.shopDetails", "Shop details")}
-        </Link>
-      </div>
-
       <section className="rounded-2xl border border-line bg-card p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t("dash.netProfit", "Net profit (lifetime)")}
