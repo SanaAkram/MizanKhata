@@ -14,6 +14,7 @@ import {
   buildOrderReport,
   daysUntil,
   deleteOrder,
+  nextFridayStr,
   orderBucket,
   productHistory,
   replaceOrderItems,
@@ -681,15 +682,17 @@ function DemandSection({
           return (
             <li
               key={r.key}
-              className={`rounded-xl border px-4 py-3 ${
+              onClick={() => onOpenHistory(r)}
+              className={`cursor-pointer rounded-xl border px-4 py-3 active:bg-line/50 ${
                 checked ? "border-forest/40 bg-forest/5" : "border-line bg-card"
               }`}
             >
-              <label className="flex cursor-pointer items-center gap-3 py-1 active:opacity-80">
+              <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   checked={checked}
                   disabled={remaining <= 0}
+                  onClick={(e) => e.stopPropagation()}
                   onChange={(e) => onToggle(r, e.target.checked)}
                   className="h-6 w-6 shrink-0 accent-forest"
                 />
@@ -701,14 +704,12 @@ function DemandSection({
                     </p>
                   </div>
                 </div>
-              </label>
+              </div>
               <div className="ml-9">
-                <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
-                <button
-                  type="button"
-                  onClick={() => onOpenHistory(r)}
-                  className="mt-2 w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-left text-[11px] font-semibold text-muted active:bg-line"
-                >
+                <div onClick={(e) => e.stopPropagation()}>
+                  <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
+                </div>
+                <p className="mt-2 text-[11px] font-semibold text-muted">
                   {allocated > 0
                     ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
                         done: allocated,
@@ -716,9 +717,10 @@ function DemandSection({
                         unit: r.unit,
                       })
                     : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
-                </button>
+                </p>
                 {checked ? (
                   <input
+                    onClick={(e) => e.stopPropagation()}
                     value={String(selected[r.key])}
                     onChange={(e) =>
                       onQtyChange(
@@ -906,7 +908,7 @@ function OrderForm({
   const [amount, setAmount] = useState(
     initial && Number(initial.amount) ? String(Number(initial.amount)) : "",
   );
-  const [due, setDue] = useState(initial?.due_date ?? "");
+  const [due, setDue] = useState(initial?.due_date ?? nextFridayStr());
   const [lines, setLines] = useState<ItemLine[]>(
     () =>
       initialItems

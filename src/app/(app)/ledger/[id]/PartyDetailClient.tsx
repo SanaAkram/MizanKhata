@@ -23,7 +23,7 @@ import {
   recordPurchase,
   type Product,
 } from "@/lib/khata/shop-db";
-import { addOrder } from "@/lib/khata/orders";
+import { addOrder, nextFridayStr } from "@/lib/khata/orders";
 import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
 import FullPage from "@/components/FullPage";
@@ -1190,7 +1190,8 @@ function OrderForm({
   const [lines, setLines] = useState<ItemLine[]>([]);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [date, setDate] = useState(""); // empty = no deadline
+  // Defaults to the coming Friday rather than leaving the deadline blank.
+  const [date, setDate] = useState(nextFridayStr());
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
 

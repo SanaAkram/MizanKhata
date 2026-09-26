@@ -257,6 +257,18 @@ export function daysUntil(dueKey: string | null): number | null {
   return Math.round((due.getTime() - today.getTime()) / 86_400_000);
 }
 
+/** The coming Friday (today itself, if today is already Friday) as
+ *  YYYY-MM-DD — the default delivery date an order form pre-fills
+ *  instead of leaving "no due date" for the shopkeeper to notice later. */
+export function nextFridayStr(): string {
+  const d = new Date();
+  const add = (5 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + add);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
 export type OrderBucket = "overdue" | "today" | "soon" | "later" | "nodate";
 
 /** How the Order Book decides urgency. Defaults: flag "soon" 2 days out,
