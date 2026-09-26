@@ -206,6 +206,60 @@ export type Database = {
           },
         ]
       }
+      shop_order_items: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          id: string
+          name: string
+          order_id: string
+          owner_id: string
+          product_id: string | null
+          qty: number
+          rate: number
+          unit: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          id: string
+          name: string
+          order_id: string
+          owner_id?: string
+          product_id?: string | null
+          qty: number
+          rate?: number
+          unit?: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          order_id?: string
+          owner_id?: string
+          product_id?: string | null
+          qty?: number
+          rate?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_orders: {
         Row: {
           amount: number
@@ -905,9 +959,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const

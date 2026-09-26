@@ -360,6 +360,13 @@ export default function PartyDetailClient({
       details: note ? `${qtyText}\n\n${note}` : qtyText,
       amount,
       dueDate: dateIso ? dateIso.slice(0, 10) : null,
+      items: lines.map((l) => ({
+        productId: l.productId,
+        name: l.name,
+        unit: l.unit,
+        qty: l.qty,
+        rate: l.rate,
+      })),
     });
     setOrdering(false);
     setOrderDone(true);

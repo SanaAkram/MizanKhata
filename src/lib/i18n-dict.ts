@@ -835,6 +835,49 @@ const DICT: Record<string, Entry> = {
     ur: "رقم (اختیاری)",
     roman: "Raqam (optional)",
   },
+  "ord.tabReport": { en: "Report", ur: "رپورٹ", roman: "Report" },
+  "ord.reportIn": {
+    en: "Customers are waiting for",
+    ur: "کسٹمرز کو ان کا انتظار ہے",
+    roman: "Customers ko in ka intezaar hai",
+  },
+  "ord.reportOut": {
+    en: "Still to order from suppliers",
+    ur: "سپلائرز سے ابھی منگوانا ہے",
+    roman: "Suppliers se abhi mangwana hai",
+  },
+  "ord.reportFrom": {
+    en: "from {n} order{s}",
+    ur: "{n} آرڈرز سے",
+    roman: "{n} order{s} se",
+  },
+  "ord.aParty": { en: "someone", ur: "کوئی", roman: "koi" },
+  "ord.orderedOfTotal": {
+    en: "{done} of {total} {unit} ordered",
+    ur: "{total} {unit} میں سے {done} منگوایا جا چکا",
+    roman: "{total} {unit} mein se {done} mangwaya ja chuka",
+  },
+  "ord.noneOrderedYet": {
+    en: "None ordered from suppliers yet",
+    ur: "ابھی سپلائر سے کچھ نہیں منگوایا",
+    roman: "Abhi supplier se kuch nahi mangwaya",
+  },
+  "ord.orderFromSupplier": {
+    en: "Order from supplier",
+    ur: "سپلائر سے منگوائیں",
+    roman: "Supplier se mangwayein",
+  },
+  "ord.allocHeading": {
+    en: "{name} — {n} {unit} left to place",
+    ur: "{name} — {n} {unit} ابھی منگوانا باقی ہے",
+    roman: "{name} — {n} {unit} abhi mangwana baqi hai",
+  },
+  "ord.allocQty": { en: "Quantity", ur: "مقدار", roman: "Quantity" },
+  "ord.createAndShare": {
+    en: "Create & share as photo",
+    ur: "بنائیں اور تصویر کے طور پر بھیجیں",
+    roman: "Banayein aur photo ke tor par bhejein",
+  },
   "dash.stockValue": {
     en: "Stock value",
     ur: "اسٹاک کی مالیت",

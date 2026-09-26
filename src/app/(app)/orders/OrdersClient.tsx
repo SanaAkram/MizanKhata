@@ -11,14 +11,19 @@ import { useT } from "@/lib/i18n";
 import { useOrderPrefs } from "@/lib/khata/order-prefs";
 import {
   addOrder,
+  buildOrderReport,
   daysUntil,
   deleteOrder,
   orderBucket,
+  replaceOrderItems,
   setOrderStatus,
   updateOrder,
   type Order,
   type OrderBucket,
   type OrderDirection,
+  type OrderItem,
+  type OrderItemLine,
+  type OrderReportRow,
 } from "@/lib/khata/orders";
 import type { Product } from "@/lib/khata/shop-db";
 import { receiptImage, shareImage } from "@/lib/khata/receipt-image";
@@ -47,12 +52,14 @@ export default function OrdersClient({
   businessId,
   businessName,
   orders,
+  items,
   parties,
   products,
 }: {
   businessId: string;
   businessName: string;
   orders: Order[];
+  items: OrderItem[];
   parties: PartyOpt[];
   products: Product[];
 }) {
@@ -60,12 +67,13 @@ export default function OrdersClient({
   const router = useRouter();
   const t = useT();
   const prefs = useOrderPrefs();
-  const [tab, setTab] = useState<"open" | "done">("open");
+  const [tab, setTab] = useState<"open" | "done" | "report">("open");
   const [adding, setAdding] = useState(false);
   const [detail, setDetail] = useState<Order | null>(null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [imgBusy, setImgBusy] = useState(false);
+  const [allocating, setAllocating] = useState<OrderReportRow | null>(null);
 
   const open = useMemo(
     () => orders.filter((o) => o.status === "open"),
@@ -91,6 +99,25 @@ export default function OrdersClient({
     return m;
   }, [open, prefs]);
 
+  const reportIn = useMemo(() => buildOrderReport(open, items, "in"), [open, items]);
+  const reportOut = useMemo(() => buildOrderReport(open, items, "out"), [open, items]);
+
+  // How much of each product has already been put on order with a supplier
+  // (open or already received — either way it's in motion), so the "split
+  // this demand across suppliers" flow can show what's left to place.
+  const nonCancelled = useMemo(
+    () => orders.filter((o) => o.status !== "cancelled"),
+    [orders],
+  );
+  const allocatedOut = useMemo(
+    () => buildOrderReport(nonCancelled, items, "out"),
+    [nonCancelled, items],
+  );
+  const allocatedByKey = useMemo(
+    () => new Map(allocatedOut.map((r) => [r.key, r.totalQty])),
+    [allocatedOut],
+  );
+
   async function mark(o: Order, status: "done" | "cancelled" | "open") {
     setBusy(true);
     try {
@@ -104,7 +131,7 @@ export default function OrdersClient({
     }
   }
 
-  async function shareAsPhoto(o: Order) {
+  async function shareAsPhoto(o: Pick<Order, "id" | "title" | "details" | "due_date">) {
     setImgBusy(true);
     try {
       // details may be "qty name" lines (ledger) OR "qty name <rate>Rs" lines
@@ -139,6 +166,47 @@ export default function OrdersClient({
       toast("Could not make the image.", "error");
     } finally {
       setImgBusy(false);
+    }
+  }
+
+  // Splits a customer-demand row (from the Report tab) off to a supplier:
+  // makes a new "out" order carrying just that quantity of that one
+  // product, then shares it as a no-price photo — same "Order Book" shape
+  // as a manually-created order, just pre-filled from the report row.
+  async function allocateToSupplier(
+    row: OrderReportRow,
+    supplierId: string,
+    qty: number,
+  ) {
+    const supplier = parties.find((p) => p.id === supplierId && p.kind === "supplier");
+    if (!supplier || qty <= 0) return;
+    setBusy(true);
+    try {
+      const product = products.find((p) => p.id === row.key);
+      const rate = product?.purchase_price ?? 0;
+      const id = newId("ord_");
+      const heading = `${qty} ${row.name}`;
+      await addOrder(supabase, businessId, {
+        id,
+        direction: "out",
+        partyType: "supplier",
+        partyId: supplier.id,
+        partyName: supplier.name,
+        title: heading,
+        details: heading,
+        amount: Math.round(qty * rate * 100) / 100,
+        dueDate: null,
+        items: [
+          { productId: product?.id ?? null, name: row.name, unit: row.unit, qty, rate },
+        ],
+      });
+      setAllocating(null);
+      await shareAsPhoto({ id, title: heading, details: heading, due_date: null });
+      router.refresh();
+    } catch {
+      toast("Could not create the supplier order.", "error");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -178,7 +246,7 @@ export default function OrdersClient({
       </div>
 
       <div className="flex gap-1 rounded-xl border border-line bg-card p-1">
-        {(["open", "done"] as const).map((tk) => (
+        {(["open", "done", "report"] as const).map((tk) => (
           <button
             key={tk}
             onClick={() => setTab(tk)}
@@ -188,7 +256,9 @@ export default function OrdersClient({
           >
             {tk === "open"
               ? t("ord.tabOpen", "Open")
-              : t("ord.tabDone", "Done / cancelled")}
+              : tk === "done"
+                ? t("ord.tabDone", "Done / cancelled")
+                : t("ord.tabReport", "Report")}
           </button>
         ))}
       </div>
@@ -228,23 +298,65 @@ export default function OrdersClient({
             ))}
           </div>
         )
-      ) : done.length === 0 ? (
-        <Empty text={t("ord.noneDone", "Nothing finished yet.")} />
+      ) : tab === "done" ? (
+        done.length === 0 ? (
+          <Empty text={t("ord.noneDone", "Nothing finished yet.")} />
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {done.map((o) => (
+              <OrderRow
+                key={o.id}
+                o={o}
+                t={t}
+                onClick={() => {
+                  setEditing(false);
+                  setDetail(o);
+                }}
+              />
+            ))}
+          </ul>
+        )
       ) : (
-        <ul className="flex flex-col gap-2">
-          {done.map((o) => (
-            <OrderRow
-              key={o.id}
-              o={o}
-              t={t}
-              onClick={() => {
-                setEditing(false);
-                setDetail(o);
-              }}
-            />
-          ))}
-        </ul>
+        <div className="flex flex-col gap-4">
+          <ReportSection
+            heading={t("ord.reportIn", "Customers are waiting for")}
+            rows={reportIn}
+            allocatedByKey={allocatedByKey}
+            onAllocate={setAllocating}
+            t={t}
+          />
+          <ReportSection
+            heading={t("ord.reportOut", "Still to order from suppliers")}
+            rows={reportOut}
+            t={t}
+          />
+        </div>
       )}
+
+      {/* split a report row's demand off to a supplier, no-price photo */}
+      <Sheet
+        open={allocating !== null}
+        title={allocating ? t("ord.orderFromSupplier", "Order from supplier") : ""}
+        onClose={() => setAllocating(null)}
+      >
+        {allocating ? (
+          <AllocateForm
+            row={allocating}
+            remaining={Math.max(
+              0,
+              Math.round(
+                (allocating.totalQty - (allocatedByKey.get(allocating.key) ?? 0)) *
+                  100,
+              ) / 100,
+            )}
+            suppliers={parties.filter((p) => p.kind === "supplier")}
+            busy={busy || imgBusy}
+            onSubmit={(supplierId, qty) =>
+              void allocateToSupplier(allocating, supplierId, qty)
+            }
+          />
+        ) : null}
+      </Sheet>
 
       <button
         onClick={() => setAdding(true)}
@@ -291,6 +403,7 @@ export default function OrdersClient({
             products={products}
             submitLabel={t("c.saveChanges", "Save changes")}
             initial={detail}
+            initialItems={items.filter((it) => it.order_id === detail.id)}
             onSubmit={async (v) => {
               try {
                 await updateOrder(supabase, detail.id, {
@@ -303,6 +416,7 @@ export default function OrdersClient({
                   party_id: v.partyId,
                   party_name: v.partyName,
                 });
+                await replaceOrderItems(supabase, businessId, detail.id, v.items);
                 setEditing(false);
                 setDetail(null);
                 router.refresh();
@@ -403,6 +517,144 @@ export default function OrdersClient({
   );
 }
 
+function ReportSection({
+  heading,
+  rows,
+  allocatedByKey,
+  onAllocate,
+  t,
+}: {
+  heading: string;
+  rows: ReturnType<typeof buildOrderReport>;
+  allocatedByKey?: Map<string, number>;
+  onAllocate?: (row: OrderReportRow) => void;
+  t: ReturnType<typeof useT>;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <section>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+        {heading}
+      </h2>
+      <ul className="flex flex-col gap-2">
+        {rows.map((r) => {
+          const allocated = allocatedByKey?.get(r.key) ?? 0;
+          const remaining = Math.max(0, Math.round((r.totalQty - allocated) * 100) / 100);
+          return (
+            <li
+              key={r.key}
+              className="rounded-xl border border-line bg-card px-4 py-3"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
+                <p className="numeric shrink-0 text-sm font-semibold text-forest">
+                  {r.totalQty} {r.unit}
+                </p>
+              </div>
+              <p className="mt-0.5 truncate text-[11px] text-muted">
+                {t("ord.reportFrom", "from {n} order{s}", {
+                  n: r.parties.length,
+                  s: r.parties.length === 1 ? "" : "s",
+                })}
+                {" · "}
+                {r.parties
+                  .map((p) => `${p.name || t("ord.aParty", "someone")} (${p.qty})`)
+                  .join(", ")}
+              </p>
+              {onAllocate ? (
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-semibold text-muted">
+                    {allocated > 0
+                      ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
+                          done: allocated,
+                          total: r.totalQty,
+                          unit: r.unit,
+                        })
+                      : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
+                  </p>
+                  {remaining > 0 ? (
+                    <button
+                      onClick={() => onAllocate(r)}
+                      className="shrink-0 rounded-lg border border-forest/30 bg-forest/5 px-2.5 py-1 text-[11px] font-semibold text-forest"
+                    >
+                      {t("ord.orderFromSupplier", "Order from supplier")}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function AllocateForm({
+  row,
+  remaining,
+  suppliers,
+  busy,
+  onSubmit,
+}: {
+  row: OrderReportRow;
+  remaining: number;
+  suppliers: PartyOpt[];
+  busy: boolean;
+  onSubmit: (supplierId: string, qty: number) => void;
+}) {
+  const t = useT();
+  const [supplierId, setSupplierId] = useState("");
+  const [qty, setQty] = useState(remaining > 0 ? String(remaining) : "");
+  const n = Math.max(0, parseFloat(qty) || 0);
+  const cls =
+    "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-ink">
+        {t("ord.allocHeading", "{name} — {n} {unit} left to place", {
+          name: row.name,
+          n: remaining,
+          unit: row.unit,
+        })}
+      </p>
+      <select
+        value={supplierId}
+        onChange={(e) => setSupplierId(e.target.value)}
+        className={cls}
+        autoFocus
+      >
+        <option value="">{t("ord.pickSupplier", "Which supplier? (optional)")}</option>
+        {suppliers.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+      <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+        {t("ord.allocQty", "Quantity")}
+        <input
+          value={qty}
+          onChange={(e) => setQty(e.target.value.replace(/[^\d.]/g, ""))}
+          inputMode="decimal"
+          placeholder="0"
+          className={cls}
+        />
+      </label>
+      <button
+        onClick={() => onSubmit(supplierId, n)}
+        disabled={!supplierId || n <= 0 || busy}
+        className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
+      >
+        {busy
+          ? t("c.saving", "Saving…")
+          : t("ord.createAndShare", "Create & share as photo")}
+      </button>
+    </div>
+  );
+}
+
 function Empty({ text }: { text: string }) {
   return (
     <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-muted">
@@ -488,6 +740,7 @@ type FormValue = {
   details: string | null;
   amount: number;
   dueDate: string | null;
+  items: OrderItemLine[];
 };
 
 function OrderForm({
@@ -495,12 +748,14 @@ function OrderForm({
   products,
   submitLabel,
   initial,
+  initialItems,
   onSubmit,
 }: {
   parties: PartyOpt[];
   products: Product[];
   submitLabel: string;
   initial?: Order;
+  initialItems?: OrderItem[];
   onSubmit: (v: FormValue) => void | Promise<void>;
 }) {
   const t = useT();
@@ -514,7 +769,18 @@ function OrderForm({
     initial && Number(initial.amount) ? String(Number(initial.amount)) : "",
   );
   const [due, setDue] = useState(initial?.due_date ?? "");
-  const [lines, setLines] = useState<ItemLine[]>([]);
+  const [lines, setLines] = useState<ItemLine[]>(
+    () =>
+      initialItems
+        ?.filter((it) => it.product_id)
+        .map((it) => ({
+          productId: it.product_id as string,
+          name: it.name,
+          unit: it.unit,
+          qty: Number(it.qty),
+          rate: Number(it.rate),
+        })) ?? [],
+  );
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -674,6 +940,13 @@ function OrderForm({
               due && (due >= todayStr || due === initial?.due_date)
                 ? due
                 : null,
+            items: lines.map((l) => ({
+              productId: l.productId,
+              name: l.name,
+              unit: l.unit,
+              qty: l.qty,
+              rate: l.rate,
+            })),
           });
           setBusy(false);
         }}
