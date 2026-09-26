@@ -165,9 +165,10 @@ export type OrderReportRow = {
 
 /** Groups an item under its product_id, or under a name+unit key when it
  *  has none (a line typed free-hand rather than picked from stock). Kept
- *  as one function so the Report totals and the per-product history
- *  drill-down always agree on what counts as "the same product". */
-function itemKey(it: OrderItem): string {
+ *  as one function so the Report totals, the per-product history
+ *  drill-down, and the auto-complete check always agree on what counts
+ *  as "the same product". */
+export function itemKey(it: OrderItem): string {
   return it.product_id ?? `n:${it.name.trim().toLowerCase()}|${it.unit}`;
 }
 

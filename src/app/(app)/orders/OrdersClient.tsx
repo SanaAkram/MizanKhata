@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "@/lib/toast";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,6 +13,7 @@ import {
   addOrder,
   buildOrderReport,
   daysUntil,
+  itemKey,
   deleteOrder,
   nextFridayStr,
   orderBucket,
@@ -147,6 +148,55 @@ export default function OrdersClient({
     () => (historyRow ? productHistory(orders, items, historyRow.key) : []),
     [historyRow, orders, items],
   );
+
+  // Only supplier orders actually marked "done" (received), not just
+  // placed — for deciding whether a customer's order is fully sourced.
+  const receivedByKey = useMemo(() => {
+    const doneOut = orders.filter((o) => o.direction === "out" && o.status === "done");
+    return new Map(buildOrderReport(doneOut, items, "out").map((r) => [r.key, r.totalQty]));
+  }, [orders, items]);
+
+  // Open customer orders where every one of their products has now been
+  // fully received from suppliers (pooled across everyone waiting on that
+  // product) — ready to close automatically, no manual "Mark sent" needed.
+  const autoCompleteIds = useMemo(() => {
+    const demandByKey = new Map(reportIn.map((r) => [r.key, r.totalQty]));
+    const ids: string[] = [];
+    for (const o of open) {
+      if (o.direction !== "in") continue;
+      const its = items.filter((it) => it.order_id === o.id);
+      if (its.length === 0) continue; // no structured items — can't verify, leave alone
+      const fullyReceived = its.every((it) => {
+        const key = itemKey(it);
+        const demand = demandByKey.get(key) ?? 0;
+        const received = receivedByKey.get(key) ?? 0;
+        return demand > 0 && received >= demand;
+      });
+      if (fullyReceived) ids.push(o.id);
+    }
+    return ids;
+  }, [open, items, reportIn, receivedByKey]);
+
+  const autoCompletedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const todo = autoCompleteIds.filter((id) => !autoCompletedRef.current.has(id));
+    if (todo.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      for (const id of todo) {
+        autoCompletedRef.current.add(id);
+        try {
+          await setOrderStatus(supabase, id, "done");
+        } catch {
+          autoCompletedRef.current.delete(id);
+        }
+      }
+      if (!cancelled) router.refresh();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [autoCompleteIds, supabase, router]);
 
   async function mark(o: Order, status: "done" | "cancelled" | "open") {
     setBusy(true);
@@ -740,14 +790,32 @@ function DemandSection({
               }`}
             >
               <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={remaining <= 0}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => onToggle(r, e.target.checked)}
-                  className="h-6 w-6 shrink-0 accent-forest"
-                />
+                {remaining <= 0 ? (
+                  <span
+                    aria-label={t("ord.fullyOrdered", "Fully ordered")}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-ok text-paper"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                ) : (
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => onToggle(r, e.target.checked)}
+                    className="h-6 w-6 shrink-0 accent-forest"
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="truncate text-sm font-semibold text-ink">{r.name}</p>

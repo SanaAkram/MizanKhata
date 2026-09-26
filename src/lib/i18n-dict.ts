@@ -848,6 +848,11 @@ const DICT: Record<string, Entry> = {
     ur: "ابھی سپلائر سے کچھ نہیں منگوایا",
     roman: "Abhi supplier se kuch nahi mangwaya",
   },
+  "ord.fullyOrdered": {
+    en: "Fully ordered",
+    ur: "مکمل طور پر منگوا لیا گیا",
+    roman: "Mukammal tor par mangwa liya gaya",
+  },
   "ord.orderFromSupplier": {
     en: "Order from supplier",
     ur: "سپلائر سے منگوائیں",
