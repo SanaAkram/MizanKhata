@@ -209,11 +209,11 @@ export default function PartyDetailClient({
     lines: ItemLine[],
     cash: { dir: "in" | "out" } | null,
   ) {
-    // Mirrors this entry into the Cash Book when the "cash in/out" toggle was
-    // on — a "You got" (payment) entry defaults to this on, since it's
-    // always real money changing hands; a "You gave" (credit) entry defaults
-    // it off, but the shopkeeper can turn it on when cash also moved (e.g. a
-    // cash loan recorded as a credit note, or a part-cash purchase).
+    // Mirrors this entry into the Cash Book, but only when the shopkeeper
+    // explicitly turned the "cash in/out" toggle on — off by default for
+    // both entry types, since not every payment/credit entry is cash (a
+    // "You got" could be a bank transfer; a "You gave" could be plain
+    // credit with no cash involved at all).
     async function logCash() {
       if (!cash) return;
       await addCash(supabase, businessId, {
@@ -683,7 +683,6 @@ export default function PartyDetailClient({
             hideRate
             allowCash
             cashDirection={addType === "payment" ? (isCust ? "in" : "out") : "out"}
-            cashDefaultOn={addType === "payment"}
             rateFrom={isCust ? "sale" : "purchase"}
             billNote={
               addType === "credit"
@@ -897,7 +896,6 @@ function EntryForm({
   hideRate = false,
   allowCash = false,
   cashDirection = "in",
-  cashDefaultOn = false,
   submitLabel,
   rateFrom = "sale",
   billNote,
@@ -912,9 +910,6 @@ function EntryForm({
   /** Which way the mirrored Cash Book row moves — fixed by context (party
    *  kind + entry type), not something the user picks freely. */
   cashDirection?: "in" | "out";
-  /** Starts the toggle on ("You got" is always real money moving — this
-   *  keeps that automatic today) or off ("You gave" usually isn't). */
-  cashDefaultOn?: boolean;
   submitLabel: string;
   rateFrom?: "sale" | "purchase";
   billNote?: string;
@@ -942,7 +937,9 @@ function EntryForm({
       start.getMinutes(),
     ).padStart(2, "0")}`,
   );
-  const [cashOn, setCashOn] = useState(cashDefaultOn);
+  // Off by default for both entry types — the shopkeeper opts in
+  // explicitly whenever real cash also moved.
+  const [cashOn, setCashOn] = useState(false);
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
   // The keypad is the amount field's own "keyboard" — shown while the
