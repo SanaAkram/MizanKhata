@@ -945,11 +945,15 @@ function EntryForm({
   const [cashOn, setCashOn] = useState(cashDefaultOn);
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
+  // The keypad is the amount field's own "keyboard" — shown while the
+  // amount is what you're editing, hidden the moment focus moves to any
+  // other field (note/date/time), same as a real keyboard would.
+  const [calcOpen, setCalcOpen] = useState(true);
 
-  // The amount field is driven by the always-visible keypad below (not a
-  // tap-to-open popup), so it can hold an un-evaluated expression like
-  // "10+5" right up until Save — evalExpr() resolves that; parseFloat()
-  // alone would silently drop everything after the "+".
+  // The amount field is driven by the calculator keypad (not typed
+  // directly), so it can hold an un-evaluated expression like "10+5" right
+  // up until Save — evalExpr() resolves that; parseFloat() alone would
+  // silently drop everything after the "+".
   const preview = evalExpr(amount);
   const amt = Math.round(((preview ?? parseFloat(amount)) || 0) * 100) / 100;
   const cls =
@@ -968,20 +972,42 @@ function EntryForm({
     setLines([]);
   }
 
+  function submit() {
+    if (amt <= 0 || busy) return;
+    setBusy(true);
+    const iso = new Date(`${date}T${time || "12:00"}:00`).toISOString();
+    onSubmit(
+      amt,
+      note.trim(),
+      iso,
+      lines,
+      allowCash && cashOn ? { dir: cashDirection } : null,
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-stretch gap-1.5">
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-paper px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setCalcOpen(true)}
+          className={`flex flex-1 items-center gap-2 rounded-xl border px-4 py-3 text-left ${
+            calcOpen ? "border-forest" : "border-line"
+          }`}
+        >
           <span className="numeric text-2xl font-semibold text-muted">
             {t("c.rs", "Rs")}
           </span>
           <span className="numeric flex-1 truncate text-2xl font-semibold text-ink">
             {amount || "0"}
           </span>
-        </div>
+        </button>
         <button
           type="button"
-          onClick={() => setAmount((a) => a.slice(0, -1))}
+          onClick={() => {
+            setCalcOpen(true);
+            setAmount((a) => a.slice(0, -1));
+          }}
           aria-label={t("c.backspace", "Backspace")}
           className="shrink-0 rounded-xl border border-line bg-card px-3 text-muted active:bg-line"
         >
@@ -1038,6 +1064,7 @@ function EntryForm({
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
+        onFocus={() => setCalcOpen(false)}
         placeholder={t("c.notePh", "Details / comments")}
         rows={3}
         className={`${cls} resize-none`}
@@ -1048,12 +1075,14 @@ function EntryForm({
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
+          onFocus={() => setCalcOpen(false)}
           className={`${cls} w-1/2`}
         />
         <input
           type="time"
           value={time}
           onChange={(e) => setTime(e.target.value)}
+          onFocus={() => setCalcOpen(false)}
           className={`${cls} w-1/2`}
         />
       </div>
@@ -1088,25 +1117,16 @@ function EntryForm({
       ) : null}
 
       <button
-        onClick={() => {
-          if (amt <= 0 || busy) return;
-          setBusy(true);
-          const iso = new Date(`${date}T${time || "12:00"}:00`).toISOString();
-          onSubmit(
-            amt,
-            note.trim(),
-            iso,
-            lines,
-            allowCash && cashOn ? { dir: cashDirection } : null,
-          );
-        }}
+        onClick={submit}
         disabled={amt <= 0 || busy}
         className="rounded-xl bg-forest px-4 py-3 text-sm font-semibold text-paper disabled:opacity-50"
       >
         {busy ? t("c.saving", "Saving…") : submitLabel}
       </button>
 
-      <CalcKeypad value={amount} onChange={setAmount} />
+      {calcOpen ? (
+        <CalcKeypad value={amount} onChange={setAmount} onEnter={submit} />
+      ) : null}
 
       <ItemLinePicker
         open={picker}
