@@ -575,6 +575,13 @@ export default function OrdersClient({
           />
         ) : detail ? (
           <div className="flex flex-col gap-3">
+            {orderNumberById.get(detail.id) ? (
+              <p className="text-xs font-semibold text-muted">
+                {t("ord.orderNum", "Order #{n}", {
+                  n: orderNumberById.get(detail.id) ?? 0,
+                })}
+              </p>
+            ) : null}
             <p className="text-xs text-muted">
               {detail.direction === "in"
                 ? t("ord.fromCustomer", "Order from {name}", {
