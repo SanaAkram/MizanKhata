@@ -26,7 +26,9 @@ import {
 import { addOrder } from "@/lib/khata/orders";
 import { useT } from "@/lib/i18n";
 import Sheet from "@/components/Sheet";
-import CalcField from "@/components/CalcField";
+import FullPage from "@/components/FullPage";
+import CalcField, { evalExpr } from "@/components/CalcField";
+import CalcKeypad from "@/components/CalcKeypad";
 import DateRangeFilter from "@/components/DateRangeFilter";
 import {
   ALL_TIME,
@@ -669,7 +671,7 @@ export default function PartyDetailClient({
       </section>
 
       {/* add entry */}
-      <Sheet
+      <FullPage
         open={addType !== null}
         title={addType === "credit" ? creditLabel : paymentLabel}
         onClose={() => setAddType(null)}
@@ -704,7 +706,7 @@ export default function PartyDetailClient({
             onSubmit={(a, n, d, lines, cash) => saveAdd(addType, a, n, d, lines, cash)}
           />
         ) : null}
-      </Sheet>
+      </FullPage>
 
       {/* bill generated from a "You gave" entry */}
       <Sheet
@@ -776,7 +778,7 @@ export default function PartyDetailClient({
       </Sheet>
 
       {/* entry detail (read) */}
-      <Sheet
+      <FullPage
         open={detail !== null}
         title={t("party.entry", "Entry")}
         onClose={() => setDetail(null)}
@@ -839,10 +841,10 @@ export default function PartyDetailClient({
             );
           })()
         ) : null}
-      </Sheet>
+      </FullPage>
 
       {/* edit entry */}
-      <Sheet
+      <FullPage
         open={editRow !== null}
         title={t("c.edit", "Edit entry")}
         onClose={() => setEditRow(null)}
@@ -862,7 +864,7 @@ export default function PartyDetailClient({
             onSubmit={(a, n, d) => saveEdit(editRow, a, n, d)}
           />
         ) : null}
-      </Sheet>
+      </FullPage>
 
       {/* party menu */}
       <Sheet open={menu} title={party.name} onClose={() => setMenu(false)}>
@@ -944,7 +946,12 @@ function EntryForm({
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const amt = Math.round((parseFloat(amount) || 0) * 100) / 100;
+  // The amount field is driven by the always-visible keypad below (not a
+  // tap-to-open popup), so it can hold an un-evaluated expression like
+  // "10+5" right up until Save — evalExpr() resolves that; parseFloat()
+  // alone would silently drop everything after the "+".
+  const preview = evalExpr(amount);
+  const amt = Math.round(((preview ?? parseFloat(amount)) || 0) * 100) / 100;
   const cls =
     "rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-forest";
 
@@ -963,13 +970,40 @@ function EntryForm({
 
   return (
     <div className="flex flex-col gap-3">
-      <CalcField
-        big
-        autoFocus
-        value={amount}
-        onChange={setAmount}
-        placeholder={t("c.amount", "Amount")}
-      />
+      <div className="flex items-stretch gap-1.5">
+        <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-paper px-4 py-3">
+          <span className="numeric text-2xl font-semibold text-muted">
+            {t("c.rs", "Rs")}
+          </span>
+          <span className="numeric flex-1 truncate text-2xl font-semibold text-ink">
+            {amount || "0"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAmount((a) => a.slice(0, -1))}
+          aria-label={t("c.backspace", "Backspace")}
+          className="shrink-0 rounded-xl border border-line bg-card px-3 text-muted active:bg-line"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 6 3 12l6 6h10a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H9Z" />
+            <path d="m12 9 4 6M16 9l-4 6" />
+          </svg>
+        </button>
+      </div>
+      {preview != null && String(preview) !== amount ? (
+        <p className="numeric -mt-2 text-right text-xs text-muted">
+          = {preview}
+        </p>
+      ) : null}
 
       {allowItems ? (
         <button
@@ -1071,6 +1105,8 @@ function EntryForm({
       >
         {busy ? t("c.saving", "Saving…") : submitLabel}
       </button>
+
+      <CalcKeypad value={amount} onChange={setAmount} />
 
       <ItemLinePicker
         open={picker}

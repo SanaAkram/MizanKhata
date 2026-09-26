@@ -43,6 +43,8 @@ const DICT: Record<string, Entry> = {
   "c.date": { en: "Date", ur: "تاریخ", roman: "Tareekh" },
   "c.time": { en: "Time", ur: "وقت", roman: "Waqt" },
   "c.amount": { en: "Amount", ur: "رقم", roman: "Raqam" },
+  "c.rs": { en: "Rs", ur: "روپے", roman: "Rs" },
+  "c.backspace": { en: "Backspace", ur: "بیک اسپیس", roman: "Backspace" },
   "c.total": { en: "Total", ur: "کل", roman: "Kul" },
   "c.cash": { en: "cash", ur: "نقد", roman: "Naqad" },
   "c.customer": { en: "Customer", ur: "گاہک", roman: "Customer" },
