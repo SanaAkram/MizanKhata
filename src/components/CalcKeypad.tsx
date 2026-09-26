@@ -112,11 +112,11 @@ export default function CalcKeypad({
   return (
     <div className="flex flex-col gap-2">
       {mem !== 0 ? (
-        <div className="flex items-center gap-2 rounded-xl border border-forest/30 bg-forest/5 px-3 py-2">
+        <div className="flex items-center gap-2 px-1">
           <button
             type="button"
             onClick={() => onChange(String(mem))}
-            className="flex-1 truncate text-left text-sm font-semibold text-forest"
+            className="flex-1 truncate text-left text-sm font-medium text-muted"
           >
             M {mem > 0 ? "+" : ""}
             {fmtMem(mem)} · {t("calc.tapToUse", "tap to use")}

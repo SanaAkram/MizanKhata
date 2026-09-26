@@ -1058,6 +1058,10 @@ function EntryForm({
         </p>
       ) : null}
 
+      {calcOpen ? (
+        <CalcKeypad value={amount} onChange={setAmount} onEnter={submit} />
+      ) : null}
+
       {allowItems ? (
         <button
           onClick={() => setPicker(true)}
@@ -1152,10 +1156,6 @@ function EntryForm({
       >
         {busy ? t("c.saving", "Saving…") : submitLabel}
       </button>
-
-      {calcOpen ? (
-        <CalcKeypad value={amount} onChange={setAmount} onEnter={submit} />
-      ) : null}
 
       <ItemLinePicker
         open={picker}
