@@ -191,10 +191,12 @@ export default async function ShopDashboardPage() {
           label={t("stock.totalValue", "Stock value")}
           value={fmtRs(stockVal)}
         />
-        <MiniCard
-          label={t("dash.itemsInStock", "Items in stock")}
-          value={String(inStock)}
-        />
+        <div className="col-span-2">
+          <MiniCard
+            label={t("dash.itemsInStock", "Items in stock")}
+            value={String(inStock)}
+          />
+        </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3">

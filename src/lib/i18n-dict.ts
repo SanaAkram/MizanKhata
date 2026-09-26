@@ -180,6 +180,26 @@ const DICT: Record<string, Entry> = {
     ur: "رابطوں سے شامل کریں",
     roman: "Contacts se import karein",
   },
+  "ledger.importVcard": {
+    en: "Import contact file (.vcf)",
+    ur: "کانٹیکٹ فائل امپورٹ کریں (.vcf)",
+    roman: "Contact file import karein (.vcf)",
+  },
+  "ledger.importVcardHint": {
+    en: "On iPhone: open the contact in Contacts, tap Share Contact, then Save to Files — then pick that file here.",
+    ur: "آئی فون پر: کانٹیکٹ کھولیں، Share Contact پر ٹیپ کریں، پھر Save to Files کریں — پھر وہ فائل یہاں منتخب کریں۔",
+    roman: "iPhone par: Contacts mein woh contact kholein, Share Contact par tap karein, phir Save to Files karein — phir woh file yahan select karein.",
+  },
+  "ledger.vcardEmpty": {
+    en: "Couldn't find a name or number in that file.",
+    ur: "اس فائل میں نام یا نمبر نہیں ملا۔",
+    roman: "Is file mein naam ya number nahi mila.",
+  },
+  "ledger.vcardFailed": {
+    en: "Could not read that contact file.",
+    ur: "یہ کانٹیکٹ فائل نہیں پڑھی جا سکی۔",
+    roman: "Yeh contact file nahi parhi ja saki.",
+  },
   "ledger.name": { en: "Name", ur: "نام", roman: "Naam" },
   "ledger.phoneOpt": {
     en: "Phone (optional)",
@@ -1246,6 +1266,13 @@ const DICT: Record<string, Entry> = {
 
   // ---- settings ---------------------------------------------------------
   "settings.account": { en: "Account", ur: "اکاؤنٹ", roman: "Account" },
+  "settings.accountType": {
+    en: "Account type",
+    ur: "اکاؤنٹ کی قسم",
+    roman: "Account ki qisam",
+  },
+  "settings.premium": { en: "Premium", ur: "پریمیم", roman: "Premium" },
+  "settings.free": { en: "Free", ur: "فری", roman: "Free" },
   "settings.shop": { en: "Business", ur: "بزنس", roman: "Business" },
   "settings.language": { en: "Language", ur: "زبان", roman: "Zabaan" },
   "settings.languageHint": {

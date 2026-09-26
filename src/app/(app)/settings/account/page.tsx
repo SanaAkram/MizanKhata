@@ -23,10 +23,18 @@ export default async function AccountSettingsPage() {
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t("settings.account", "Account")}
         </h2>
-        <p className="mt-2 text-sm text-ink">{user?.email ?? "—"}</p>
-        {profile?.is_premium ? (
-          <p className="mt-1 text-xs font-semibold text-gold">Premium</p>
-        ) : null}
+        <p className="mt-2 text-sm text-ink">
+          {t("settings.accountType", "Account type")}:{" "}
+          <span
+            className={`font-semibold ${
+              profile?.is_premium ? "text-gold" : "text-ink"
+            }`}
+          >
+            {profile?.is_premium
+              ? t("settings.premium", "Premium")
+              : t("settings.free", "Free")}
+          </span>
+        </p>
       </section>
 
       <ProfileSection profile={profile} />

@@ -36,8 +36,7 @@ function SettingsRow({
 export default async function SettingsPage() {
   const supabase = await createClient();
   const t = await serverT();
-  const [{ data: { user } }, profile, { active }] = await Promise.all([
-    supabase.auth.getUser(),
+  const [profile, { active }] = await Promise.all([
     getProfile(),
     resolveBusiness(supabase),
   ]);
@@ -47,11 +46,11 @@ export default async function SettingsPage() {
       <SettingsRow
         href="/settings/account"
         title={t("settings.account", "Account")}
-        subtitle={
+        subtitle={`${t("settings.accountType", "Account type")}: ${
           profile?.is_premium
-            ? `${user?.email ?? ""} · Premium`
-            : user?.email ?? ""
-        }
+            ? t("settings.premium", "Premium")
+            : t("settings.free", "Free")
+        }`}
       />
 
       <SettingsRow

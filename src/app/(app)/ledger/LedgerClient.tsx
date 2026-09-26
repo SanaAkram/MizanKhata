@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "@/lib/toast";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -269,6 +269,18 @@ export default function LedgerClient({
   );
 }
 
+/**
+ * Bare-bones vCard reader for the "import from a .vcf file" fallback — the
+ * Contact Picker API (navigator.contacts) only exists on Chrome/Android;
+ * iOS Safari has no equivalent, but the iOS Contacts app can share any
+ * contact as a .vcf, which this can read the name/number back out of.
+ */
+function parseVCard(text: string): { name?: string; phone?: string } {
+  const name = text.match(/^FN:(.+)$/m)?.[1]?.trim();
+  const phone = text.match(/^TEL[^:]*:(.+)$/m)?.[1]?.trim();
+  return { name, phone: phone?.replace(/\s+/g, "") };
+}
+
 function AddPartySheet({
   open,
   onClose,
@@ -288,6 +300,7 @@ function AddPartySheet({
   const [phone, setPhone] = useState("");
   const [opening, setOpening] = useState("");
   const [saving, setSaving] = useState(false);
+  const vcardRef = useRef<HTMLInputElement>(null);
 
   const contactsSupported =
     typeof navigator !== "undefined" &&
@@ -312,6 +325,20 @@ function AddPartySheet({
       if (c?.tel?.[0]) setPhone(String(c.tel[0]).replace(/\s+/g, ""));
     } catch {
       /* cancelled / unsupported */
+    }
+  }
+
+  async function onVCardFile(file: File) {
+    try {
+      const { name: n, phone: p } = parseVCard(await file.text());
+      if (!n && !p) {
+        toast(t("ledger.vcardEmpty", "Couldn't find a name or number in that file."), "error");
+        return;
+      }
+      if (n) setName(n);
+      if (p) setPhone(p);
+    } catch {
+      toast(t("ledger.vcardFailed", "Could not read that contact file."), "error");
     }
   }
 
@@ -371,7 +398,33 @@ function AddPartySheet({
           >
             {t("ledger.importContacts", "Import from contacts")}
           </button>
-        ) : null}
+        ) : (
+          <>
+            <button
+              onClick={() => vcardRef.current?.click()}
+              className="rounded-lg border border-line px-3 py-2.5 text-left text-sm font-semibold text-forest"
+            >
+              {t("ledger.importVcard", "Import contact file (.vcf)")}
+            </button>
+            <p className="-mt-1 text-[11px] text-muted">
+              {t(
+                "ledger.importVcardHint",
+                "On iPhone: open the contact in Contacts, tap Share Contact, then Save to Files — then pick that file here.",
+              )}
+            </p>
+            <input
+              ref={vcardRef}
+              type="file"
+              accept=".vcf,text/vcard,text/x-vcard"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void onVCardFile(f);
+                e.target.value = "";
+              }}
+            />
+          </>
+        )}
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
