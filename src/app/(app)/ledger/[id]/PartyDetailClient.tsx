@@ -1094,21 +1094,23 @@ function EntryForm({
               : "border-line text-muted"
           }`}
         >
-          <span>
+          <span className="min-w-0 flex-1 text-start">
             {cashDirection === "in"
               ? t("party.alsoCashIn", "Also add to Cash Book (cash in)")
               : t("party.alsoCashOut", "Also add to Cash Book (cash out)")}
           </span>
+          {/* A flex-based knob (justify-start/end) rather than absolute +
+              translate-x — translate-x is a physical transform that doesn't
+              flip for RTL, which pushed the knob outside the track in Urdu
+              (and, once the track itself sat further right under RTL flex
+              reordering, in the other layouts too). justify-end/-start are
+              logical and follow dir automatically. */}
           <span
-            className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-              cashOn ? "bg-forest" : "bg-line"
+            className={`flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+              cashOn ? "justify-end bg-forest" : "justify-start bg-line"
             }`}
           >
-            <span
-              className={`absolute top-0.5 h-4 w-4 rounded-full bg-paper transition-transform ${
-                cashOn ? "translate-x-4" : "translate-x-0.5"
-              }`}
-            />
+            <span className="h-4 w-4 shrink-0 rounded-full bg-paper" />
           </span>
         </button>
       ) : null}
