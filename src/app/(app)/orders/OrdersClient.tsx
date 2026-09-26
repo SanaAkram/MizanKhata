@@ -986,6 +986,20 @@ function OrderForm({
     setPicker(false);
   }
 
+  function clearLines() {
+    // addLines() appended this exact text onto the end of `details` —
+    // strip just that back off instead of leaving it stuck in the box.
+    const itemsText = linesToText(lines);
+    if (itemsText) {
+      setDetails((n) => {
+        if (n === itemsText) return "";
+        if (n.endsWith("\n" + itemsText)) return n.slice(0, -(itemsText.length + 1));
+        return n;
+      });
+    }
+    setLines([]);
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1 rounded-xl border border-line p-1">
@@ -1053,7 +1067,7 @@ function OrderForm({
             })}
           </span>
           <button
-            onClick={() => setLines([])}
+            onClick={clearLines}
             className="font-semibold text-muted underline underline-offset-2"
           >
             {t("party.clearItems", "Clear")}

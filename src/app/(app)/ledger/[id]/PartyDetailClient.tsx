@@ -996,6 +996,16 @@ function EntryForm({
   }
 
   function clearLines() {
+    // addLines() appended this exact text onto the end of `note` — strip
+    // just that back off instead of leaving it stuck in the textarea.
+    const itemsText = linesToText(lines);
+    if (itemsText) {
+      setNote((n) => {
+        if (n === itemsText) return "";
+        if (n.endsWith("\n" + itemsText)) return n.slice(0, -(itemsText.length + 1));
+        return n;
+      });
+    }
     setLines([]);
   }
 

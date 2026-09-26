@@ -56,6 +56,8 @@ function fmtMem(n: number): string {
   return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
+type MemLine = { expr: string; value: number; sign: 1 | -1 };
+
 const OP_KEYS = new Set(["%", "÷", "×", "−", "+", "="]);
 
 /**
@@ -65,14 +67,16 @@ const OP_KEYS = new Set(["%", "÷", "×", "−", "+", "="]);
  * the same thing as the form's own Save button — a shortcut for finishing
  * entry right from the keypad), and a wide 0.
  *
- * M+ / M- match a standard calculator's memory keys: they add (or
- * subtract) whatever's on screen into a *hidden* memory register — not
- * the display — and then clear the display so the next number can be
- * typed fresh (e.g. price × qty, M+, next price × qty, M+, …, to tally
- * several lines before recalling the total). AC clears the display only;
- * memory is untouched by it, same as a real calculator, and only clears
- * on the × next to the memory readout. Tapping that readout recalls the
- * total into the field (like MR).
+ * M+ / M- tally up a running total across several calculations (price ×
+ * qty, M+, next price × qty, M+, …). Each one is kept as its own line
+ * (the expression as typed, e.g. "100*20") so the shopkeeper can see what
+ * was added, not just a final number — and the running total is written
+ * straight into the field itself, so it's already the amount Save will
+ * use with no separate recall step. Typing a fresh digit right after M+/M-
+ * starts a new number instead of appending to that total (like a normal
+ * calculator starting over after a result); typing an operator instead
+ * keeps building on it. AC clears the field only, never the memory lines
+ * — only the × next to them does that.
  */
 export default function CalcKeypad({
   value,
@@ -84,24 +88,34 @@ export default function CalcKeypad({
   onEnter?: () => void;
 }) {
   const t = useT();
-  const [mem, setMem] = useState(0);
+  const [memLines, setMemLines] = useState<MemLine[]>([]);
+  const [freshStart, setFreshStart] = useState(false);
+  const mem =
+    Math.round(memLines.reduce((s, l) => s + l.sign * l.value, 0) * 100) / 100;
 
   function tap(k: string) {
     if (k === "=") {
       const r = evalExpr(value);
       if (r != null) onChange(String(r));
+      setFreshStart(true);
       return;
     }
+    const isDigit = k === "." || (k >= "0" && k <= "9");
     onChange(
-      value + (k === "−" ? "-" : k === "×" ? "*" : k === "÷" ? "/" : k),
+      (freshStart && isDigit ? "" : value) +
+        (k === "−" ? "-" : k === "×" ? "*" : k === "÷" ? "/" : k),
     );
+    setFreshStart(false);
   }
 
   function memAdd(sign: 1 | -1) {
     const v = evalExpr(value) ?? Number(value) ?? 0;
     if (!v) return;
-    setMem((m) => Math.round((m + sign * v) * 100) / 100);
-    onChange(""); // ready for the next entry, same as a physical calculator
+    const lines = [...memLines, { expr: value, value: v, sign }];
+    const total = Math.round(lines.reduce((s, l) => s + l.sign * l.value, 0) * 100) / 100;
+    setMemLines(lines);
+    onChange(String(total)); // the running total is the amount, ready to save
+    setFreshStart(true); // next digit starts the next line fresh
   }
 
   const keyCls = (active = false) =>
@@ -111,19 +125,23 @@ export default function CalcKeypad({
 
   return (
     <div className="flex flex-col gap-2">
-      {mem !== 0 ? (
-        <div className="flex items-center gap-2 px-1">
+      {memLines.length > 0 ? (
+        <div className="flex items-start gap-2 px-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-muted">
+              {t("calc.total", "Total")}: {fmtMem(mem)}
+            </p>
+            <div className="mt-0.5 flex max-h-20 flex-col gap-0.5 overflow-y-auto">
+              {memLines.map((l, i) => (
+                <p key={i} className="truncate text-xs text-muted">
+                  ({l.sign > 0 ? "M" : "M-"}) {l.expr}
+                </p>
+              ))}
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => onChange(String(mem))}
-            className="flex-1 truncate text-left text-sm font-medium text-muted"
-          >
-            M {mem > 0 ? "+" : ""}
-            {fmtMem(mem)} · {t("calc.tapToUse", "tap to use")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMem(0)}
+            onClick={() => setMemLines([])}
             aria-label={t("calc.clearMemory", "Clear memory")}
             className="shrink-0 text-muted"
           >
