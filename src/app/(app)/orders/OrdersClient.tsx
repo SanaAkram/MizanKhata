@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { newId } from "@/lib/ids";
-import { fmtRs } from "@/lib/format";
+import { fmtEntryDate, fmtRs } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useOrderPrefs } from "@/lib/khata/order-prefs";
 import {
@@ -15,6 +15,7 @@ import {
   daysUntil,
   deleteOrder,
   orderBucket,
+  productHistory,
   replaceOrderItems,
   setOrderStatus,
   updateOrder,
@@ -28,6 +29,7 @@ import {
 import type { Product } from "@/lib/khata/shop-db";
 import { receiptImage, shareImage } from "@/lib/khata/receipt-image";
 import Sheet from "@/components/Sheet";
+import FullPage from "@/components/FullPage";
 import ItemLinePicker, {
   linesToText,
   linesTotal,
@@ -77,6 +79,7 @@ export default function OrdersClient({
   // order (key -> quantity), and whether the "pick a supplier" sheet is open.
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [allocSheet, setAllocSheet] = useState(false);
+  const [historyRow, setHistoryRow] = useState<OrderReportRow | null>(null);
 
   const open = useMemo(
     () => orders.filter((o) => o.status === "open"),
@@ -119,6 +122,11 @@ export default function OrdersClient({
   const allocatedByKey = useMemo(
     () => new Map(allocatedOut.map((r) => [r.key, r.totalQty])),
     [allocatedOut],
+  );
+
+  const historyEntries = useMemo(
+    () => (historyRow ? productHistory(orders, items, historyRow.key) : []),
+    [historyRow, orders, items],
   );
 
   async function mark(o: Order, status: "done" | "cancelled" | "open") {
@@ -360,16 +368,62 @@ export default function OrdersClient({
             }
             onQtyChange={(key, qty) => setSelected((s) => ({ ...s, [key]: qty }))}
             onOpenOrder={openOrderFromReport}
+            onOpenHistory={setHistoryRow}
             t={t}
           />
           <ReportSection
             heading={t("ord.reportOut", "Still to order from suppliers")}
             rows={reportOut}
             onOpenOrder={openOrderFromReport}
+            onOpenHistory={setHistoryRow}
             t={t}
           />
         </div>
       )}
+
+      {/* full history for one product: every order it's been on, who with, when */}
+      <FullPage
+        open={historyRow !== null}
+        title={historyRow?.name ?? ""}
+        onClose={() => setHistoryRow(null)}
+      >
+        <div className="flex flex-col gap-2">
+          {historyEntries.length === 0 ? (
+            <Empty text={t("ord.noHistory", "No orders yet.")} />
+          ) : (
+            historyEntries.map((h, i) => (
+              <button
+                key={`${h.orderId}-${i}`}
+                type="button"
+                onClick={() => {
+                  setHistoryRow(null);
+                  openOrderFromReport(h.orderId);
+                }}
+                className="w-full rounded-xl border border-line bg-card px-4 py-3 text-left"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {h.partyName ||
+                      (h.direction === "in"
+                        ? t("ord.aCustomer", "a customer")
+                        : t("ord.aSupplier", "a supplier"))}
+                  </p>
+                  <p className="numeric shrink-0 text-sm font-semibold text-forest">
+                    {h.qty} {h.unit}
+                  </p>
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted">
+                  {fmtEntryDate(h.date)} ·{" "}
+                  {h.direction === "in"
+                    ? t("ord.fromCustomerShort", "customer order")
+                    : t("ord.toSupplierShort", "supplier order")}{" "}
+                  · {t(`ord.status.${h.status}`, h.status)}
+                </p>
+              </button>
+            ))
+          )}
+        </div>
+      </FullPage>
 
       {tab === "report" && Object.keys(selected).length > 0 ? (
         <div className="sticky bottom-20 z-20 flex items-center justify-between gap-3 rounded-xl border border-forest/30 bg-card px-4 py-3 shadow-lg">
@@ -599,11 +653,13 @@ function ReportSection({
   heading,
   rows,
   onOpenOrder,
+  onOpenHistory,
   t,
 }: {
   heading: string;
   rows: ReturnType<typeof buildOrderReport>;
   onOpenOrder: (orderId: string) => void;
+  onOpenHistory: (row: OrderReportRow) => void;
   t: ReturnType<typeof useT>;
 }) {
   if (rows.length === 0) return null;
@@ -622,6 +678,14 @@ function ReportSection({
               </p>
             </div>
             <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
+            <button
+              type="button"
+              onClick={() => onOpenHistory(r)}
+              className="mt-1.5 flex w-full items-center justify-between text-[11px] font-semibold text-muted"
+            >
+              <span>{t("ord.viewHistory", "View order history")}</span>
+              <span aria-hidden>›</span>
+            </button>
           </li>
         ))}
       </ul>
@@ -638,6 +702,7 @@ function DemandSection({
   onToggle,
   onQtyChange,
   onOpenOrder,
+  onOpenHistory,
   t,
 }: {
   rows: ReturnType<typeof buildOrderReport>;
@@ -646,6 +711,7 @@ function DemandSection({
   onToggle: (row: OrderReportRow, checked: boolean) => void;
   onQtyChange: (key: string, qty: number) => void;
   onOpenOrder: (orderId: string) => void;
+  onOpenHistory: (row: OrderReportRow) => void;
   t: ReturnType<typeof useT>;
 }) {
   if (rows.length === 0) return null;
@@ -685,15 +751,22 @@ function DemandSection({
               </label>
               <div className="ml-9">
                 <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
-                <p className="mt-1 text-[11px] font-semibold text-muted">
-                  {allocated > 0
-                    ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
-                        done: allocated,
-                        total: r.totalQty,
-                        unit: r.unit,
-                      })
-                    : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => onOpenHistory(r)}
+                  className="mt-1 flex w-full items-center justify-between text-[11px] font-semibold text-muted"
+                >
+                  <span>
+                    {allocated > 0
+                      ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
+                          done: allocated,
+                          total: r.totalQty,
+                          unit: r.unit,
+                        })
+                      : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
+                  </span>
+                  <span aria-hidden>›</span>
+                </button>
                 {checked ? (
                   <input
                     value={String(selected[r.key])}

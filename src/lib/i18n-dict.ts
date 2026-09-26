@@ -877,6 +877,26 @@ const DICT: Record<string, Entry> = {
     ur: "{n} چیزیں منتخب",
     roman: "{n} item{s} select ki gayi",
   },
+  "ord.viewHistory": {
+    en: "View order history",
+    ur: "آرڈر کی تاریخ دیکھیں",
+    roman: "Order ki history dekhein",
+  },
+  "ord.noHistory": {
+    en: "No orders yet.",
+    ur: "ابھی کوئی آرڈر نہیں۔",
+    roman: "Abhi koi order nahi.",
+  },
+  "ord.fromCustomerShort": {
+    en: "customer order",
+    ur: "کسٹمر آرڈر",
+    roman: "customer order",
+  },
+  "ord.toSupplierShort": {
+    en: "supplier order",
+    ur: "سپلائر آرڈر",
+    roman: "supplier order",
+  },
   "dash.stockValue": {
     en: "Stock value",
     ur: "اسٹاک کی مالیت",

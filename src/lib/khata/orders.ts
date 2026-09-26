@@ -163,8 +163,15 @@ export type OrderReportRow = {
   parties: { name: string; qty: number; orderId: string }[];
 };
 
-/** Adds up open orders' line items by product (falling back to a
- *  name+unit key for items with no product_id), one direction at a time —
+/** Groups an item under its product_id, or under a name+unit key when it
+ *  has none (a line typed free-hand rather than picked from stock). Kept
+ *  as one function so the Report totals and the per-product history
+ *  drill-down always agree on what counts as "the same product". */
+function itemKey(it: OrderItem): string {
+  return it.product_id ?? `n:${it.name.trim().toLowerCase()}|${it.unit}`;
+}
+
+/** Adds up open orders' line items by product, one direction at a time —
  *  "in" = what customers are waiting on us for, "out" = what we still
  *  need to place with suppliers. Orders with no structured items (title
  *  typed free-hand, no picker used) don't contribute a row. Each
@@ -182,7 +189,7 @@ export function buildOrderReport(
   for (const it of items) {
     const order = ordersById.get(it.order_id);
     if (!order) continue;
-    const key = it.product_id ?? `n:${it.name.trim().toLowerCase()}|${it.unit}`;
+    const key = itemKey(it);
     const row =
       rows.get(key) ??
       ({ key, name: it.name, unit: it.unit, totalQty: 0, parties: [] } as OrderReportRow);
@@ -191,6 +198,44 @@ export function buildOrderReport(
     rows.set(key, row);
   }
   return [...rows.values()].sort((a, b) => b.totalQty - a.totalQty);
+}
+
+export type ProductHistoryEntry = {
+  orderId: string;
+  partyName: string;
+  direction: OrderDirection;
+  status: OrderStatus;
+  date: string;
+  qty: number;
+  unit: string;
+};
+
+/** Every time this product (identified by a Report row's key) has been on
+ *  an order, in any direction or status, most recent first — for the
+ *  Report tab's "view history" drill-down: who it went to or came from,
+ *  how much, and when. */
+export function productHistory(
+  allOrders: Order[],
+  items: OrderItem[],
+  key: string,
+): ProductHistoryEntry[] {
+  const ordersById = new Map(allOrders.map((o) => [o.id, o]));
+  const out: ProductHistoryEntry[] = [];
+  for (const it of items) {
+    if (itemKey(it) !== key) continue;
+    const order = ordersById.get(it.order_id);
+    if (!order) continue;
+    out.push({
+      orderId: order.id,
+      partyName: order.party_name || "",
+      direction: order.direction as OrderDirection,
+      status: order.status as OrderStatus,
+      date: order.created_at,
+      qty: Number(it.qty),
+      unit: it.unit,
+    });
+  }
+  return out.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 // ---- date helpers (local-day based) ---------------------------------
