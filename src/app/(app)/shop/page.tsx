@@ -150,7 +150,7 @@ export default async function ShopDashboardPage() {
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
         <Link
-          href="/shop/settings"
+          href="/settings"
           className="text-xs font-semibold text-muted underline underline-offset-4"
         >
           {t("dash.shopDetails", "Shop details")}

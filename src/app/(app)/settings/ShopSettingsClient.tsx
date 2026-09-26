@@ -67,7 +67,6 @@ export default function ShopSettingsClient({
         setActiveBusinessCookie(b.id);
         setNewBizOpen(false);
         setNewBizName("");
-        router.push("/shop");
         router.refresh();
       }
     } catch {
@@ -86,7 +85,6 @@ export default function ShopSettingsClient({
       if (next) setActiveBusinessCookie(next.id);
       setArmDelBiz(false);
       toast("Business deleted.", "success");
-      router.push("/shop");
       router.refresh();
     } catch {
       toast("Could not delete the business.", "error");
@@ -180,20 +178,17 @@ export default function ShopSettingsClient({
         phone: phone.trim() || null,
         address: address.trim() || null,
       });
-      router.push("/shop");
+      toast("Saved.", "success");
       router.refresh();
     } catch {
       toast("Could not save. Try again.", "error");
+    } finally {
       setBusy(false);
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/shop" className="text-sm text-muted">
-        ‹ {t("nav.shop", "Shop")}
-      </Link>
-
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
           {t("shopset.business", "Business")}

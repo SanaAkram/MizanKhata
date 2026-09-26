@@ -16,7 +16,6 @@ const TITLE_PATHS = [
   "/shop/bills",
   "/shop/expense",
   "/shop/reports",
-  "/shop/settings",
   "/shop",
   "/settings",
 ];

@@ -67,11 +67,6 @@ const DICT: Record<string, Entry> = {
   "title./shop/bills": { en: "Bills", ur: "بل", roman: "Bills" },
   "title./shop/expense": { en: "Expenses", ur: "اخراجات", roman: "Kharchay" },
   "title./shop/reports": { en: "Reports", ur: "رپورٹس", roman: "Reportein" },
-  "title./shop/settings": {
-    en: "Shop details",
-    ur: "دکان کی تفصیل",
-    roman: "Dukaan ki tafseel",
-  },
   "title./settings": { en: "Settings", ur: "ترتیبات", roman: "Tarteebat" },
 
   // ---- bottom nav ------------------------------------------------------
@@ -1246,6 +1241,7 @@ const DICT: Record<string, Entry> = {
 
   // ---- settings ---------------------------------------------------------
   "settings.account": { en: "Account", ur: "اکاؤنٹ", roman: "Account" },
+  "settings.shop": { en: "Shop", ur: "دکان", roman: "Dukaan" },
   "settings.language": { en: "Language", ur: "زبان", roman: "Zabaan" },
   "settings.languageHint": {
     en: "Changes labels across the app.",

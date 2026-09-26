@@ -81,7 +81,7 @@ export default function ImportClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/shop/settings" className="text-sm text-muted">
+      <Link href="/settings" className="text-sm text-muted">
         ‹ Shop details
       </Link>
 

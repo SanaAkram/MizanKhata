@@ -1,18 +1,29 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { serverT } from "@/lib/i18n-server";
-import { getProfile } from "@/lib/auth/profile";
+import { getProfile, isPremium } from "@/lib/auth/profile";
+import { resolveBusiness } from "@/lib/khata/business-active";
 import SignOutButton from "./SignOutButton";
 import LanguagePicker from "./LanguagePicker";
 import ProfileSection from "./ProfileSection";
 import AccountSecurity from "./AccountSecurity";
+import ShopSettingsClient from "./ShopSettingsClient";
+
+export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
   const t = await serverT();
-  const [{ data: { user } }, profile] = await Promise.all([
+  const [
+    { data: { user } },
+    profile,
+    { list: businesses, active: activeBusiness },
+    premium,
+  ] = await Promise.all([
     supabase.auth.getUser(),
     getProfile(),
+    resolveBusiness(supabase),
+    isPremium(),
   ]);
 
   return (
@@ -32,6 +43,17 @@ export default async function SettingsPage() {
       <AccountSecurity email={user?.email ?? ""} />
 
       <LanguagePicker />
+
+      <div className="flex flex-col gap-4 border-t border-line pt-6">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+          {t("settings.shop", "Shop")}
+        </h2>
+        <ShopSettingsClient
+          list={businesses}
+          activeId={activeBusiness?.id ?? ""}
+          premium={premium}
+        />
+      </div>
 
       <section className="rounded-2xl border border-line bg-card p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
