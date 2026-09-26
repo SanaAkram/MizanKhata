@@ -660,14 +660,19 @@ function DemandSection({
           const remaining = Math.max(0, Math.round((r.totalQty - allocated) * 100) / 100);
           const checked = r.key in selected;
           return (
-            <li key={r.key} className="rounded-xl border border-line bg-card px-4 py-3">
-              <div className="flex items-start gap-2">
+            <li
+              key={r.key}
+              className={`rounded-xl border px-4 py-3 ${
+                checked ? "border-forest/40 bg-forest/5" : "border-line bg-card"
+              }`}
+            >
+              <label className="flex cursor-pointer items-center gap-3 py-1 active:opacity-80">
                 <input
                   type="checkbox"
                   checked={checked}
                   disabled={remaining <= 0}
                   onChange={(e) => onToggle(r, e.target.checked)}
-                  className="mt-1 shrink-0"
+                  className="h-6 w-6 shrink-0 accent-forest"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-3">
@@ -676,30 +681,32 @@ function DemandSection({
                       {r.totalQty} {r.unit}
                     </p>
                   </div>
-                  <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
-                  <p className="mt-1 text-[11px] font-semibold text-muted">
-                    {allocated > 0
-                      ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
-                          done: allocated,
-                          total: r.totalQty,
-                          unit: r.unit,
-                        })
-                      : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
-                  </p>
-                  {checked ? (
-                    <input
-                      value={String(selected[r.key])}
-                      onChange={(e) =>
-                        onQtyChange(
-                          r.key,
-                          Math.max(0, parseFloat(e.target.value.replace(/[^\d.]/g, "")) || 0),
-                        )
-                      }
-                      inputMode="decimal"
-                      className="mt-2 w-24 rounded-lg border border-line bg-paper px-2 py-1 text-sm"
-                    />
-                  ) : null}
                 </div>
+              </label>
+              <div className="ml-9">
+                <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
+                <p className="mt-1 text-[11px] font-semibold text-muted">
+                  {allocated > 0
+                    ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
+                        done: allocated,
+                        total: r.totalQty,
+                        unit: r.unit,
+                      })
+                    : t("ord.noneOrderedYet", "None ordered from suppliers yet")}
+                </p>
+                {checked ? (
+                  <input
+                    value={String(selected[r.key])}
+                    onChange={(e) =>
+                      onQtyChange(
+                        r.key,
+                        Math.max(0, parseFloat(e.target.value.replace(/[^\d.]/g, "")) || 0),
+                      )
+                    }
+                    inputMode="decimal"
+                    className="mt-2 w-24 rounded-lg border border-line bg-paper px-2 py-1.5 text-sm"
+                  />
+                ) : null}
               </div>
             </li>
           );
