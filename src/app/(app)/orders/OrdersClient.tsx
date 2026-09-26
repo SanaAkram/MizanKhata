@@ -707,7 +707,7 @@ function DemandSection({
                 <button
                   type="button"
                   onClick={() => onOpenHistory(r)}
-                  className="mt-1 block w-full text-left text-[11px] font-semibold text-muted"
+                  className="mt-2 w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-left text-[11px] font-semibold text-muted active:bg-line"
                 >
                   {allocated > 0
                     ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
