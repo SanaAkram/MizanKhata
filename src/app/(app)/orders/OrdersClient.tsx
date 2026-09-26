@@ -451,10 +451,12 @@ export default function OrdersClient({
               const next = { ...s };
               if (checked) {
                 const allocated = allocatedByKey.get(row.key) ?? 0;
-                next[row.key] = Math.max(
-                  0,
-                  Math.round((row.totalQty - allocated) * 100) / 100,
-                );
+                const remaining = Math.round((row.totalQty - allocated) * 100) / 100;
+                // Nothing left unordered (or already over-ordered) doesn't
+                // mean there's nothing TO order — default to the full
+                // quantity so checking the box never pre-fills a qty of 0
+                // (which would silently drop it when creating the order).
+                next[row.key] = remaining > 0 ? remaining : row.totalQty;
               } else {
                 delete next[row.key];
               }
@@ -790,32 +792,13 @@ function DemandSection({
               }`}
             >
               <div className="flex items-center gap-3">
-                {remaining <= 0 ? (
-                  <span
-                    aria-label={t("ord.fullyOrdered", "Fully ordered")}
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-ok text-paper"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  </span>
-                ) : (
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => onToggle(r, e.target.checked)}
-                    className="h-6 w-6 shrink-0 accent-forest"
-                  />
-                )}
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => onToggle(r, e.target.checked)}
+                  className="h-6 w-6 shrink-0 accent-forest"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="truncate text-sm font-semibold text-ink">{r.name}</p>
@@ -829,7 +812,25 @@ function DemandSection({
                 <div onClick={(e) => e.stopPropagation()}>
                   <PartyChips parties={r.parties} onOpenOrder={onOpenOrder} t={t} />
                 </div>
-                <p className="mt-2 text-[11px] font-semibold text-muted">
+                <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-muted">
+                  {remaining <= 0 && allocated > 0 ? (
+                    <span
+                      aria-label={t("ord.fullyOrdered", "Fully ordered")}
+                      className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-ok text-paper"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-2.5 w-2.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  ) : null}
                   {allocated > 0
                     ? t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
                         done: allocated,
