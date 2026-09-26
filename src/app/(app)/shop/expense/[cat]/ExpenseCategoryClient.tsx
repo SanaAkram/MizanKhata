@@ -89,10 +89,10 @@ export default function ExpenseCategoryClient({
         </p>
       ) : layout === "columns" ? (
         <div className="grid grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-xl border border-line px-3">
-          <span className="border-b border-line py-2 pr-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+          <span className="border-b border-line py-2 pe-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
             {t("exp.entries", "Entries")}
           </span>
-          <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
+          <span className="border-b border-line py-2 ps-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
             {t("cash.out", "Cash out")}
           </span>
           {shown.map((r, i) => {
@@ -103,7 +103,7 @@ export default function ExpenseCategoryClient({
                 onClick={() => setDetail(r)}
                 className="contents text-left"
               >
-                <span className={`min-w-0 py-2.5 pr-2.5 ${b}`}>
+                <span className={`min-w-0 py-2.5 pe-2.5 ${b}`}>
                   <span className="block text-[11px] text-muted">
                     {fmtEntryDate(r.date)}
                   </span>
@@ -115,7 +115,7 @@ export default function ExpenseCategoryClient({
                   </span>
                 </span>
                 <span
-                  className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-sm font-semibold text-danger ${b}`}
+                  className={`numeric whitespace-nowrap py-2.5 ps-2.5 text-right text-sm font-semibold text-danger ${b}`}
                 >
                   {fmtRs(r.amount)}
                 </span>

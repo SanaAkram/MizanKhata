@@ -129,13 +129,13 @@ export default function CashbookClient({
           </p>
         ) : layout === "columns" ? (
           <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] overflow-hidden rounded-xl border border-line px-3">
-            <span className="border-b border-line py-2 pr-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+            <span className="border-b border-line py-2 pe-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
               {t("cash.entries", "Entries")}
             </span>
-            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
+            <span className="border-b border-line py-2 ps-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
               {t("cash.out", "Cash out")}
             </span>
-            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-ok">
+            <span className="border-b border-line py-2 ps-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-ok">
               {t("cash.in", "Cash in")}
             </span>
             {rows.map((e, i) => {
@@ -147,7 +147,7 @@ export default function CashbookClient({
                   onClick={() => setDetail(e)}
                   className="contents text-left"
                 >
-                  <span className={`min-w-0 py-2.5 pr-2.5 ${b}`}>
+                  <span className={`min-w-0 py-2.5 pe-2.5 ${b}`}>
                     <span className="block text-[11px] text-muted">
                       {fmtEntryDate(e.date)}
                     </span>
@@ -162,12 +162,12 @@ export default function CashbookClient({
                     </span>
                   </span>
                   <span
-                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-sm font-semibold text-danger ${b}`}
+                    className={`numeric whitespace-nowrap py-2.5 ps-2.5 text-right text-sm font-semibold text-danger ${b}`}
                   >
                     {isIn ? "" : fmtRs(e.amount)}
                   </span>
                   <span
-                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-sm font-semibold text-ok ${b}`}
+                    className={`numeric whitespace-nowrap py-2.5 ps-2.5 text-right text-sm font-semibold text-ok ${b}`}
                   >
                     {isIn ? fmtRs(e.amount) : ""}
                   </span>

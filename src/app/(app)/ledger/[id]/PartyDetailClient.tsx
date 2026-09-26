@@ -567,16 +567,16 @@ export default function PartyDetailClient({
           // row. Each row is a display:contents button (one click target); the
           // visible cells are its spans, which become the grid items.
           <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] overflow-hidden rounded-xl border border-line px-2.5">
-            <span className="border-b border-line py-2 pr-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+            <span className="border-b border-line py-2 pe-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
               {t("party.entries", "Entries")}
             </span>
-            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
+            <span className="border-b border-line py-2 ps-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-danger">
               {gaveTxt}
             </span>
-            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-ok">
+            <span className="border-b border-line py-2 ps-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-ok">
               {gotTxt}
             </span>
-            <span className="border-b border-line py-2 pl-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-muted">
+            <span className="border-b border-line py-2 ps-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-muted">
               {t("party.balance", "Balance")}
             </span>
 
@@ -589,7 +589,7 @@ export default function PartyDetailClient({
                   onClick={() => setDetail(r)}
                   className="contents text-left"
                 >
-                  <span className={`min-w-0 py-2.5 pr-2.5 ${b}`}>
+                  <span className={`min-w-0 py-2.5 pe-2.5 ${b}`}>
                     <span className="block text-[11px] text-muted">
                       {fmtEntryDate(r.date)}
                     </span>
@@ -604,17 +604,17 @@ export default function PartyDetailClient({
                     )}
                   </span>
                   <span
-                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-[13px] font-semibold text-danger ${b}`}
+                    className={`numeric whitespace-nowrap py-2.5 ps-2.5 text-right text-[13px] font-semibold text-danger ${b}`}
                   >
                     {credit ? fmtRs(r.amount) : ""}
                   </span>
                   <span
-                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-[13px] font-semibold text-ok ${b}`}
+                    className={`numeric whitespace-nowrap py-2.5 ps-2.5 text-right text-[13px] font-semibold text-ok ${b}`}
                   >
                     {credit ? "" : fmtRs(r.amount)}
                   </span>
                   <span
-                    className={`numeric whitespace-nowrap py-2.5 pl-2.5 text-right text-[11px] text-muted ${b}`}
+                    className={`numeric whitespace-nowrap py-2.5 ps-2.5 text-right text-[11px] text-muted ${b}`}
                   >
                     {fmtRs(Math.abs(r.running))}
                   </span>
