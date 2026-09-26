@@ -203,23 +203,26 @@ export function buildOrderReport(
 export type ProductHistoryEntry = {
   orderId: string;
   partyName: string;
-  direction: OrderDirection;
   status: OrderStatus;
   date: string;
   qty: number;
   unit: string;
 };
 
-/** Every time this product (identified by a Report row's key) has been on
- *  an order, in any direction or status, most recent first — for the
- *  Report tab's "view history" drill-down: who it went to or came from,
- *  how much, and when. */
+/** This product's supplier-order history (identified by a Report row's
+ *  key), any status, most recent first — for the Report tab's "view
+ *  history" drill-down: of the total quantity needed, how much has
+ *  actually been placed with a supplier, with whom and when. Always
+ *  "out" direction — the customer orders that make up the demand itself
+ *  are already shown as chips on the report row. */
 export function productHistory(
   allOrders: Order[],
   items: OrderItem[],
   key: string,
 ): ProductHistoryEntry[] {
-  const ordersById = new Map(allOrders.map((o) => [o.id, o]));
+  const ordersById = new Map(
+    allOrders.filter((o) => o.direction === "out").map((o) => [o.id, o]),
+  );
   const out: ProductHistoryEntry[] = [];
   for (const it of items) {
     if (itemKey(it) !== key) continue;
@@ -228,7 +231,6 @@ export function productHistory(
     out.push({
       orderId: order.id,
       partyName: order.party_name || "",
-      direction: order.direction as OrderDirection,
       status: order.status as OrderStatus,
       date: order.created_at,
       qty: Number(it.qty),

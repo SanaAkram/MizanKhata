@@ -887,15 +887,10 @@ const DICT: Record<string, Entry> = {
     ur: "ابھی کوئی آرڈر نہیں۔",
     roman: "Abhi koi order nahi.",
   },
-  "ord.fromCustomerShort": {
-    en: "customer order",
-    ur: "کسٹمر آرڈر",
-    roman: "customer order",
-  },
-  "ord.toSupplierShort": {
-    en: "supplier order",
-    ur: "سپلائر آرڈر",
-    roman: "supplier order",
+  "ord.supplierOrdersFor": {
+    en: "Supplier orders for this product",
+    ur: "اس چیز کے سپلائر آرڈرز",
+    roman: "Is cheez ke supplier orders",
   },
   "dash.stockValue": {
     en: "Stock value",

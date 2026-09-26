@@ -387,7 +387,23 @@ export default function OrdersClient({
         title={historyRow?.name ?? ""}
         onClose={() => setHistoryRow(null)}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
+          {historyRow ? (
+            <div className="rounded-xl border border-forest/30 bg-forest/5 px-4 py-3">
+              <p className="text-sm font-semibold text-ink">
+                {t("ord.orderedOfTotal", "{done} of {total} {unit} ordered", {
+                  done: Math.round(
+                    historyEntries.reduce((s, h) => s + h.qty, 0) * 100,
+                  ) / 100,
+                  total: historyRow.totalQty,
+                  unit: historyRow.unit,
+                })}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted">
+                {t("ord.supplierOrdersFor", "Supplier orders for this product")}
+              </p>
+            </div>
+          ) : null}
           {historyEntries.length === 0 ? (
             <Empty text={t("ord.noHistory", "No orders yet.")} />
           ) : (
@@ -403,21 +419,14 @@ export default function OrdersClient({
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="truncate text-sm font-semibold text-ink">
-                    {h.partyName ||
-                      (h.direction === "in"
-                        ? t("ord.aCustomer", "a customer")
-                        : t("ord.aSupplier", "a supplier"))}
+                    {h.partyName || t("ord.aSupplier", "a supplier")}
                   </p>
                   <p className="numeric shrink-0 text-sm font-semibold text-forest">
                     {h.qty} {h.unit}
                   </p>
                 </div>
                 <p className="mt-0.5 text-[11px] text-muted">
-                  {fmtEntryDate(h.date)} ·{" "}
-                  {h.direction === "in"
-                    ? t("ord.fromCustomerShort", "customer order")
-                    : t("ord.toSupplierShort", "supplier order")}{" "}
-                  · {t(`ord.status.${h.status}`, h.status)}
+                  {fmtEntryDate(h.date)} · {t(`ord.status.${h.status}`, h.status)}
                 </p>
               </button>
             ))
