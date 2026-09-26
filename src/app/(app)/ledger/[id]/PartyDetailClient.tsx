@@ -705,7 +705,6 @@ export default function PartyDetailClient({
           <EntryForm
             products={products}
             allowItems
-            hideRate
             allowCash
             cashDirection={addType === "payment" ? (isCust ? "in" : "out") : "out"}
             rateFrom={isCust ? "sale" : "purchase"}
@@ -877,7 +876,6 @@ export default function PartyDetailClient({
           <EntryForm
             products={products}
             allowItems
-            hideRate
             rateFrom={isCust ? "sale" : "purchase"}
             submitLabel={t("c.saveChanges", "Save changes")}
             initial={{

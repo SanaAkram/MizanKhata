@@ -304,6 +304,8 @@ const DICT: Record<string, Entry> = {
     ur: "تصویر نہیں بن سکی۔",
     roman: "Tasveer nahi ban saki.",
   },
+  "calc.tapToUse": { en: "tap to use", ur: "استعمال کے لیے دبائیں", roman: "tap karein" },
+  "calc.clearMemory": { en: "Clear memory", ur: "میموری صاف کریں", roman: "Memory clear karein" },
   "party.addItem": {
     en: "+ Add item from stock",
     ur: "+ اسٹاک سے چیز شامل کریں",
