@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { newId } from "@/lib/ids";
-import type { CashImport, PartyImport } from "./digikhata";
+import type { CashImport, MergedPartyImport, PartyImport } from "./digikhata";
 
 type DB = SupabaseClient<Database>;
 type KhataInsert = Database["public"]["Tables"]["shop_khata_tx"]["Insert"];
@@ -50,6 +50,47 @@ type PlainRow = {
   date: string;
 };
 
+async function insertPartyRows(
+  db: DB,
+  isCust: boolean,
+  partyId: string,
+  base: PlainRow[],
+): Promise<ApplyResult> {
+  let added = 0;
+  for (let i = 0; i < base.length; i += 200) {
+    const chunk = base.slice(i, i + 200);
+    let error: { message: string } | null = null;
+    let count = 0;
+    if (isCust) {
+      const rows: KhataInsert[] = chunk.map((r) => ({
+        ...r,
+        customer_id: partyId,
+      }));
+      const res = await db
+        .from("shop_khata_tx")
+        .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
+        .select("id");
+      error = res.error;
+      count = res.data?.length ?? 0;
+    } else {
+      const rows: SupInsert[] = chunk.map((r) => ({
+        ...r,
+        supplier_id: partyId,
+      }));
+      const res = await db
+        .from("shop_supplier_tx")
+        .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
+        .select("id");
+      error = res.error;
+      count = res.data?.length ?? 0;
+    }
+    if (error)
+      return { added, skipped: base.length - added, error: error.message };
+    added += count;
+  }
+  return { added, skipped: base.length - added };
+}
+
 export async function applyPartyImport(
   db: DB,
   bid: string,
@@ -91,39 +132,63 @@ export async function applyPartyImport(
     });
   }
 
-  let added = 0;
-  for (let i = 0; i < base.length; i += 200) {
-    const chunk = base.slice(i, i + 200);
-    let error: { message: string } | null = null;
-    let count = 0;
-    if (isCust) {
-      const rows: KhataInsert[] = chunk.map((r) => ({
-        ...r,
-        customer_id: partyId!,
-      }));
-      const res = await db
-        .from("shop_khata_tx")
-        .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
-        .select("id");
-      error = res.error;
-      count = res.data?.length ?? 0;
-    } else {
-      const rows: SupInsert[] = chunk.map((r) => ({
-        ...r,
-        supplier_id: partyId!,
-      }));
-      const res = await db
-        .from("shop_supplier_tx")
-        .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
-        .select("id");
-      error = res.error;
-      count = res.data?.length ?? 0;
-    }
-    if (error)
-      return { added, skipped: base.length - added, error: error.message };
-    added += count;
+  return insertPartyRows(db, isCust, partyId, base);
+}
+
+/**
+ * Same as applyPartyImport, but for a party whose full history came as
+ * several date-range exports (Digikhata caps a single statement at 1,000
+ * entries) — mergePartyImports() in digikhata.ts already worked out which
+ * part is chronologically first and flagged any gap between parts; this
+ * just inserts the result. Only the earliest part contributes an Opening
+ * balance row — every other part's own "opening balance" was already
+ * folded into the running total mergePartyImports() checked it against,
+ * so inserting it again would double it.
+ */
+export async function applyMergedPartyImport(
+  db: DB,
+  bid: string,
+  m: MergedPartyImport,
+): Promise<ApplyResult> {
+  const isCust = m.partyKind === "customer";
+
+  let partyId = await findPartyId(db, bid, m.partyKind, m.name, m.phone);
+  if (!partyId) {
+    partyId = newId(isCust ? "c_" : "s_");
+    const ins = await db
+      .from(isCust ? "shop_customers" : "shop_suppliers")
+      .insert({ id: partyId, business_id: bid, name: m.name, phone: m.phone });
+    if (ins.error) return { added: 0, skipped: 0, error: ins.error.message };
   }
-  return { added, skipped: base.length - added };
+
+  const base: PlainRow[] = [];
+  const earliest = m.parts[0];
+  if (m.openingBalance > 0 && earliest) {
+    base.push({
+      id: rid(earliest.fileKey, "opening"),
+      business_id: bid,
+      type: "credit",
+      amount: m.openingBalance,
+      note: "Opening balance (Digikhata)",
+      ref: `dk:${earliest.fileKey}:opening`,
+      date: earliest.entries[0]?.date ?? new Date().toISOString(),
+    });
+  }
+  for (const part of m.parts) {
+    for (const e of part.entries) {
+      base.push({
+        id: rid(part.fileKey, e.row),
+        business_id: bid,
+        type: e.type,
+        amount: e.amount,
+        note: e.note,
+        ref: `dk:${part.fileKey}:${e.row}`,
+        date: e.date,
+      });
+    }
+  }
+
+  return insertPartyRows(db, isCust, partyId, base);
 }
 
 export async function applyCashImport(

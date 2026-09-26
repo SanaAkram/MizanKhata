@@ -44,6 +44,82 @@ export type ParseResult =
   | ({ format: "cash" } & CashImport)
   | { format: "unknown"; hint: string };
 
+/**
+ * Digikhata caps a single statement export at 1,000 entries, so a party
+ * with a longer history has to be exported as several date-range PDFs.
+ * Two imports are "the same party" if they'd resolve to the same row in
+ * findPartyId() (apply.ts) — phone if either has one, else the name.
+ */
+export function partyGroupKey(p: PartyImport): string {
+  const id = p.phone ?? p.name.trim().toLowerCase();
+  return `${p.partyKind}:${id}`;
+}
+
+export type MergedPartyImport = {
+  partyKind: "customer" | "supplier";
+  name: string;
+  phone: string | null;
+  openingBalance: number; // from the chronologically earliest part only
+  statedNet: number; // "Net Balance" from the chronologically latest part
+  derivedNet: number; // computed across every part combined
+  ok: boolean;
+  /** A later part's own stated opening balance should equal the running
+   *  total built from every earlier part — if it doesn't, the exported
+   *  date ranges don't actually chain up (a gap or an overlap), and
+   *  importing them as-is would silently misstate the balance. */
+  continuityGaps: { beforeFile: string; expected: number; stated: number }[];
+  /** Parts in chronological order, each still tagged with its own file key
+   *  so apply.ts can keep per-file, per-row dedup ids. */
+  parts: { fileKey: string; entries: ImportEntry[] }[];
+};
+
+/** Combines several same-party PartyImports (each from a different,
+ *  presumably non-overlapping date-range export) into one. Only the
+ *  earliest part's opening balance is treated as real money to insert —
+ *  every other part's is just a checkpoint to validate against. */
+export function mergePartyImports(
+  parts: { fileKey: string; parsed: PartyImport }[],
+): MergedPartyImport {
+  const sorted = [...parts].sort((a, b) => {
+    const da = a.parsed.entries[0] ? Date.parse(a.parsed.entries[0].date) : 0;
+    const db = b.parsed.entries[0] ? Date.parse(b.parsed.entries[0].date) : 0;
+    return da - db;
+  });
+
+  const first = sorted[0].parsed;
+  let running = first.openingBalance;
+  const continuityGaps: MergedPartyImport["continuityGaps"] = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    const part = sorted[i].parsed;
+    if (i > 0) {
+      const expected = Math.round(running * 100) / 100;
+      const stated = Math.round(part.openingBalance * 100) / 100;
+      if (Math.abs(expected - stated) >= 1) {
+        continuityGaps.push({ beforeFile: sorted[i].fileKey, expected, stated });
+      }
+    }
+    for (const e of part.entries) {
+      running += e.type === "credit" ? e.amount : -e.amount;
+    }
+  }
+
+  const derivedNet = Math.round(running * 100) / 100;
+  const last = sorted[sorted.length - 1].parsed;
+
+  return {
+    partyKind: first.partyKind,
+    name: first.name,
+    phone: sorted.map((p) => p.parsed.phone).find(Boolean) ?? null,
+    openingBalance: first.openingBalance,
+    statedNet: last.statedNet,
+    derivedNet,
+    ok: Math.abs(derivedNet - last.statedNet) < 1,
+    continuityGaps,
+    parts: sorted.map((p) => ({ fileKey: p.fileKey, entries: p.parsed.entries })),
+  };
+}
+
 const MONTHS: Record<string, number> = {
   jan: 0,
   feb: 1,
