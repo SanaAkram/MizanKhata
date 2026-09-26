@@ -394,9 +394,14 @@ const DICT: Record<string, Entry> = {
     roman: "Koi party nahi — aam",
   },
   "cash.alsoUpdatesParty": {
-    en: "This also records a payment on {name}'s ledger.",
-    ur: "یہ {name} کے کھاتے میں بھی ادائیگی کے طور پر درج ہوگا۔",
-    roman: "Yeh {name} ke khaty mein bhi payment ke tor par likh jayega.",
+    en: "This also records a Payment (settles some of what's owed) on {name}'s ledger.",
+    ur: "یہ {name} کے کھاتے میں بھی پیمنٹ (بقایا کم کرے گا) کے طور پر درج ہوگا۔",
+    roman: "Yeh {name} ke khaty mein bhi Payment (baqaya kam karega) ke tor par likh jayega.",
+  },
+  "cash.alsoUpdatesPartyCredit": {
+    en: "This also records a Purchase (they'll owe more) on {name}'s ledger.",
+    ur: "یہ {name} کے کھاتے میں بھی پرچیز (بقایا بڑھے گا) کے طور پر درج ہوگا۔",
+    roman: "Yeh {name} ke khaty mein bhi Purchase (baqaya barhega) ke tor par likh jayega.",
   },
   "cash.notePh": {
     en: "Note (e.g. shop rent)",

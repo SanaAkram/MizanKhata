@@ -322,12 +322,17 @@ function AddCashForm({
         category: type === "out" ? category || "expense" : "income",
       });
       // Mirror into that party's own ledger too — a cash entry tagged to a
-      // customer/supplier is a real payment settling their balance, not
-      // just a note on the cashbook side.
+      // customer/supplier is a real transaction against their balance, not
+      // just a note on the cashbook side. Giving a customer cash (a
+      // refund, change, a loan) is a Purchase/credit — they now owe more
+      // — same as any other credit entry; every other combination
+      // (customer paying us, us paying or being refunded by a supplier)
+      // settles the balance, i.e. a Payment.
       if (p) {
+        const mirrorType = type === "out" && p.kind === "customer" ? "credit" : "payment";
         await addPartyTx(supabase, businessId, p.kind, p.id, {
           id: newId(p.kind === "customer" ? "kt_" : "st_"),
-          type: "payment",
+          type: mirrorType,
           amount: amt,
           note: note.trim() || (type === "in" ? "Cash received" : "Cash paid"),
           ref: id,
@@ -344,23 +349,17 @@ function AddCashForm({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1 rounded-xl border border-line p-1">
-        {(["in", "out"] as const).map((tk) => {
-          const locked =
-            selectedParty &&
-            tk !== (selectedParty.kind === "customer" ? "in" : "out");
-          return (
-            <button
-              key={tk}
-              onClick={() => !locked && setType(tk)}
-              disabled={!!locked}
-              className={`flex-1 rounded-lg py-2 text-xs font-semibold disabled:opacity-40 ${
-                type === tk ? "bg-forest text-paper" : "text-muted"
-              }`}
-            >
-              {tk === "in" ? t("cash.in", "Cash in") : t("cash.out", "Cash out")}
-            </button>
-          );
-        })}
+        {(["in", "out"] as const).map((tk) => (
+          <button
+            key={tk}
+            onClick={() => setType(tk)}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
+              type === tk ? "bg-forest text-paper" : "text-muted"
+            }`}
+          >
+            {tk === "in" ? t("cash.in", "Cash in") : t("cash.out", "Cash out")}
+          </button>
+        ))}
       </div>
       <CalcField
         big
@@ -388,6 +387,9 @@ function AddCashForm({
         onChange={(e) => {
           const val = e.target.value;
           setPartyVal(val);
+          // A sensible default for the common case — customer paying us,
+          // or us paying a supplier — not a restriction; either tab above
+          // can still be picked for any party.
           const p = parties.find((x) => `${x.kind}:${x.id}` === val);
           if (p) setType(p.kind === "customer" ? "in" : "out");
         }}
@@ -406,11 +408,17 @@ function AddCashForm({
       </select>
       {selectedParty ? (
         <p className="text-xs text-muted">
-          {t(
-            "cash.alsoUpdatesParty",
-            "This also records a payment on {name}'s ledger.",
-            { name: selectedParty.name },
-          )}
+          {type === "out" && selectedParty.kind === "customer"
+            ? t(
+                "cash.alsoUpdatesPartyCredit",
+                "This also records a Purchase (they'll owe more) on {name}'s ledger.",
+                { name: selectedParty.name },
+              )
+            : t(
+                "cash.alsoUpdatesParty",
+                "This also records a Payment (settles some of what's owed) on {name}'s ledger.",
+                { name: selectedParty.name },
+              )}
         </p>
       ) : null}
       <input
