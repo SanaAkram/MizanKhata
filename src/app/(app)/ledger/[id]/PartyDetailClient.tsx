@@ -122,15 +122,6 @@ type Props = {
   premium: boolean;
 };
 
-function waLink(phone: string, text: string) {
-  return (
-    "https://wa.me/" +
-    phone.replace(/[^0-9]/g, "") +
-    "?text=" +
-    encodeURIComponent(text)
-  );
-}
-
 export default function PartyDetailClient({
   businessId,
   kind,
@@ -408,6 +399,40 @@ export default function PartyDetailClient({
     }
   }
 
+  // The WhatsApp icon next to the party's name — a picture of their whole
+  // statement (lifetime totals + current balance), same receipt format as
+  // a single entry, instead of the old plain-text balance reminder.
+  async function sharePartyImage() {
+    setImgBusy(true);
+    try {
+      const blob = await receiptImage({
+        shopName: business?.name || "MizanKhata",
+        shopSub: business?.phone || undefined,
+        heading: t("party.statement", "Statement"),
+        party: party.name,
+        dateText: fmtEntryDate(new Date().toISOString()),
+        rows: [],
+        totals: [
+          { label: gaveTxt, value: fmtRs(gaveTotal) },
+          { label: gotTxt, value: fmtRs(gotTotal) },
+          {
+            label: t("party.balance", "Balance"),
+            value: fmtRs(Math.abs(balance)),
+            bold: true,
+          },
+        ],
+        note: waText,
+        brand,
+        logoUrl,
+      });
+      await shareImage(blob, `statement-${party.id.slice(-6)}.png`, party.name);
+    } catch {
+      toast(t("party.imageFailed", "Could not make the image."), "error");
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
   // Same idea for the bill/purchase just created from a "You gave" + items
   // entry (the "Bill ready" sheet).
   async function shareMadeBill(spec: MadeBillSpec) {
@@ -455,16 +480,16 @@ export default function PartyDetailClient({
             {party.name}
           </h1>
           {party.phone ? (
-            <a
-              href={waLink(party.phone, waText)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => void sharePartyImage()}
+              disabled={imgBusy}
               aria-label={t("party.whatsapp", "WhatsApp")}
               title={`${t("party.whatsapp", "WhatsApp")} ${party.phone}`}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ok/10 text-ok active:scale-95"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ok/10 text-ok active:scale-95 disabled:opacity-50"
             >
               <WhatsAppIcon className="h-4 w-4" />
-            </a>
+            </button>
           ) : null}
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">

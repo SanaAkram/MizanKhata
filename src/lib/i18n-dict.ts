@@ -201,6 +201,7 @@ const DICT: Record<string, Entry> = {
   "party.youGave": { en: "Purchase", ur: "پرچیز", roman: "Purchase" },
   "party.youGot": { en: "Payment", ur: "پیمنٹ", roman: "Payment" },
   "party.balance": { en: "Balance", ur: "بقایا", roman: "Baqaya" },
+  "party.statement": { en: "Statement", ur: "گوشوارہ", roman: "Statement" },
   "party.whatsapp": {
     en: "WhatsApp",
     ur: "واٹس ایپ",
