@@ -83,6 +83,8 @@ export async function deleteStockMove(
   );
 }
 
+/** Stock can go negative (goods sold before they were recorded in) — never
+ *  clamp, so every deduction is exactly reversible by its matching restore. */
 async function adjustStock(
   db: DB,
   productId: string,
@@ -93,10 +95,7 @@ async function adjustStock(
     .select("stock")
     .eq("id", productId)
     .single();
-  const next = Math.max(
-    0,
-    Math.round(((Number(p?.stock) || 0) + delta) * 100) / 100,
-  );
+  const next = Math.round(((Number(p?.stock) || 0) + delta) * 100) / 100;
   await db.from("shop_products").update({ stock: next }).eq("id", productId);
 }
 
@@ -360,18 +359,7 @@ export async function completeSale(
   if (res.error) throw res.error;
 
   // decrement stock
-  for (const l of lines) {
-    const { data: prod } = await db
-      .from("shop_products")
-      .select("stock")
-      .eq("id", l.productId)
-      .single();
-    const next = Math.max(
-      0,
-      Math.round(((Number(prod?.stock) || 0) - l.qty) * 100) / 100,
-    );
-    await db.from("shop_products").update({ stock: next }).eq("id", l.productId);
-  }
+  for (const l of lines) await adjustStock(db, l.productId, -l.qty);
 
   if (paidCash > 0) {
     await db.from("shop_cashbook").insert({
@@ -544,6 +532,54 @@ export async function deleteSale(db: DB, saleId: string): Promise<void> {
   await db.from("shop_cashbook").delete().eq("bill_id", saleId);
   const { error } = await db.from("shop_sales").delete().eq("id", saleId);
   if (error) throw error;
+}
+
+/** Undo one purchase line: its stock comes back out, and the supplier's
+ *  credit shrinks by that line's cost — or the whole credit goes if it was
+ *  the last line of that purchase. */
+export async function deletePurchaseLine(db: DB, purchaseId: string): Promise<void> {
+  const { data: row, error } = await db
+    .from("shop_purchases")
+    .select("id,product_id,qty,price,ref")
+    .eq("id", purchaseId)
+    .single();
+  if (error || !row) throw error ?? new Error("purchase not found");
+
+  const del = await db.from("shop_purchases").delete().eq("id", purchaseId);
+  if (del.error) throw del.error;
+  if (row.product_id) await adjustStock(db, row.product_id, -Number(row.qty));
+
+  if (!row.ref) return;
+  const { data: left } = await db
+    .from("shop_purchases")
+    .select("id")
+    .eq("ref", row.ref)
+    .limit(1);
+  if (!left || left.length === 0) {
+    await db.from("shop_supplier_tx").delete().eq("id", row.ref);
+    return;
+  }
+  const { data: credit } = await db
+    .from("shop_supplier_tx")
+    .select("amount")
+    .eq("id", row.ref)
+    .maybeSingle();
+  if (credit) {
+    const lineCost = Number(row.qty) * Number(row.price);
+    const next = Math.round((Number(credit.amount) - lineCost) * 100) / 100;
+    await db.from("shop_supplier_tx").update({ amount: next }).eq("id", row.ref);
+  }
+}
+
+/** Remove a whole supplier purchase (a "You gave" with items): every line's
+ *  stock comes back out, and its credit entry goes too. */
+export async function deletePurchaseBatch(db: DB, batchId: string): Promise<void> {
+  const { data: lines } = await db
+    .from("shop_purchases")
+    .select("id")
+    .eq("ref", batchId);
+  for (const l of lines ?? []) await deletePurchaseLine(db, l.id);
+  await db.from("shop_supplier_tx").delete().eq("id", batchId);
 }
 
 // ---- restock ----------------------------------------------------

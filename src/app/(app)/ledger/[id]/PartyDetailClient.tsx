@@ -20,6 +20,8 @@ import {
 } from "@/lib/khata/db";
 import {
   completeSale,
+  deletePurchaseBatch,
+  deleteSale,
   recordPurchase,
   type Product,
 } from "@/lib/khata/shop-db";
@@ -360,7 +362,29 @@ export default function PartyDetailClient({
     router.refresh();
   }
 
+  // Deleting a ledger entry that came from a sale or a purchase has to undo
+  // that sale/purchase as well — its stock and its bill — or the stock and
+  // the ledger drift apart. A plain payment/credit has nothing to undo.
   async function removeRow(row: Row) {
+    if (kind === "customer" && row.bill_id) {
+      await deleteSale(supabase, row.bill_id);
+    } else if (kind === "supplier" && row.ref) {
+      const { data: purchased } = await supabase
+        .from("shop_purchases")
+        .select("id")
+        .eq("ref", row.ref)
+        .limit(1);
+      if (purchased && purchased.length > 0) {
+        await deletePurchaseBatch(supabase, row.ref);
+      } else {
+        const { data: sale } = await supabase
+          .from("shop_sales")
+          .select("id")
+          .eq("id", row.ref)
+          .maybeSingle();
+        if (sale) await deleteSale(supabase, row.ref);
+      }
+    }
     await deletePartyTx(supabase, kind, row.id);
     setEditRow(null);
     setDetail(null);

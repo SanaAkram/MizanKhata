@@ -931,7 +931,7 @@ const DICT: Record<string, Entry> = {
     ur: "نئی چیز شامل کریں",
     roman: "Nai cheez add karein",
   },
-  "stock.restock": { en: "Restock", ur: "دوبارہ بھروائیں", roman: "Dobara stock" },
+  "stock.restock": { en: "Restock", ur: "اسٹاک بھروائیں", roman: "Dobara stock" },
   "stock.searchItems": {
     en: "Search {n} items",
     ur: "{n} چیزیں تلاش کریں",
@@ -1001,7 +1001,7 @@ const DICT: Record<string, Entry> = {
   },
   "stock.restockAdd": {
     en: "+ Restock / add product",
-    ur: "+ مال بھروائیں / نئی چیز",
+    ur: "+ اسٹاک بھروائیں / نئی چیز",
     roman: "+ Maal bharwayein / nai cheez",
   },
   "stock.nothingLow": {

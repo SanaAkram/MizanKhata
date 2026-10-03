@@ -9,6 +9,7 @@ import { newId } from "@/lib/ids";
 import { fmtEntryDate, fmtRs } from "@/lib/format";
 import {
   addStockMove,
+  deletePurchaseLine,
   deleteStockMove,
   stockHistory,
   updateProduct,
@@ -102,13 +103,9 @@ export default function StockItemClient({
         qty: r.qty,
       });
     } else {
-      // purchase row — delete the purchase + reverse stock
-      await supabase.from("shop_purchases").delete().eq("id", r.id);
-      const nextStock = Math.max(
-        0,
-        Math.round((Number(product.stock) - r.qty) * 100) / 100,
-      );
-      await updateProduct(supabase, product.id, { stock: nextStock });
+      // purchase line — its stock comes back out and the supplier's credit
+      // is reduced by its cost (or removed with the last line)
+      await deletePurchaseLine(supabase, r.id);
     }
     setDetail(null);
     router.refresh();
