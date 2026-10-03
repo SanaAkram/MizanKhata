@@ -200,8 +200,12 @@ export default function PartyDetailClient({
 
   // Digikhata model: "You gave" = a credit entry (balance goes up), "You got"
   // = a payment (balance goes down). Same for customer and supplier.
-  const gaveTxt = t("party.youGave", "You gave");
-  const gotTxt = t("party.youGot", "You got");
+  const gaveTxt = isCust
+    ? t("party.custGave", "Apny diye")
+    : t("party.youGave", "Purchase");
+  const gotTxt = isCust
+    ? t("party.custGot", "Apny liye")
+    : t("party.youGot", "Payment");
   const creditLabel = gaveTxt;
   const paymentLabel = gotTxt;
   const gaveTotal = life.credit;
