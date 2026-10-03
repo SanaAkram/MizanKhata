@@ -10,6 +10,7 @@ import { useEntryLayout } from "@/lib/entry-layout";
 import {
   addCash,
   addPartyTx,
+  deleteCash,
   deleteParty,
   deletePartyTx,
   partyLifetime,
@@ -230,11 +231,17 @@ export default function PartyDetailClient({
     // default for both entry types, since not every payment/credit entry
     // moves real cash or comes from another party (a "You got" could be
     // a bank transfer; a "You gave" could be plain credit).
-    async function logSettlement(txId: string) {
+    // `txId`/`billId` are what the other side's row points back at, so
+    // deleting this entry can find and remove what it mirrored.
+    async function logSettlement(link: {
+      txId: string;
+      billId: string | null;
+      cashId: string;
+    }) {
       if (!settlement) return;
       if (settlement.kind === "cash") {
         await addCash(supabase, businessId, {
-          id: newId("cb_"),
+          id: link.cashId,
           type: settlement.dir,
           amount,
           note:
@@ -251,6 +258,7 @@ export default function PartyDetailClient({
           date: dateIso,
           method: "cash",
           category: "payment",
+          billId: link.billId,
         });
         return;
       }
@@ -259,7 +267,7 @@ export default function PartyDetailClient({
         type: settlement.txType,
         amount,
         note: note.trim() || `Via ${party.name}`,
-        ref: txId,
+        ref: link.billId ?? link.txId,
         date: dateIso,
       });
     }
@@ -327,21 +335,25 @@ export default function PartyDetailClient({
         totals,
         filename: `bill-${billId.slice(-6)}.png`,
       });
-      await logSettlement(billId);
+      await logSettlement({ txId: billId, billId, cashId: newId("cb_") });
       setAddType(null);
       router.refresh();
       return;
     }
 
     const id = newId("tx_");
+    // A cash settlement's Cash Book row is pointed at from this entry's
+    // ref, so deleting the entry can remove the cash it recorded.
+    const cashId = newId("cb_");
     await addPartyTx(supabase, businessId, kind, party.id, {
       id,
       type,
       amount,
       note,
+      ref: settlement?.kind === "cash" ? cashId : null,
       date: dateIso,
     });
-    await logSettlement(id);
+    await logSettlement({ txId: id, billId: null, cashId });
     setAddType(null);
     router.refresh();
   }
@@ -366,6 +378,15 @@ export default function PartyDetailClient({
   // that sale/purchase as well — its stock and its bill — or the stock and
   // the ledger drift apart. A plain payment/credit has nothing to undo.
   async function removeRow(row: Row) {
+    // A cash-settled entry pointed its ref at the Cash Book row it created.
+    if (row.ref) {
+      const { data: cashRow } = await supabase
+        .from("shop_cashbook")
+        .select("id")
+        .eq("id", row.ref)
+        .maybeSingle();
+      if (cashRow) await deleteCash(supabase, row.ref);
+    }
     if (kind === "customer" && row.bill_id) {
       await deleteSale(supabase, row.bill_id);
     } else if (kind === "supplier" && row.ref) {
@@ -385,6 +406,11 @@ export default function PartyDetailClient({
         if (sale) await deleteSale(supabase, row.ref);
       }
     }
+    // A party-settled entry mirrored itself onto the other party's ledger,
+    // pointing its ref back here — remove that mirror too.
+    const link = row.bill_id ?? row.id;
+    await supabase.from("shop_khata_tx").delete().eq("ref", link).neq("id", row.id);
+    await supabase.from("shop_supplier_tx").delete().eq("ref", link).neq("id", row.id);
     await deletePartyTx(supabase, kind, row.id);
     setEditRow(null);
     setDetail(null);

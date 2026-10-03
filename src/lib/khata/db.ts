@@ -227,6 +227,8 @@ export async function addCash(
     date: string;
     method?: "cash";
     category?: string | null;
+    /** Set when this cash belongs to a bill, so deleting the bill removes it too. */
+    billId?: string | null;
   },
 ): Promise<void> {
   const { error } = await db.from("shop_cashbook").insert({
@@ -241,6 +243,7 @@ export async function addCash(
     date: row.date,
     method: row.method ?? "cash",
     category: row.category ?? null,
+    bill_id: row.billId ?? null,
   });
   if (error) throw error;
 }
