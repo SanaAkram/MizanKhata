@@ -125,7 +125,7 @@ export default async function ShopDashboardPage() {
     { href: "/shop/pos", label: t("title./shop/pos", "Sell"), sub: "POS" },
     {
       href: "/shop/stock",
-      label: t("nav.shop", "Stock"),
+      label: t("stock.cardTitle", "Stock"),
       sub: `${products.length} ${t("stock.items", "items")}`,
     },
     {

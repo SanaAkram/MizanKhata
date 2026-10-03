@@ -924,6 +924,7 @@ const DICT: Record<string, Entry> = {
   "dash.expense": { en: "Expense", ur: "خرچ", roman: "Kharcha" },
 
   // ---- stock ------------------------------------------------------------
+  "stock.cardTitle": { en: "Stock", ur: "اسٹاک", roman: "Stock" },
   "stock.allItems": { en: "All items", ur: "تمام چیزیں", roman: "Sari cheezein" },
   "stock.lowStock": { en: "Low stock", ur: "کم اسٹاک", roman: "Kam stock" },
   "stock.inReport": { en: "IN report", ur: "آمد رپورٹ", roman: "Andar report" },
