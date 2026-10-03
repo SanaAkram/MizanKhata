@@ -20,6 +20,7 @@ import {
   productHistory,
   replaceOrderItems,
   setOrderStatus,
+  syncOrderStock,
   updateOrder,
   type Order,
   type OrderBucket,
@@ -185,7 +186,17 @@ export default function OrdersClient({
     (async () => {
       for (const id of todo) {
         autoCompletedRef.current.add(id);
+        const o = orders.find((x) => x.id === id);
         try {
+          if (o) {
+            await syncOrderStock(
+              supabase,
+              businessId,
+              o,
+              items.filter((it) => it.order_id === id),
+              true,
+            );
+          }
           await setOrderStatus(supabase, id, "done");
         } catch {
           autoCompletedRef.current.delete(id);
@@ -196,11 +207,18 @@ export default function OrdersClient({
     return () => {
       cancelled = true;
     };
-  }, [autoCompleteIds, supabase, router]);
+  }, [autoCompleteIds, orders, items, businessId, supabase, router]);
 
   async function mark(o: Order, status: "done" | "cancelled" | "open") {
     setBusy(true);
     try {
+      await syncOrderStock(
+        supabase,
+        businessId,
+        o,
+        items.filter((it) => it.order_id === o.id),
+        status === "done",
+      );
       await setOrderStatus(supabase, o.id, status);
       setDetail(null);
       router.refresh();
@@ -334,6 +352,13 @@ export default function OrdersClient({
   async function remove(o: Order) {
     setBusy(true);
     try {
+      await syncOrderStock(
+        supabase,
+        businessId,
+        o,
+        items.filter((it) => it.order_id === o.id),
+        false,
+      );
       await deleteOrder(supabase, o.id);
       setDetail(null);
       router.refresh();

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { newId } from "@/lib/ids";
+import { addStockMove, deleteStockMove } from "@/lib/khata/shop-db";
 
 type DB = SupabaseClient<Database>;
 export type Order = Database["public"]["Tables"]["shop_orders"]["Row"];
@@ -151,6 +152,60 @@ export async function setOrderStatus(
 export async function deleteOrder(db: DB, id: string): Promise<void> {
   const { error } = await db.from("shop_orders").delete().eq("id", id);
   if (error) throw error;
+}
+
+/** Orders created before this moment never move stock — the stock they
+ *  would have moved was already recorded by hand, so touching it now would
+ *  double-count. Only orders created from here on follow the Done rule. */
+const ORDER_STOCK_FROM = new Date("2026-10-02T21:30:00Z");
+
+/** Keeps an order's stock in line with whether it's Done: a customer order
+ *  going Done takes its items out of stock, a supplier order going Done
+ *  (received) puts them in. Leaving Done — re-opened, cancelled, deleted —
+ *  reverses exactly what was applied, via the stock moves tagged with the
+ *  order id. */
+export async function syncOrderStock(
+  db: DB,
+  businessId: string,
+  o: Pick<Order, "id" | "direction" | "party_id" | "party_name" | "created_at">,
+  items: OrderItem[],
+  done: boolean,
+): Promise<void> {
+  if (new Date(o.created_at) < ORDER_STOCK_FROM) return;
+  const { data: applied } = await db
+    .from("shop_stock_moves")
+    .select("id,product_id,kind,qty")
+    .eq("ref", o.id);
+  const have = applied ?? [];
+
+  if (!done) {
+    for (const m of have) {
+      await deleteStockMove(db, {
+        id: m.id,
+        product_id: m.product_id,
+        kind: m.kind === "out" ? "out" : "in",
+        qty: Number(m.qty),
+      });
+    }
+    return;
+  }
+  if (have.length > 0) return;
+
+  const kind = o.direction === "in" ? "out" : "in";
+  const now = new Date().toISOString();
+  for (const it of items) {
+    if (!it.product_id) continue;
+    await addStockMove(db, businessId, {
+      id: newId("sm_"),
+      productId: it.product_id,
+      kind,
+      qty: Number(it.qty),
+      note: o.party_name ? `Order: ${o.party_name}` : "Order",
+      ref: o.id,
+      supplierId: o.direction === "out" ? o.party_id : null,
+      date: now,
+    });
+  }
 }
 
 // ---- Order Report: how much of each product is on order -------------
