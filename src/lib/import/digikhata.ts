@@ -21,7 +21,9 @@ export type ImportEntry = {
 
 export type PartyImport = {
   kind: "party";
-  partyKind: "customer" | "supplier";
+  /** null when the statement doesn't say (no "will get" / "will give" line,
+   *  e.g. a Urdu or Roman Urdu export) — the import asks which it is. */
+  partyKind: "customer" | "supplier" | null;
   name: string;
   phone: string | null;
   openingBalance: number;
@@ -39,9 +41,21 @@ export type CashImport = {
   statedNet: number;
 };
 
+export type StockItem = {
+  name: string;
+  unit: string;
+  qty: number;
+};
+
+export type StockImport = {
+  kind: "stock";
+  items: StockItem[];
+};
+
 export type ParseResult =
   | ({ format: "party" } & PartyImport)
   | ({ format: "cash" } & CashImport)
+  | ({ format: "stock" } & StockImport)
   | { format: "unknown"; hint: string };
 
 /**
@@ -106,6 +120,7 @@ export function mergePartyImports(
 
   const derivedNet = Math.round(running * 100) / 100;
   const last = sorted[sorted.length - 1].parsed;
+  if (!first.partyKind) throw new Error("Choose customer or supplier before merging");
 
   return {
     partyKind: first.partyKind,
@@ -164,12 +179,25 @@ function normPhone(raw: string): string | null {
 }
 
 export function parseDigikhata(text: string): ParseResult {
+  // English headings first — the exact labels these parsers were built on.
   if (/Cashbook Statement/i.test(text)) return parseCashbook(text);
+  if (/Items List Report|Stock In Hand/i.test(text)) return parseStock(text);
   if (/\bStatement\b/i.test(text) && /No\.?\s*of\s*Entries/i.test(text))
     return parseParty(text);
+
+  // Otherwise go by the shape of the rows, not the words — Urdu and Roman
+  // Urdu exports label their headings differently, but their rows still have
+  // the same dates, Rs amounts and unit/quantity pairs.
+  const tokens = tokenize(text);
+  const hasDateRows = tokens.some((_, i) => isRowStart(tokens, i));
+  const hasRs = tokens.some((t) => AMOUNT_RE.test(t));
+  if (hasDateRows && hasRs) return parseParty(text);
+  const stock = scanStock(tokens);
+  if (!hasDateRows && stock.length >= 3) return parseStock(text);
+
   return {
     format: "unknown",
-    hint: "This doesn't look like a Digikhata party statement or cash book PDF.",
+    hint: "This doesn't look like a Digikhata party statement, cash book or stock list PDF.",
   };
 }
 
@@ -222,12 +250,14 @@ function parseParty(text: string): ParseResult {
   const phone = phoneM ? normPhone(phoneM[1]) : null;
 
   // "(<party> will get)" — they'll get paid, i.e. we owe them = supplier.
-  // "(<party> will give)" — they'll give/pay us, i.e. they owe us = customer
-  // (the default, since a mis-worded or unseen phrasing is far more likely
-  // to be an ordinary customer than a supplier).
-  const partyKind: "customer" | "supplier" = /will\s+get\)/i.test(flat)
+  // "(<party> will give)" — they'll give/pay us, i.e. they owe us = customer.
+  // Neither marker (an export in another language) → unknown, and the
+  // import asks rather than guessing.
+  const partyKind: "customer" | "supplier" | null = /will\s+get\)/i.test(flat)
     ? "supplier"
-    : "customer";
+    : /will\s+give\)/i.test(flat)
+      ? "customer"
+      : null;
 
   // Prefer the "Opening Balance" summary card; fall back to the inline
   // "(Opening Balance: Rs …)" marker that sits just before row 1 in the
@@ -406,4 +436,56 @@ function parseCashbook(text: string): ParseResult {
     days,
     statedNet,
   };
+}
+
+// ---- stock list (Items List Report) -------------------------------------
+
+const STOCK_UNIT_RE = /^(pcs|pc|dzn|dz|kg|g|ft|box|set|pair|ltr|mtr|bag|pkt)$/i;
+const STOCK_QTY_RE = /^-?\d{1,3}(,\d{3})+(\.\d+)?$|^-?\d+(\.\d+)?$/;
+/** Page furniture and column headings — never part of an item's name. */
+const STOCK_NOISE_RE =
+  /^(Items|Unit|Stock In Hand|Items List Report|Report Generated.*|\(As of.*|No\. of Items.*|Start Using.*|Install|.*Digikhata.*|atiq\b.*|&\s*sons.*|.*sons hardware.*)$/i;
+const PHONE_RE = /^\+?\d{10,13}$/;
+
+/** Reads a stock list's token stream: each item is its name words followed
+ *  by its unit and then its stock-in-hand figure. Urdu names come out one
+ *  word per token, in logical order, sometimes with an inch mark ahead of its
+ *  number ("\"10") — normalised to the usual 10" form. */
+export function scanStock(tokens: string[]): StockItem[] {
+  const items: StockItem[] = [];
+  let buf: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i].normalize("NFKC").replace(/\s+/g, " ").trim();
+    if (!tok || STOCK_NOISE_RE.test(tok) || PHONE_RE.test(tok.replace(/\s/g, "")))
+      continue;
+    const next = tokens[i + 1]?.normalize("NFKC").replace(/\s+/g, " ").trim();
+    if (STOCK_UNIT_RE.test(tok) && next && STOCK_QTY_RE.test(next)) {
+      const name = cleanStockName(buf);
+      if (name) items.push({ name, unit: tok.toLowerCase(), qty: num(next) });
+      buf = [];
+      i += 1;
+      continue;
+    }
+    buf.push(tok);
+  }
+  return items;
+}
+
+function cleanStockName(parts: string[]): string {
+  return parts
+    .join(" ")
+    .replace(/(^|\s)["'’”]\s*(\d+(?:\/\d+)?)/g, '$1$2"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseStock(text: string): ParseResult {
+  const items = scanStock(tokenize(text));
+  if (items.length === 0) {
+    return {
+      format: "unknown",
+      hint: "This looks like a stock list, but no items could be read from it.",
+    };
+  }
+  return { format: "stock", kind: "stock", items };
 }

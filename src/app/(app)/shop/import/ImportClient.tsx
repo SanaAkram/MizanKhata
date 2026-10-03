@@ -19,6 +19,7 @@ import {
   applyCashImport,
   applyMergedPartyImport,
   applyPartyImport,
+  applyStockImport,
   type ApplyResult,
 } from "@/lib/import/apply";
 
@@ -27,11 +28,28 @@ type Job = {
   key: string;
   parsed?: ParseResult;
   parseError?: string;
+  /** Asked for when the PDF doesn't say whether the party is a customer or supplier. */
+  chosenKind?: "customer" | "supplier";
   result?: ApplyResult;
 };
 
 const fileKey = (n: string) =>
   n.replace(/\.pdf$/i, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase().slice(0, 40);
+
+/** The parsed file with what the PDF left open filled in: the party kind the
+ *  user picked, and the file name when the statement had no readable name. */
+function ready(j: Job): ParseResult | undefined {
+  const p = j.parsed;
+  if (!p || p.format !== "party") return p;
+  const partyKind = p.partyKind ?? j.chosenKind ?? null;
+  const name = p.name === "Unknown" ? j.name.replace(/\.pdf$/i, "") : p.name;
+  return { ...p, partyKind, name };
+}
+
+function needsKind(j: Job): boolean {
+  const r = ready(j);
+  return r?.format === "party" && !r.partyKind;
+}
 
 export default function ImportClient({
   businessId,
@@ -65,6 +83,10 @@ export default function ImportClient({
     setJobs((cur) => [...cur, ...next]);
   }
 
+  function chooseKind(key: string, kind: "customer" | "supplier") {
+    setJobs((cur) => cur.map((x) => (x.key === key ? { ...x, chosenKind: kind } : x)));
+  }
+
   // A statement over 1,000 entries has to be exported from Digikhata as
   // several date-range PDFs — group any files that parsed to the same
   // customer/supplier so they're reviewed and imported as one dataset
@@ -72,10 +94,11 @@ export default function ImportClient({
   const groups = useMemo(() => {
     const map = new Map<string, { job: Job; parsed: PartyImport }[]>();
     for (const j of jobs) {
-      if (j.parsed?.format !== "party") continue;
-      const key = partyGroupKey(j.parsed);
+      const r = ready(j);
+      if (r?.format !== "party" || !r.partyKind) continue;
+      const key = partyGroupKey(r);
       const arr = map.get(key) ?? [];
-      arr.push({ job: j, parsed: j.parsed });
+      arr.push({ job: j, parsed: r });
       map.set(key, arr);
     }
     return map;
@@ -117,19 +140,23 @@ export default function ImportClient({
       setGroupResults({ ...newGroupResults });
     }
 
-    for (let i = 0; i < updated.length; i++) {
-      const j = updated[i];
-      if (!j.parsed || j.parsed.format === "unknown" || j.result) continue;
+    for (const j of updated) {
+      const r = ready(j);
+      if (!r || r.format === "unknown" || j.result) continue;
+      if (r.format === "party" && !r.partyKind) continue; // waiting for customer/supplier
       if (groupOfJob.has(j)) continue; // handled above, as part of its group
       try {
-        j.result =
-          j.parsed.format === "party"
-            ? await applyPartyImport(supabase, businessId, j.key, j.parsed)
-            : await applyCashImport(supabase, businessId, j.key, j.parsed);
+        if (r.format === "party") {
+          j.result = await applyPartyImport(supabase, businessId, j.key, r);
+        } else if (r.format === "cash") {
+          j.result = await applyCashImport(supabase, businessId, j.key, r);
+        } else if (r.format === "stock") {
+          j.result = await applyStockImport(supabase, businessId, r.items);
+        }
       } catch {
         j.result = { added: 0, skipped: 0, error: "Import failed." };
       }
-      total += j.result.added;
+      if (j.result) total += j.result.added;
       setJobs([...updated]);
     }
 
@@ -139,16 +166,21 @@ export default function ImportClient({
   }
 
   const importable =
-    jobs.filter(
-      (j) =>
-        j.parsed &&
-        j.parsed.format !== "unknown" &&
+    jobs.filter((j) => {
+      const r = ready(j);
+      return (
+        r &&
+        r.format !== "unknown" &&
         !j.result &&
-        !groupOfJob.has(j),
-    ).length +
+        !groupOfJob.has(j) &&
+        !(r.format === "party" && !r.partyKind)
+      );
+    }).length +
     [...groups.entries()].filter(
       ([key, items]) => items.length >= 2 && !groupResults[key],
     ).length;
+
+  const awaitingKind = jobs.filter(needsKind).length;
 
   function renderMergedSummary(merged: MergedPartyImport, fileNames: string[]) {
     const entryCount = merged.parts.reduce((s, p) => s + p.entries.length, 0);
@@ -188,12 +220,13 @@ export default function ImportClient({
           Import from Digikhata
         </h1>
         <p className="mt-1 text-sm text-muted">
-          In Digikhata, open a party or the cash book → Statement → download the
-          PDF. Add the files here. They import into <b>{businessName}</b>.
-          If a party has more than 1,000 entries, Digikhata can only export it
-          in date-range chunks — add all of that party&apos;s files together
-          and they&apos;ll be combined into one import. Nothing is saved
-          until you tap Import, and the same file can&apos;t double up.
+          Works for a party statement, the cash book, or a stock list (items
+          with their stock in hand) — in English, Urdu or Roman Urdu. Open it
+          in Digikhata, download the PDF, and add it here. It imports into{" "}
+          <b>{businessName}</b>. If a party has more than 1,000 entries, add all
+          of that party&apos;s files together and they&apos;ll be combined into
+          one import. Nothing is saved until you tap Import, and the same file
+          can&apos;t double up.
         </p>
       </div>
 
@@ -258,6 +291,7 @@ export default function ImportClient({
               );
             }
 
+            const r = ready(j);
             return (
               <li
                 key={i}
@@ -266,26 +300,56 @@ export default function ImportClient({
                 <p className="truncate font-semibold text-ink">{j.name}</p>
                 {j.parseError ? (
                   <p className="mt-0.5 text-xs text-danger">{j.parseError}</p>
-                ) : j.parsed?.format === "unknown" ? (
-                  <p className="mt-0.5 text-xs text-danger">{j.parsed.hint}</p>
-                ) : j.parsed?.format === "party" ? (
+                ) : r?.format === "unknown" ? (
+                  <p className="mt-0.5 text-xs text-danger">{r.hint}</p>
+                ) : r?.format === "party" ? (
+                  <>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {r.partyKind ? (
+                        <span className="font-semibold capitalize text-ink">
+                          {r.partyKind}
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-danger">
+                          Customer or supplier?
+                        </span>
+                      )}{" "}
+                      · {r.name} · {r.entries.length} entries ·{" "}
+                      <span className={r.ok ? "text-ok" : "text-danger"}>
+                        closing {fmtRs(r.derivedNet)}{" "}
+                        {r.ok ? "✓" : `✗ (PDF says ${fmtRs(r.statedNet)})`}
+                      </span>
+                    </p>
+                    {needsKind(j) ? (
+                      <div className="mt-2 flex gap-2">
+                        {(["customer", "supplier"] as const).map((k) => (
+                          <button
+                            key={k}
+                            type="button"
+                            onClick={() => chooseKind(j.key, k)}
+                            className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold capitalize ${
+                              j.chosenKind === k
+                                ? "border-forest bg-forest text-paper"
+                                : "border-line text-forest"
+                            }`}
+                          >
+                            {k}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : r?.format === "cash" ? (
                   <p className="mt-0.5 text-xs text-muted">
-                    <span className="font-semibold capitalize text-ink">
-                      {j.parsed.partyKind}
-                    </span>{" "}
-                    · {j.parsed.name} · {j.parsed.entries.length} entries ·{" "}
-                    <span className={j.parsed.ok ? "text-ok" : "text-danger"}>
-                      closing {fmtRs(j.parsed.derivedNet)}{" "}
-                      {j.parsed.ok
-                        ? "✓"
-                        : `✗ (PDF says ${fmtRs(j.parsed.statedNet)})`}
-                    </span>
+                    Cash book · opening {fmtRs(r.openingCash)} ·{" "}
+                    {r.days.length} day
+                    {r.days.length === 1 ? "" : "s"} with activity
                   </p>
-                ) : j.parsed?.format === "cash" ? (
+                ) : r?.format === "stock" ? (
                   <p className="mt-0.5 text-xs text-muted">
-                    Cash book · opening {fmtRs(j.parsed.openingCash)} ·{" "}
-                    {j.parsed.days.length} day
-                    {j.parsed.days.length === 1 ? "" : "s"} with activity
+                    Stock list · {r.items.length} items ·{" "}
+                    {r.items.reduce((s, it) => s + it.qty, 0).toLocaleString("en-US")}{" "}
+                    in stock
                   </p>
                 ) : (
                   <p className="mt-0.5 text-xs text-muted">Reading…</p>
@@ -310,6 +374,13 @@ export default function ImportClient({
             );
           })}
         </ul>
+      ) : null}
+
+      {awaitingKind > 0 ? (
+        <p className="text-xs font-semibold text-danger">
+          Pick customer or supplier for {awaitingKind} file
+          {awaitingKind === 1 ? "" : "s"} above to import {awaitingKind === 1 ? "it" : "them"}.
+        </p>
       ) : null}
 
       {importable > 0 ? (

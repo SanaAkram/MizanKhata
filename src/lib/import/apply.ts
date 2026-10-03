@@ -3,7 +3,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { newId } from "@/lib/ids";
-import type { CashImport, MergedPartyImport, PartyImport } from "./digikhata";
+import { addStockMove } from "@/lib/khata/shop-db";
+import type {
+  CashImport,
+  MergedPartyImport,
+  PartyImport,
+  StockItem,
+} from "./digikhata";
 
 type DB = SupabaseClient<Database>;
 type KhataInsert = Database["public"]["Tables"]["shop_khata_tx"]["Insert"];
@@ -97,6 +103,7 @@ export async function applyPartyImport(
   fileKey: string,
   p: PartyImport,
 ): Promise<ApplyResult> {
+  if (!p.partyKind) return { added: 0, skipped: 0, error: "Choose customer or supplier first." };
   const isCust = p.partyKind === "customer";
 
   let partyId = await findPartyId(db, bid, p.partyKind, p.name, p.phone);
@@ -189,6 +196,56 @@ export async function applyMergedPartyImport(
   }
 
   return insertPartyRows(db, isCust, partyId, base);
+}
+
+const normName = (s: string) =>
+  s.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+
+/** Adds a stock list as products. A product whose name is already there (or
+ *  appears earlier in the same list) is left alone, so re-importing the same
+ *  file adds nothing. Each new product starts at zero and takes its
+ *  stock-in-hand as one stock-in record, so its history shows the import. */
+export async function applyStockImport(
+  db: DB,
+  bid: string,
+  items: StockItem[],
+): Promise<ApplyResult> {
+  const { data: existing, error } = await db
+    .from("shop_products")
+    .select("name")
+    .eq("business_id", bid);
+  if (error) return { added: 0, skipped: 0, error: error.message };
+  const seen = new Set((existing ?? []).map((p) => normName(p.name)));
+
+  let added = 0;
+  let skipped = 0;
+  for (const it of items) {
+    const key = normName(it.name);
+    if (seen.has(key)) {
+      skipped += 1;
+      continue;
+    }
+    seen.add(key);
+    const productId = newId("p_");
+    const ins = await db.from("shop_products").insert({
+      id: productId,
+      business_id: bid,
+      name: it.name,
+      unit: it.unit,
+      stock: 0,
+    });
+    if (ins.error) return { added, skipped, error: ins.error.message };
+    await addStockMove(db, bid, {
+      id: newId("sm_"),
+      productId,
+      kind: "in",
+      qty: it.qty,
+      note: "Digikhata stock import",
+      date: new Date().toISOString(),
+    });
+    added += 1;
+  }
+  return { added, skipped };
 }
 
 export async function applyCashImport(
